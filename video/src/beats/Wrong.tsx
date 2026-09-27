@@ -1,7 +1,7 @@
 import type React from 'react';
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from 'remotion';
 import { c, font } from '../theme';
-import { Bench, Sample } from '../parts';
+import { Bench, Caption, Sample } from '../parts';
 import { STAMP_AT } from '../timeline';
 import { stacked, unit, type Layout } from '../layout';
 
@@ -26,6 +26,7 @@ export const Wrong: React.FC<{ layout: Layout }> = ({ layout }) => {
 					</div>
 				}
 			>
+				<Caption u={u}>…and we show where it’s wrong.</Caption>
 				<div style={{ fontFamily: font.mono, fontSize: 28 * u, color: c.faint }}>true: cuttlefish</div>
 				<div style={{ fontFamily: font.serif, fontSize: 96 * u, color: c.red, opacity: said }}>said: squid 71%</div>
 			</Bench>

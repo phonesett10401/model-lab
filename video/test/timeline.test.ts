@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { beats, beat, cues, DURATION, FPS, padVolume, STAMP_AT } from '../src/timeline.ts';
+import { beats, beat, cues, DURATION, FPS, MUSIC, musicVolume, STAMP_AT } from '../src/timeline.ts';
 
 test('beats are contiguous and fill exactly 15 seconds', () => {
 	let at = 0;
@@ -12,22 +12,27 @@ test('beats are contiguous and fill exactly 15 seconds', () => {
 	assert.equal(DURATION / FPS, 15);
 });
 
-test('beat boundaries match the storyboard', () => {
-	const secs = (id: Parameters<typeof beat>[0]) => beat(id).from / FPS;
-	assert.deepEqual(
-		[secs('fly'), secs('open'), secs('right'), secs('wrong'), secs('report'), secs('end')],
-		[1.5, 4.5, 5.5, 8.5, 11, 13.5]
-	);
+test('every cut lands on the music beat grid', () => {
+	const beatFrames = (FPS * 60) / MUSIC.bpm;
+	for (const b of beats.slice(1)) {
+		const k = (b.from - MUSIC.dropFrame) / beatFrames;
+		assert.ok(Math.abs(k - Math.round(k)) * beatFrames <= 1, `${b.id} at ${b.from} is off the beat`);
+	}
+});
+
+test('the WRONG stamp lands on the drop, and the music window fits the track', () => {
+	assert.equal(beat('wrong').from + STAMP_AT, MUSIC.dropFrame);
+	assert.ok(Math.abs(MUSIC.dropFrame / FPS + MUSIC.startSeconds - MUSIC.dropInTrackSeconds) < 1e-9);
+	assert.ok(MUSIC.startSeconds + DURATION / FPS <= MUSIC.trackSeconds);
 });
 
 test('every cue sits inside the video, and the thud lands with the stamp', () => {
 	for (const c of cues) assert.ok(c.at >= 0 && c.at < DURATION, `${c.sfx} at ${c.at}`);
-	const thud = cues.find((c) => c.sfx === 'thud')!;
-	assert.equal(thud.at, beat('wrong').from + STAMP_AT);
-	assert.equal(cues.filter((c) => c.sfx === 'tick' && c.at < beat('fly').from).length, 'AI MODEL LAB'.length);
+	assert.equal(cues.find((c) => c.sfx === 'thud')!.at, MUSIC.dropFrame);
 });
 
-test('the pad dips before the stamp and fades out at the end', () => {
-	assert.ok(padVolume(270) < padVolume(200));
-	assert.equal(padVolume(DURATION), 0);
+test('the music fades in, ducks under the thud, and fades out to silence', () => {
+	assert.ok(musicVolume(0) < musicVolume(30));
+	assert.ok(musicVolume(MUSIC.dropFrame + 2) < musicVolume(MUSIC.dropFrame - 30));
+	assert.equal(musicVolume(DURATION), 0);
 });

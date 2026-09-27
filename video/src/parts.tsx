@@ -62,3 +62,21 @@ export const Bench: React.FC<{ layout: Layout; u: number; photo: string; dropAt?
 		</AbsoluteFill>
 	);
 };
+
+/** The brand mark that stays in the corner through the middle of the video. */
+export const Bug: React.FC<{ u: number }> = ({ u }) => (
+	<div style={{ position: 'absolute', top: 36 * u, left: 40 * u, fontFamily: font.mono, color: c.red, fontSize: 22 * u, letterSpacing: '0.24em' }}>AI MODEL LAB</div>
+);
+
+/** A lab-level line above the example ("Every model gets tested."). */
+export const Caption: React.FC<{ u: number; children: React.ReactNode }> = ({ u, children }) => (
+	<div style={{ fontFamily: font.mono, fontSize: 26 * u, color: c.soft, letterSpacing: '0.08em' }}>{children}</div>
+);
+
+/** The AI MODEL LAB lockup used at the start and the end. */
+export const Lockup: React.FC<{ u: number; progress: number }> = ({ u, progress }) => (
+	<div style={{ display: 'grid', gap: 20 * u, justifyItems: 'start' }}>
+		<div style={{ height: 6 * u, width: `${progress * 180 * u}px`, background: c.red }} />
+		<div style={{ fontFamily: font.mono, fontWeight: 600, color: c.red, fontSize: 110 * u, letterSpacing: '0.16em', lineHeight: 1, opacity: progress }}>AI MODEL LAB</div>
+	</div>
+);

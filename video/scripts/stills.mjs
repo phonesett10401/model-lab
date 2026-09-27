@@ -2,7 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 
-const frames = { title: 40, fly: 100, open: 160, right: 230, wrong: 300, report: 395, end: 440 };
+const frames = { title: 50, fly: 120, open: 190, right: 240, wrong: 300, report: 395, end: 440 };
 mkdirSync('out/stills', { recursive: true });
 for (const layout of ['wide', 'square', 'tall'])
 	for (const [beat, frame] of Object.entries(frames)) {
