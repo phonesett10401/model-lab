@@ -23,7 +23,7 @@
 <header class="hero">
 	<div class="copy">
 		<p class="kicker mono">VOL. 01 · SMALL MODELS, HONEST REPORT CARDS</p>
-		<h1 class="serif">See what it sees. <em>And where it’s wrong.</em></h1>
+		<h1 class="serif">Click it. Test it. <em>See the result.</em></h1>
 		<p class="lede soft">Small AI models I train. Each one has a report card that shows how it fails.</p>
 		<a class="cta btn" href="#archive">Open the archive ↓</a>
 	</div>
@@ -37,7 +37,7 @@
 		{#key i}
 			<div class="specimen">
 				{#if s.kind === 'image'}
-					<img src={s.src} alt="Illustration of an octopus" width="240" height="180" />
+					<img src={s.src} alt="An octopus on a rocky seabed" width="512" height="512" />
 					<span class="scan" aria-hidden="true"></span>
 				{:else if s.kind === 'audio'}
 					<div class="wave" aria-hidden="true">{#each wave as h, n (n)}<i style="transform: scaleY({h})"></i>{/each}</div>

@@ -12,7 +12,7 @@ export interface HeroSpecimen {
 
 // Illustrative only — the hero is labelled SAMPLE.
 const all: HeroSpecimen[] = [
-	{ kind: 'image', label: 'IMAGE', src: '/samples/octopus.svg', predictions: [{ label: 'octopus', score: 0.94 }, { label: 'squid', score: 0.04 }, { label: 'cuttlefish', score: 0.02 }] },
+	{ kind: 'image', label: 'IMAGE', src: '/samples/octopus.jpg', predictions: [{ label: 'octopus', score: 0.94 }, { label: 'squid', score: 0.04 }, { label: 'cuttlefish', score: 0.02 }] },
 	{ kind: 'text', label: 'TEXT', text: 'The fish tasted a bit off yesterday.', predictions: [{ label: 'negative', score: 0.71 }, { label: 'neutral', score: 0.22 }, { label: 'positive', score: 0.07 }] },
 	{ kind: 'audio', label: 'AUDIO', predictions: [{ label: 'whale', score: 0.83 }, { label: 'engine', score: 0.12 }, { label: 'bubbles', score: 0.05 }] },
 ];

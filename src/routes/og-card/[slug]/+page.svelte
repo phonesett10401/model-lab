@@ -14,7 +14,7 @@
 		<h1 class="serif">{data.entry.name}</h1>
 		<p class="purpose">{data.entry.purpose}</p>
 	{:else}
-		<h1 class="serif">See what it sees. <em>And where it’s wrong.</em></h1>
+		<h1 class="serif">Click it. Test it. <em>See the result.</em></h1>
 		<p class="purpose">Small AI models I train, each with a report card that shows how it fails.</p>
 	{/if}
 </div>

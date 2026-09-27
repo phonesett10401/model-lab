@@ -21,7 +21,7 @@ test('reduced motion keeps the hero still', async ({ page }) => {
 
 test('the hero links to the archive', async ({ page }) => {
 	await page.goto('/');
-	await expect(page.getByRole('heading', { level: 1 })).toContainText('See what it sees.');
+	await expect(page.getByRole('heading', { level: 1 })).toContainText('Click it. Test it.');
 	await expect(page.locator('.hero .lede')).toHaveText('Small AI models I train. Each one has a report card that shows how it fails.');
 	await expect(page.locator('.topbar')).toContainText('AI MODEL LAB');
 	await page.getByRole('link', { name: 'Open the archive ↓' }).click();
