@@ -1,7 +1,7 @@
 <script lang="ts">
 	import EntryHeader from '$lib/components/EntryHeader.svelte';
 	import EntryMeta from '$lib/components/EntryMeta.svelte';
-	import ReportCard from '$lib/components/ReportCard.svelte';
+	import Workbench from '$lib/components/Workbench.svelte';
 
 	let { data } = $props();
 </script>
@@ -10,7 +10,7 @@
 <article class="page">
 	<a class="back mono" href="/?entry={data.entry.slug}#archive">← Archive</a>
 	<EntryHeader entry={data.entry} level={1} />
-	<ReportCard report={data.entry.report} show={['data', 'metrics', 'fails']} idPrefix="page" />
+	<Workbench entry={data.entry} header={false} />
 </article>
 
 <style>

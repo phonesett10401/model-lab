@@ -13,7 +13,7 @@ test('a planned model page is honest about having no numbers', async ({ page }) 
 test('a draft model shows measured metrics, worst first, with DRAFT stamp', async ({ page }) => {
 	await page.goto('/models/draft-shape-sorter');
 	await expect(page.getByText('DRAFT', { exact: true }).first()).toBeVisible();
-	const rows = page.locator('#page-metrics li');
+	const rows = page.locator('[id$="-metrics"] li');
 	await expect(rows.first()).toHaveAttribute('aria-label', 'triangle, 81 percent');
 	await expect(page.getByText('said: triangle')).toBeVisible();
 });
@@ -21,7 +21,7 @@ test('a draft model shows measured metrics, worst first, with DRAFT stamp', asyn
 test('an audit page shows its report with before/after', async ({ page }) => {
 	await page.goto('/audits/draft-document-assistant-audit');
 	await expect(page.getByRole('heading', { level: 1, name: 'Document assistant audit' })).toBeVisible();
-	await expect(page.locator('#page-metrics li').first()).toHaveAttribute('aria-label', 'direct jailbreak, 20 percent, 60 percent before defences');
+	await expect(page.locator('[id$="-metrics"] li').first()).toHaveAttribute('aria-label', 'direct jailbreak, 20 percent, 60 percent before defences');
 });
 
 test('unknown entries are 404s', async ({ page }) => {
