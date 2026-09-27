@@ -3,10 +3,12 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
 	testDir: 'e2e',
 	testMatch: '**/*.e2e.ts',
-	webServer: { command: 'pnpm build && pnpm preview --port 4173', port: 4173, reuseExistingServer: !process.env.CI },
+	webServer: { command: 'pnpm build && pnpm preview --port 4173', port: 4173, reuseExistingServer: !process.env.CI, timeout: 180_000 },
 	use: { baseURL: 'http://localhost:4173' },
 	projects: [
-		{ name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-		{ name: 'webkit', use: { ...devices['Desktop Safari'] } }
+		{ name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: '**/intro-video.e2e.ts' },
+		{ name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: '**/intro-video.e2e.ts' },
+		// Playwright's bundled Chromium can't decode H.264; real playback is tested in installed Google Chrome.
+		{ name: 'chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' }, testMatch: '**/intro-video.e2e.ts' }
 	]
 });

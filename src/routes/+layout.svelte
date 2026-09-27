@@ -17,7 +17,7 @@
 
 	let { children } = $props();
 	onNavigate(startMorph);
-	const bare = $derived(page.route.id?.startsWith('/og-card') ?? false);
+	const bare = $derived(page.route.id === '/intro' || (page.route.id?.startsWith('/og-card') ?? false));
 </script>
 
 <svelte:head>
