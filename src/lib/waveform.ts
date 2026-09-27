@@ -10,8 +10,9 @@ export function peaks(data: Float32Array, count: number): number[] {
 	return out.map((v) => v / max);
 }
 
-/** Browser-only. Throws if the audio can't be decoded. */
+/** Browser-only. Throws if the audio can't be decoded; [] where Web Audio doesn't exist (no preview, still usable). */
 export async function waveform(url: string, count = 48): Promise<number[]> {
+	if (typeof AudioContext === 'undefined') return [];
 	const buf = await fetch(url).then((r) => r.arrayBuffer());
 	const ctx = new AudioContext();
 	try {

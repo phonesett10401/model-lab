@@ -3,6 +3,9 @@
 	import PredictionBars from './PredictionBars.svelte';
 	import ReportCard from './ReportCard.svelte';
 	import ImageInput from './inputs/ImageInput.svelte';
+	import TextInput from './inputs/TextInput.svelte';
+	import AudioInput from './inputs/AudioInput.svelte';
+	import TableInput from './inputs/TableInput.svelte';
 	import { getRuntime, type Runtime } from '$lib/runtime';
 	import { initialBench, lastResult, step, type BenchState } from '$lib/bench';
 	import { latestOnly } from '$lib/latest';
@@ -45,6 +48,9 @@
 	const previous = $derived(bench.kind === 'error' ? lastResult(bench) : null);
 
 	let shownImage = $state<string | null>(null);
+	let shownText = $state('');
+	let shownAudio = $state<string | null>(null);
+	let shownValues = $state<Record<string, string | number> | null>(null);
 
 	async function run(input: ModelInput, isLatest = latest()) {
 		if (!runtime) return;
@@ -67,10 +73,17 @@
 		const isLatest = latest();
 		active = 'demo';
 		const i = s.input;
-		if (i.type === 'image') {
-			shownImage = i.src;
+		if (i.type === 'text') {
+			shownText = i.text;
+			run({ type: 'text', text: i.text, sampleId: s.id }, isLatest);
+		} else if (i.type === 'table') {
+			shownValues = { ...i.values };
+			run({ type: 'table', values: i.values, sampleId: s.id }, isLatest);
+		} else {
+			if (i.type === 'image') shownImage = i.src;
+			else shownAudio = i.src;
 			const blob = await fetch(i.src).then((r) => r.blob());
-			if (isLatest()) run({ type: 'image', blob, sampleId: s.id }, isLatest);
+			if (isLatest()) run({ type: i.type, blob, sampleId: s.id }, isLatest);
 		}
 	}
 
@@ -106,8 +119,12 @@
 		>
 			{#if entry.input === 'image'}
 				<ImageInput disabled={!live || busy} examining={bench.kind === 'examining'} bind:shown={shownImage} onsubmit={(i) => run(i)} onerror={fail} />
+			{:else if entry.input === 'text'}
+				<TextInput disabled={!live || busy} examining={bench.kind === 'examining'} bind:shown={shownText} onsubmit={(i) => run(i)} onerror={fail} />
+			{:else if entry.input === 'audio'}
+				<AudioInput disabled={!live || busy} examining={bench.kind === 'examining'} bind:shown={shownAudio} onsubmit={(i) => run(i)} onerror={fail} />
 			{:else}
-				<p class="mono faint">Input panel arrives in Task 9.</p>
+				<TableInput fields={entry.fields ?? []} disabled={!live || busy} examining={bench.kind === 'examining'} bind:shown={shownValues} onsubmit={(i) => run(i)} onerror={fail} />
 			{/if}
 
 			{#if live && entry.samples.length}
