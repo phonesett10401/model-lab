@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Spring } from 'svelte/motion';
 	import { reducedMotion } from '$lib/motion.svelte';
-	import { pct } from '$lib/format';
+	import { pct, shownPct } from '$lib/format';
 
 	let { label, score, before, top = false }: { label: string; score: number | null; before?: number | null; top?: boolean } = $props();
 
@@ -23,7 +23,7 @@
 		{#if typeof before === 'number'}<span class="before" style="transform: scaleX({before})"></span>{/if}
 		<span class="fill" style="transform: scaleX({s.current})"></span>
 	</span>
-	<span class="value mono" aria-hidden="true">{score === null ? '—' : `${pct(s.current)}%`}</span>
+	<span class="value mono" aria-hidden="true">{score === null ? '—' : `${shownPct(s.current, score)}%`}</span>
 </li>
 
 <style>

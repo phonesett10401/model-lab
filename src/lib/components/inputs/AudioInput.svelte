@@ -42,32 +42,50 @@
 		use(file);
 	}
 
+	let starting = $state(false); // permission prompt pending: ignore further clicks
+	let gone = false;
+
 	async function toggleRecord() {
+		if (starting) return;
 		if (recording) { recorder?.stop(); return; }
 		if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined')
 			return onerror('Recording isn’t supported in this browser. Upload a file instead.');
+		starting = true;
 		let stream: MediaStream;
 		try {
 			stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 		} catch (err) {
 			return onerror(micErrorMessage((err as DOMException).name));
+		} finally {
+			starting = false;
 		}
+		const release = () => stream.getTracks().forEach((t) => t.stop());
+		if (gone) return release();
 		const chunks: Blob[] = [];
-		const r = new MediaRecorder(stream);
-		recorder = r;
-		r.ondataavailable = (e) => chunks.push(e.data);
+		let r: MediaRecorder;
+		try {
+			r = new MediaRecorder(stream);
+			r.ondataavailable = (e) => chunks.push(e.data);
+			r.start();
+		} catch {
+			release();
+			return onerror('Couldn’t start recording in this browser. Upload a file instead.');
+		}
+		// Each recorder owns its stream and timer, so nothing it started can outlive its own stop.
+		const limit = setTimeout(() => r.state === 'recording' && r.stop(), MAX_RECORD_SECONDS * 1000);
 		r.onstop = () => {
-			clearTimeout(timer);
-			stream.getTracks().forEach((t) => t.stop());
+			clearTimeout(limit);
+			release();
 			recording = false;
-			use(new Blob(chunks, { type: r.mimeType || 'audio/webm' }));
+			if (!gone) use(new Blob(chunks, { type: r.mimeType || 'audio/webm' }));
 		};
-		r.start();
+		recorder = r;
+		timer = limit;
 		recording = true;
-		timer = setTimeout(() => r.state === 'recording' && r.stop(), MAX_RECORD_SECONDS * 1000);
 	}
 
 	$effect(() => () => {
+		gone = true; // leaving mid-recording discards the clip
 		clearTimeout(timer);
 		if (recorder?.state === 'recording') recorder.stop();
 		if (owned) URL.revokeObjectURL(owned);
@@ -82,7 +100,7 @@
 	</div>
 	{#if shown}<audio controls src={shown}></audio>{/if}
 	<div class="actions">
-		<button class="btn" {disabled} aria-pressed={recording} onclick={toggleRecord}>{recording ? '■ Stop' : '● Record'}</button>
+		<button class="btn" disabled={disabled || starting} aria-pressed={recording} onclick={toggleRecord}>{recording ? '■ Stop' : '● Record'}</button>
 		<button class="btn ghost" {disabled} onclick={() => upload.click()}>Upload</button>
 		<input bind:this={upload} type="file" accept="audio/*" hidden onchange={(e) => take(e.currentTarget.files?.[0])} />
 	</div>

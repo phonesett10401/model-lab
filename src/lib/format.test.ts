@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { entryPath, kindLabel, pad, pct } from './format';
+import { entryPath, kindLabel, pad, pct, shownPct } from './format';
 import { allEntries } from './entries';
 
 it('formats numbers, kinds and paths', () => {
@@ -12,4 +12,10 @@ it('formats numbers, kinds and paths', () => {
 	expect(kindLabel(audit)).toBe('AUDIT');
 	expect(entryPath(model)).toBe('/models/draft-review-mood');
 	expect(entryPath(audit)).toBe(`/audits/${audit.slug}`);
+});
+
+it('never shows a number above the true score while a bar springs past it', () => {
+	expect(shownPct(1.01, 0.93)).toBe(93); // overshoot
+	expect(shownPct(0.5, 0.93)).toBe(50); // still rising
+	expect(shownPct(-0.02, 0)).toBe(0);
 });

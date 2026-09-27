@@ -9,6 +9,7 @@
 	import { getRuntime, type Runtime } from '$lib/runtime';
 	import { initialBench, lastResult, step, type BenchState } from '$lib/bench';
 	import { latestOnly } from '$lib/latest';
+	import { reducedMotion } from '$lib/motion.svelte';
 	import type { ModelEntry, ModelInput, Sample } from '$lib/types';
 
 	let { entry, header = true }: { entry: ModelEntry; header?: boolean } = $props();
@@ -20,6 +21,8 @@
 	let width = $state(0);
 	const compact = $derived(width > 0 && width < 560);
 	const wide = $derived(width >= 1000);
+	// Tablet / landscape phone: input and result side by side (spec §6).
+	const split = $derived(width >= 600 && !wide);
 	const tabs = $derived<Tab[]>(wide ? [] : compact ? ['demo', 'data', 'metrics', 'fails'] : ['data', 'metrics', 'fails']);
 	let active = $state<Tab>('demo');
 	const current = $derived(tabs.includes(active) ? active : tabs[0]);
@@ -46,6 +49,13 @@
 		!checked ? 'ready' : !live ? 'not-live' : bench.kind === 'result' ? (bench.unsure ? 'unsure' : 'result') : bench.kind
 	);
 	const previous = $derived(bench.kind === 'error' ? lastResult(bench) : null);
+
+	// On phones the answer lands below the input: bring it into view so a run never looks like nothing happened.
+	let out: HTMLElement;
+	$effect(() => {
+		if (compact && (bench.kind === 'result' || bench.kind === 'error'))
+			out.scrollIntoView({ block: 'nearest', behavior: reducedMotion.current ? 'auto' : 'smooth' });
+	});
 
 	let shownImage = $state<string | null>(null);
 	let shownText = $state('');
@@ -94,7 +104,7 @@
 	const fail = (reason: string) => (bench = step(bench, { type: 'fail', reason }));
 </script>
 
-<article class="bench" class:wide bind:clientWidth={width}>
+<article class="bench" class:wide class:split bind:clientWidth={width}>
 	{#if header}<EntryHeader {entry} level={2} link />{/if}
 
 	{#if tabs.length}
@@ -117,6 +127,7 @@
 			hidden={tabs.includes('demo') && current !== 'demo'}
 			aria-label="Demo"
 		>
+			<div class="input-col">
 			{#if entry.input === 'image'}
 				<ImageInput disabled={!live || busy} examining={bench.kind === 'examining'} bind:shown={shownImage} onsubmit={(i) => run(i)} onerror={fail} />
 			{:else if entry.input === 'text'}
@@ -136,7 +147,9 @@
 				</div>
 			{/if}
 
-			<div class="out" aria-live="polite">
+			</div>
+
+			<div class="out" aria-live="polite" bind:this={out}>
 				{#if view === 'not-live'}
 					<p class="soft">This model is {entry.status === 'planned' ? 'planned' : 'still training'}. The demo opens once it has been measured, and there are no made-up results in the meantime.</p>
 				{:else if bench.kind === 'loading'}
@@ -176,6 +189,8 @@
 	.wide .panels { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
 	.demo { display: grid; gap: var(--space-2); align-content: start; }
 	.demo[hidden] { display: none; }
+	.input-col { display: grid; gap: var(--space-2); align-content: start; min-width: 0; }
+	.split .demo { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
 	.samples { display: flex; flex-wrap: wrap; gap: var(--space-1); align-items: center; }
 	.out { display: grid; gap: var(--space-1); min-height: 3rem; }
 	.answer { font-size: var(--step-3); line-height: 1; }

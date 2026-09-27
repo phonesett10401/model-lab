@@ -7,11 +7,12 @@
 
 	let i = $state(0);
 	let paused = $state(false);
+	let stopped = $state(false); // a tap on a dot stops rotation for good (WCAG 2.2.2; touch has no hover)
 	const s = $derived(heroSpecimens[i]);
 	const wave = Array.from({ length: 36 }, (_, n) => 0.2 + Math.abs(Math.sin(n * 1.7)) * 0.8);
 
 	$effect(() => {
-		if (reducedMotion.current || paused) return;
+		if (reducedMotion.current || paused || stopped) return;
 		const id = setInterval(() => {
 			if (!document.hidden) i = (i + 1) % heroSpecimens.length;
 		}, 5000);
@@ -52,7 +53,7 @@
 		{/key}
 		<div class="dots">
 			{#each heroSpecimens as h, n (n)}
-				<button aria-label="Show {h.label.toLowerCase()} sample" aria-pressed={n === i} onclick={() => (i = n)}></button>
+				<button aria-label="Show {h.label.toLowerCase()} sample" aria-pressed={n === i} onclick={() => { i = n; stopped = true; }}></button>
 			{/each}
 		</div>
 	</figure>
