@@ -182,3 +182,13 @@ test('on the narrowest phone, every scene stays inside its picture once built', 
 		expect(out, `scene ${i}`).toEqual([]);
 	}
 });
+
+test('the story covers every kind of model, not just images', async ({ page }) => {
+	await page.goto('/intro');
+	const story = page.locator('#story ol');
+	for (const word of [/images/, /text/, /sounds/, /tables/]) await expect(story).toContainText(word);
+	await expect(story).not.toContainText('Roboflow');
+	for (const scene of ['1', '3'])
+		for (const kind of ['image', 'text', 'audio', 'table'])
+			await expect(page.locator(`.scene[data-i="${scene}"] [data-kind="${kind}"]`)).toHaveCount(1);
+});

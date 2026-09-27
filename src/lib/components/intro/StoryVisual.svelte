@@ -5,7 +5,20 @@
 	// Fixed, hand-picked orbit and particle layouts: no randomness, so server and client render the same.
 	const swarm = Array.from({ length: 24 }, (_, i) => ({ a: (i * 360) / 24, y: ((i * 37) % 11) - 5, s: 0.7 + ((i * 53) % 7) / 20 }));
 	const bits = Array.from({ length: 16 }, (_, i) => ({ x: ((i * 29) % 17) - 8, d: (i % 8) * 0.06 }));
+	// The lab's four kinds of input; each swarm box carries one mark, evenly mixed.
+	const marks = ['▣', 'Aa', '∿', '⊞'];
+	const wave = [3, 6, 10, 5, 8, 12, 7, 4, 9, 6, 3];
 </script>
+
+<!-- One sample of each kind the lab takes: a photo, a sentence, a sound, a table row. -->
+{#snippet samples()}
+	<span class="kinds">
+		<span class="k" data-kind="image"><img src="/samples/octopus.jpg" alt="" width="512" height="512" /></span>
+		<span class="k txt" data-kind="text"><b class="serif">Aa</b><i></i><i></i></span>
+		<span class="k wave" data-kind="audio">{#each wave as h, i (i)}<i style="--h: {h}"></i>{/each}</span>
+		<span class="k grid" data-kind="table">{#each Array(9) as _, i (i)}<i></i>{/each}</span>
+	</span>
+{/snippet}
 
 <div class="visual" aria-hidden="true">
 	<!-- The stage: the video's glow, vignette and grain. The glow flares whenever a new step becomes active. -->
@@ -16,13 +29,13 @@
 	<div class="scene swarm" class:on={active === 0} data-i="0" style="--t: {t[0]}">
 		<div class="orbit">
 			{#each swarm as b, i (i)}
-				<span class="box" style="--a: {b.a}deg; --y: {b.y}; --s: {b.s}"></span>
+				<span class="box" style="--a: {b.a}deg; --y: {b.y}; --s: {b.s}"><span class="mark mono">{marks[i % 4]}</span></span>
 			{/each}
 		</div>
-		<div class="hero"><span class="mono">No. 01</span><span class="bar"></span></div>
+		<div class="hero"><span class="mono">IMAGE<br />TEXT<br />AUDIO<br />TABLE</span><span class="bar"></span></div>
 	</div>
 
-	<!-- 2 · Made by hand: the photo travels Collect → Train → Test along a glowing line; a box locks on at Test. -->
+	<!-- 2 · Made by hand: one sample of each kind travels Collect → Train → Test along a glowing line; a box locks on at Test. -->
 	<div class="scene pipe" class:on={active === 1} data-i="1" style="--t: {t[1]}">
 		<svg class="line track" viewBox="0 0 100 20" preserveAspectRatio="none"><path d="M0 10 C 20 2, 30 18, 50 10 S 80 2, 100 10" /></svg>
 		<svg class="line lit" viewBox="0 0 100 20" preserveAspectRatio="none"><path d="M0 10 C 20 2, 30 18, 50 10 S 80 2, 100 10" /></svg>
@@ -30,8 +43,8 @@
 			<span class="station mono" style="--at: {i / 2}">{s}</span>
 		{/each}
 		<div class="traveller">
-			<img src="/samples/octopus.jpg" alt="" width="512" height="512" />
-			<span class="lock"><span class="tag mono">octopus · sample</span></span>
+			{@render samples()}
+			<span class="lock"><span class="tag mono">samples</span></span>
 		</div>
 	</div>
 
@@ -47,11 +60,11 @@
 		<span class="stamp mono">HOW IT FAILS</span>
 	</div>
 
-	<!-- 4 · Runs on your device: the model streams into the phone as particles; the photo never leaves. -->
+	<!-- 4 · Runs on your device: the model streams into the phone as particles; your photos, text and recordings never leave. -->
 	<div class="scene device" class:on={active === 3} data-i="3" style="--t: {t[3]}">
 		<div class="phone">
-			<img src="/samples/octopus.jpg" alt="" width="512" height="512" />
 			<svg class="shield" viewBox="0 0 24 28"><path d="M12 1 L22 5 V13 C22 20 17 25 12 27 C7 25 2 20 2 13 V5 Z" /></svg>
+			{@render samples()}
 		</div>
 		{#each bits as b, i (i)}
 			<span class="bit" style="--x: {b.x}; --d: {b.d}"></span>
@@ -74,7 +87,7 @@
 	.glow { position: absolute; inset: 0; background: radial-gradient(closest-side at 50% 55%, color-mix(in srgb, var(--red) 22%, transparent), transparent); }
 	.flare { position: absolute; inset: 0; background: radial-gradient(closest-side at 50% 55%, color-mix(in srgb, var(--red) 45%, transparent), transparent); opacity: 0; animation: flare 1s ease-out; }
 	@keyframes flare { 20% { opacity: 1; } }
-	.vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(closest-side, transparent 60%, var(--paper)); }
+	.vignette { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to right, var(--paper), transparent 6% 94%, var(--paper)), linear-gradient(var(--paper), transparent 6% 94%, var(--paper)); }
 	.grain { position: absolute; inset: -50%; pointer-events: none; opacity: 0.09; mix-blend-mode: overlay; animation: grain 0.8s steps(4) infinite;
 		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 	@keyframes grain { 25% { translate: -5% 3%; } 50% { translate: 4% -4%; } 75% { translate: -3% -5%; } }
@@ -87,21 +100,40 @@
 	.hero { position: relative; width: calc(var(--r) * 0.55); aspect-ratio: 4 / 5; display: grid; align-content: space-between; padding: 10px; background: var(--plate); border: 1px solid var(--red);
 		transform: translateZ(0) scale(calc(0.5 + var(--t) * 0.6)); opacity: min(1, calc(var(--t) * 3)); box-shadow: 0 0 calc(var(--t) * 60px) color-mix(in srgb, var(--red) 55%, transparent); }
 	.hero .bar { height: 6px; background: var(--red); }
+	.hero .mono { font-size: max(10px, calc(var(--r) * 0.055)); line-height: 1.5; letter-spacing: 0.08em; }
+	.box { display: grid; place-items: center; }
+	.mark { font-size: max(8px, calc(var(--r) * 0.06)); color: var(--ink-faint);
+		/* Only boxes facing the viewer show their mark, so none reads mirrored as it swings round the back. */
+		opacity: clamp(0, calc(cos(var(--a) + var(--t) * 140deg) * 6), 1); }
+
+	/* The four sample kinds, as a 2×2 tile: photo, sentence, waveform, table. */
+	.kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%; aspect-ratio: 1; }
+	.k { display: grid; place-items: center; overflow: hidden; background: var(--plate); border: 1px solid var(--hairline); min-width: 0; }
+	.k img { width: 100%; height: 100%; object-fit: cover; }
+	.txt { align-content: center; gap: 3px; padding: 12%; place-items: stretch; }
+	.txt b { font-weight: 400; font-size: 1.1em; line-height: 1; color: var(--ink); }
+	.txt i { height: 2px; background: var(--ink); opacity: 0.35; }
+	.txt i:last-child { width: 60%; }
+	.wave { grid-auto-flow: column; align-items: center; justify-content: center; gap: 2px; }
+	.wave i { width: 2px; height: calc(var(--h) * 6%); background: var(--red); }
+	.grid { grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 14%; place-items: stretch; }
+	.grid i { background: var(--ink); opacity: 0.25; aspect-ratio: 1; }
+	.grid i:nth-child(-n + 3) { background: var(--red); opacity: 0.7; }
 
 	/* 2 · Pipeline */
-	.pipe { --w: 64%; --x: 18%; }
-	.line { position: absolute; left: var(--x); width: var(--w); top: 50%; height: 60px; translate: 0 -50%; overflow: visible; }
+	.pipe { --w: 60%; --x: 16%; }
+	.line { position: absolute; left: var(--x); width: var(--w); top: 64%; height: 60px; translate: 0 -50%; overflow: visible; }
 	.line path { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; }
 	.track path { stroke: var(--hairline); }
 	/* Revealed with a clip, not a dash offset: dashes on a stretched, non-scaling stroke break up in Chrome. */
 	.lit { clip-path: inset(-50% calc((1 - var(--t)) * 100%) -50% 0); filter: drop-shadow(0 0 4px var(--red)); }
 	.lit path { stroke: var(--red); }
-	.station { position: absolute; top: calc(50% + 44px); left: calc(var(--x) + var(--at) * var(--w)); translate: -50% 0; color: var(--ink-soft);
+	.station { position: absolute; top: calc(64% + 44px); left: calc(var(--x) + var(--at) * var(--w)); translate: -50% 0; color: var(--ink-soft);
 		opacity: clamp(0.3, calc((var(--t) - var(--at) + 0.08) * 12), 1); }
-	.traveller { position: absolute; top: calc(50% - 24px); left: calc(var(--x) + var(--t) * var(--w)); translate: -50% -100%; width: min(22%, 110px); aspect-ratio: 1; }
-	.traveller img { width: 100%; height: 100%; object-fit: cover; border: 1px solid var(--hairline); box-shadow: 0 0 24px color-mix(in srgb, var(--red) 35%, transparent); }
+	.traveller { position: absolute; top: calc(64% - 24px); left: calc(var(--x) + var(--t) * var(--w)); translate: -50% -100%; width: min(22%, 110px); aspect-ratio: 1; }
+	.traveller .kinds { font-size: 12px; box-shadow: 0 0 24px color-mix(in srgb, var(--red) 35%, transparent); }
 	.lock { --k: clamp(0, calc((var(--t) - 0.65) * 5), 1); position: absolute; inset: -10%; border: 2px solid var(--red); opacity: var(--k); scale: calc(1.5 - var(--k) * 0.5); box-shadow: 0 0 18px var(--red); }
-	.tag { position: absolute; bottom: 100%; right: -2px; background: var(--red); color: #1a0d0d; padding: 1px 6px; font-size: 11px; white-space: nowrap; }
+	.tag { position: absolute; bottom: 100%; right: -2px; width: max-content; background: var(--red); color: #1a0d0d; padding: 1px 6px; font-size: 11px; white-space: nowrap; }
 
 	/* 3 · Report cards */
 	.cards { perspective: 1000px; }
@@ -118,8 +150,8 @@
 	@keyframes shake { 25% { translate: 3px 1px; } 75% { translate: -3px -1px; } }
 
 	/* 4 · Device */
-	.phone { position: relative; height: 78%; aspect-ratio: 9 / 18; border: 3px solid var(--ink); border-radius: 22px; overflow: hidden; box-shadow: 0 0 calc(var(--t) * 40px) color-mix(in srgb, var(--red) 40%, transparent); }
-	.phone img { width: 100%; height: 100%; object-fit: cover; }
+	.phone { position: relative; height: 78%; aspect-ratio: 9 / 18; border: 3px solid var(--ink); border-radius: 22px; overflow: hidden; box-shadow: 0 0 calc(var(--t) * 40px) color-mix(in srgb, var(--red) 40%, transparent);
+		display: flex; flex-direction: column; justify-content: flex-end; padding: 14px 10px; background: var(--paper); font-size: 16px; }
 	.shield { position: absolute; top: 8%; left: 50%; translate: -50% 0; width: 22%; fill: color-mix(in srgb, var(--red) 25%, transparent); stroke: var(--red); stroke-width: 1.5; animation: pulse 1.6s ease-in-out infinite; }
 	@keyframes pulse { 50% { filter: drop-shadow(0 0 8px var(--red)); scale: 1.08; } }
 	.bit { --k: clamp(0, calc(var(--t) * 1.5 - var(--d)), 1); position: absolute; top: 50%; left: calc(50% + var(--x) * 1.6%); width: 6px; height: 6px; background: var(--red); box-shadow: 0 0 8px var(--red);
