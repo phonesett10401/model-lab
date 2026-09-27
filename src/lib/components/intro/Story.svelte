@@ -25,7 +25,7 @@
 		{#each storySteps as s, i (s.title)}
 			<li bind:this={items[i]} data-i={i} class:on={active === i} aria-current={active === i ? 'step' : undefined}>
 				<h2 class="serif">{s.title}</h2>
-				<p class="soft">{s.body}</p>
+				<p>{s.body}</p>
 			</li>
 		{/each}
 	</ol>
@@ -35,8 +35,11 @@
 	.story { max-width: var(--max); margin: 0 auto; padding: 0 var(--gutter); display: grid; gap: var(--space-4); }
 	.pin { position: sticky; top: 0; height: 42vh; z-index: 1; background: var(--paper); }
 	.steps { list-style: none; margin: 0; padding: 0; }
-	li { min-height: 70vh; display: grid; align-content: center; gap: var(--space-2); opacity: 0.35; transition: opacity 0.3s; }
-	li.on { opacity: 1; }
+	li { min-height: 70vh; display: grid; align-content: center; gap: var(--space-2); }
+	/* Dim inactive steps with the contrast-tested faint ink, not opacity, so they stay readable. */
+	li :is(h2, p) { color: var(--ink-faint); transition: color 0.3s; }
+	li.on h2 { color: var(--ink); }
+	li.on p { color: var(--ink-soft); }
 	h2 { font-size: var(--step-3); }
 	p { max-width: 36ch; font-size: var(--step-1); }
 	@media (min-width: 900px) {

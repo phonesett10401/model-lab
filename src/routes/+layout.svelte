@@ -31,7 +31,10 @@
 	<a class="skip" href="#main">Skip to content</a>
 	<header class="topbar">
 		<a class="wordmark mono" href="/">AI MODEL LAB</a>
-		<ThemeToggle />
+		<nav class="tools">
+			<a class="intro-link mono" href="/intro"><span aria-hidden="true">▶</span> <span class="wide">Watch the </span>intro</a>
+			<ThemeToggle />
+		</nav>
 	</header>
 	<main id="main">{@render children()}</main>
 	<Footer />
@@ -42,5 +45,8 @@
 		max-width: var(--max); margin: 0 auto; padding: var(--space-2) var(--gutter);
 		display: flex; justify-content: space-between; align-items: center; gap: var(--space-2);
 	}
+	.tools { display: flex; align-items: center; gap: var(--space-2); }
+	.intro-link { min-height: 44px; display: inline-flex; align-items: center; gap: 0.3em; color: var(--ink-soft); }
+	@media (max-width: 479px) { .wide { display: none; } }
 	.wordmark { text-decoration: none; letter-spacing: 0.14em; color: var(--red); }
 </style>

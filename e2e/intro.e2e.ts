@@ -81,3 +81,12 @@ test('the ending leads into the lab', async ({ page }) => {
 	await page.getByRole('link', { name: 'Open the lab →' }).click();
 	await expect(page).toHaveURL(/\/$/);
 });
+
+test('the lab links to the intro and never downloads the video', async ({ page }) => {
+	const videos: string[] = [];
+	page.on('request', (r) => { if (r.url().includes('/intro/')) videos.push(r.url()); });
+	await page.goto('/');
+	await page.waitForLoadState('networkidle');
+	await expect(page.getByRole('link', { name: /Watch the intro/ })).toHaveAttribute('href', '/intro');
+	expect(videos).toEqual([]);
+});
