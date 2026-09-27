@@ -24,6 +24,11 @@
 <svelte:head>
 	<title>Specimen Archive · small models, honest report cards</title>
 	<meta name="description" content="Small AI models and audits, each with a report card that shows how it fails." />
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content="Specimen Archive" />
+	<meta property="og:description" content="Small AI models and audits, each with a report card that shows how it fails." />
+	<meta property="og:image" content="{page.url.origin}/og/home.png" />
+	<meta name="twitter:card" content="summary_large_image" />
 </svelte:head>
 
 <Hero />
