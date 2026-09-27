@@ -1,6 +1,7 @@
 <script lang="ts">
 	import EntryHeader from './EntryHeader.svelte';
 	import ReportCard from './ReportCard.svelte';
+	import TranscriptViewer from './TranscriptViewer.svelte';
 	import type { AuditEntry } from '$lib/types';
 
 	let { entry }: { entry: AuditEntry } = $props();
@@ -10,6 +11,7 @@
 	<EntryHeader {entry} level={2} link />
 	{#if entry.status !== 'published'}<p class="mono faint">Write-up in progress. Results appear once measured.</p>{/if}
 	<p class="summary">{entry.summary}</p>
+	{#if entry.transcripts.length}<TranscriptViewer transcripts={entry.transcripts} />{/if}
 	<ReportCard report={entry.report} show={['data', 'metrics', 'fails']} idPrefix="bench-{entry.slug}" />
 </article>
 

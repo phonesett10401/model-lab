@@ -2,6 +2,7 @@
 	import EntryHeader from '$lib/components/EntryHeader.svelte';
 	import EntryMeta from '$lib/components/EntryMeta.svelte';
 	import ReportCard from '$lib/components/ReportCard.svelte';
+	import TranscriptViewer from '$lib/components/TranscriptViewer.svelte';
 
 	let { data } = $props();
 </script>
@@ -11,6 +12,8 @@
 	<a class="back mono" href="/?entry={data.entry.slug}#archive">← Archive</a>
 	<EntryHeader entry={data.entry} level={1} />
 	<p class="summary">{data.entry.summary}</p>
+	{#if data.entry.status !== 'published'}<p class="mono faint">Write-up in progress. Results appear once measured.</p>{/if}
+	{#if data.entry.transcripts.length}<TranscriptViewer transcripts={data.entry.transcripts} />{/if}
 	<ReportCard report={data.entry.report} show={['data', 'metrics', 'fails']} idPrefix="page" />
 </article>
 
