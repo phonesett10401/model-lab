@@ -49,3 +49,10 @@ test('audits are grouped separately', async ({ page }) => {
 	await expect(page.getByRole('heading', { name: 'Audits' })).toBeVisible();
 	await expect(page.locator('a.plate', { hasText: 'Gender classifier audit' })).toContainText('AUDIT');
 });
+
+test('on a short laptop screen every plate in the index stays reachable without an inner scroll', async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 700 });
+	await page.goto('/');
+	const clipped = await page.locator('#archive').evaluate((el) => el.scrollHeight - el.clientHeight);
+	expect(clipped).toBeLessThanOrEqual(0);
+});

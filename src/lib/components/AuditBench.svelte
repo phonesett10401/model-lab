@@ -12,7 +12,7 @@
 	{#if entry.status !== 'published'}<p class="mono faint">Write-up in progress. Results appear once measured.</p>{/if}
 	<p class="summary">{entry.summary}</p>
 	{#if entry.transcripts.length}<TranscriptViewer transcripts={entry.transcripts} />{/if}
-	<ReportCard report={entry.report} show={['data', 'metrics', 'fails']} idPrefix="bench-{entry.slug}" />
+	<ReportCard report={entry.report} show={entry.transcripts.length && !entry.report.failures.length ? ['data', 'metrics'] : ['data', 'metrics', 'fails']} idPrefix="bench-{entry.slug}" />
 </article>
 
 <style>

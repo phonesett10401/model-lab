@@ -14,7 +14,7 @@
 	<p class="summary">{data.entry.summary}</p>
 	{#if data.entry.status !== 'published'}<p class="mono faint">Write-up in progress. Results appear once measured.</p>{/if}
 	{#if data.entry.transcripts.length}<TranscriptViewer transcripts={data.entry.transcripts} />{/if}
-	<ReportCard report={data.entry.report} show={['data', 'metrics', 'fails']} idPrefix="page" />
+	<ReportCard report={data.entry.report} show={data.entry.transcripts.length && !data.entry.report.failures.length ? ['data', 'metrics'] : ['data', 'metrics', 'fails']} idPrefix="page" />
 </article>
 
 <style>

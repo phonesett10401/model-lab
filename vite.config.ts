@@ -16,6 +16,8 @@ export default defineConfig({
 				runes: ({ filename }) => (filename.split(/[\\/]/).includes('node_modules') ? undefined : true)
 			},
 			adapter: adapter({ fallback: '404.html' }),
+			// Component CSS is tiny; inlining it saves render-blocking round trips on slow phones.
+			inlineStyleThreshold: 20_000,
 			prerender: {
 				origin,
 				// Link-preview images are generated separately (pnpm og); src/lib/og.test.ts guards they exist.

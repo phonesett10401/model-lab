@@ -59,7 +59,7 @@
 		li { scroll-snap-align: start; display: grid; }
 	}
 	@media (min-width: 1024px) {
-		.index { position: sticky; top: var(--space-2); max-height: calc(100dvh - 2 * var(--space-2)); overflow: auto; }
+		.index { position: sticky; top: var(--space-2); } /* no height cap: a clipped inner scroll hid plates */
 		.hint { display: block; }
 	}
 </style>

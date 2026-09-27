@@ -26,3 +26,8 @@ test('the home bench shows the viewer for audits', async ({ page }) => {
 	await page.goto('/?entry=draft-document-assistant-audit');
 	await expect(page.getByRole('region', { name: 'Attack transcripts' })).toBeVisible();
 });
+
+test('a published audit with transcripts does not claim its failures are unmeasured', async ({ page }) => {
+	await page.goto('/audits/draft-document-assistant-audit');
+	await expect(page.getByRole('heading', { name: 'HOW IT FAILS' })).toBeHidden();
+});

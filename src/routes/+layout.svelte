@@ -3,6 +3,10 @@
 	import '@fontsource-variable/jetbrains-mono';
 	import '@fontsource/instrument-serif/400.css';
 	import '@fontsource/instrument-serif/400-italic.css';
+	// Preload the hero's fonts so the headline doesn't reflow (layout shift) when they arrive.
+	import serif from '@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff2?url';
+	import serifItalic from '@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2?url';
+	import sans from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url';
 	import '$lib/styles/tokens.css';
 	import '$lib/styles/base.css';
 	import { page } from '$app/state';
@@ -16,7 +20,10 @@
 	const bare = $derived(page.route.id?.startsWith('/og-card') ?? false);
 </script>
 
-<svelte:head><link rel="icon" href="/favicon.svg" /></svelte:head>
+<svelte:head>
+	<link rel="icon" href="/favicon.svg" />
+	{#each [serif, serifItalic, sans] as href (href)}<link rel="preload" as="font" type="font/woff2" crossorigin="anonymous" {href} />{/each}
+</svelte:head>
 
 {#if bare}
 	{@render children()}
