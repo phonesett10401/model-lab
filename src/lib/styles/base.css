@@ -1,0 +1,81 @@
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+	margin: 0;
+	background: var(--paper);
+	color: var(--ink);
+	font-family: var(--font-sans);
+	font-size: var(--step-0);
+	line-height: 1.55;
+	overflow-wrap: anywhere;
+}
+h1, h2, h3, h4 { margin: 0; line-height: 1.05; font-weight: 500; text-wrap: balance; }
+p { margin: 0; text-wrap: pretty; }
+a { color: inherit; }
+img, svg, video { max-width: 100%; display: block; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+
+.serif { font-family: var(--font-serif); font-weight: 400; }
+.mono { font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.02em; }
+.soft { color: var(--ink-soft); }
+.faint { color: var(--ink-faint); }
+
+.btn {
+	display: inline-flex; align-items: center; justify-content: center; gap: 0.4em;
+	min-height: 44px; padding: 0 var(--space-2);
+	border: 1px solid var(--ink); border-radius: var(--radius);
+	background: var(--ink); color: var(--on-ink);
+	font-family: var(--font-mono); font-size: var(--step--1);
+	cursor: pointer; text-decoration: none;
+}
+.btn.ghost { background: transparent; color: var(--ink); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.visually-hidden {
+	position: absolute; width: 1px; height: 1px; overflow: hidden;
+	clip-path: inset(50%); white-space: nowrap;
+}
+.skip { position: absolute; left: -9999px; }
+.skip:focus { left: var(--gutter); top: 0.5rem; z-index: 10; background: var(--plate); padding: 0.5rem 1rem; }
+
+/* Examining motifs. Parents need position:relative; overflow:hidden. */
+.scan {
+	position: absolute; inset: 0; pointer-events: none;
+	border-bottom: 2px solid var(--red);
+	box-shadow: 0 8px 14px -8px var(--red);
+	animation: scan 1.4s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+@keyframes scan { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+
+.sweep {
+	position: absolute; inset: 0; pointer-events: none;
+	background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--red) 22%, transparent), transparent);
+	animation: sweep 1.2s linear infinite;
+}
+@keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+.playhead {
+	position: absolute; inset: 0; pointer-events: none;
+	border-right: 2px solid var(--red);
+	animation: playhead 1.6s linear infinite;
+}
+@keyframes playhead { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+
+@keyframes ink {
+	0% { opacity: 0; transform: rotate(-4deg) scale(1.5); }
+	70% { opacity: 1; transform: rotate(-4deg) scale(0.96); }
+	100% { opacity: 1; transform: rotate(-4deg) scale(1); }
+}
+
+::view-transition-group(entry-title) { animation-duration: 0.45s; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.25s; }
+
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}

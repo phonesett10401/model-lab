@@ -1,0 +1,42 @@
+:root {
+	color-scheme: light dark;
+
+	/* light value, dark value */
+	--paper: light-dark(#f5f3f2, #141213);
+	--paper-2: light-dark(#faf8f7, #181617);
+	--plate: light-dark(#ffffff, #1d1a1b);
+	--ink: light-dark(#161212, #f3eeee);
+	--ink-soft: light-dark(#5c5454, #a9a1a1);
+	--ink-faint: light-dark(#6e6565, #938a8a);
+	--red: light-dark(#b3261e, #ff4f4f);
+	--red-wash: light-dark(#f6d3cf, #3a1d1d);
+	--hairline: light-dark(#ddd6d4, #2e292a);
+	--amber: light-dark(#8a5a00, #f2b33d);
+	--green: light-dark(#2f6f4f, #6fcf97);
+	--on-ink: light-dark(#f5f3f2, #141213);
+
+	--font-serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+	--font-sans: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+	--font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+	/* Fluid scale: 320px → 1440px */
+	--step--1: clamp(0.78rem, 0.75rem + 0.14vw, 0.875rem);
+	--step-0: clamp(1rem, 0.96rem + 0.18vw, 1.125rem);
+	--step-1: clamp(1.2rem, 1.1rem + 0.45vw, 1.5rem);
+	--step-2: clamp(1.5rem, 1.3rem + 0.9vw, 2.1rem);
+	--step-3: clamp(1.9rem, 1.5rem + 1.8vw, 3.1rem);
+	--step-4: clamp(2.5rem, 1.7rem + 3.6vw, 5rem);
+
+	--space-1: clamp(0.35rem, 0.3rem + 0.2vw, 0.5rem);
+	--space-2: clamp(0.7rem, 0.6rem + 0.4vw, 1rem);
+	--space-3: clamp(1rem, 0.85rem + 0.7vw, 1.6rem);
+	--space-4: clamp(1.5rem, 1.2rem + 1.4vw, 2.6rem);
+	--space-5: clamp(2.2rem, 1.6rem + 2.6vw, 4.2rem);
+	--space-6: clamp(3rem, 2rem + 4.4vw, 6.5rem);
+	--gutter: clamp(1rem, 0.6rem + 2vw, 2.5rem);
+	--radius: 4px;
+	--max: 1680px;
+}
+
+:root[data-theme='light'] { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
