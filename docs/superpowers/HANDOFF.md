@@ -52,8 +52,8 @@ The design the owner saw (confirm briefly, then build: "brainstorm briefly, then
 - **Browser scroll restoration:** e2e tests that goto the same URL must `scrollTo(0,0)` first.
 - **The contrast test** (`src/lib/contrast.test.ts`) parses `light-dark()` pairs in `tokens.css`, so keep that format.
 
-## Scroll story — progress (branch `feat/intro-scroll-story`, WIP commit, not merged)
+## Scroll story — built (branch `feat/intro-scroll-story`, awaiting owner's review of stills, not merged)
 
-- Done: `filled()` / `enter()` in `src/lib/intro-story.ts` (unit tested); `Story.svelte` has the spine (markers 01–04, fill), a rAF scroll listener, per-step build values `t[]`, and the scene switches as a step starts entering; `StoryVisual.svelte` has the stage (glow, flare, vignette fading into the page, grain) plus the 4 scenes (swarm, pipeline, card fan + stamp glitch, phone + shield + particles). Reduced motion → every `t` = 1, animations off.
-- New e2e tests in `e2e/intro.e2e.ts` (spine, scene build, reduced motion, no sideways scroll). **Not yet run green after the last changes.**
-- Left: (1) the Test lock-on box in scene 2 looked off-centre from the photo; check `.lock` / `.traveller` in StoryVisual. (2) Run `pnpm test:unit --run`, `pnpm test:e2e` (incl. axe on /intro), `pnpm check`. (3) Phone-width screenshots review (the contact-sheet approach: Playwright screenshots of each step at top 62% and centred). (4) Send stills to the owner, then the final review and merge.
+- `filled()` / `enter()` in `src/lib/intro-story.ts` drive the spine fill and each scene's build (`--t`, 0 → 1: starts when a step's top passes 80% down the screen, finished when it's being read). The picture switches as the next step starts building.
+- Tests: unit (`intro-story.test.ts`), e2e in `e2e/intro.e2e.ts` (spine, build, reduced motion, no sideways scroll, scenes fit at 360px). Full suite green: 30 unit, 179+ e2e.
+- The ending line is now "New models are added as they're trained." (owner's wording).
