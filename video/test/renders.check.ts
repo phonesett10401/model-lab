@@ -16,9 +16,9 @@ const files = [
 ];
 
 for (const f of files)
-	test(`${f.file}: 20 s, ${f.w}×${f.h}, with sound`, () => {
+	test(`${f.file}: 21 s, ${f.w}×${f.h}, with sound`, () => {
 		const p = probe(f.file);
-		assert.ok(Math.abs(Number(p.format.duration) - 20) <= 0.1, `duration ${p.format.duration}`);
+		assert.ok(Math.abs(Number(p.format.duration) - 21) <= 0.1, `duration ${p.format.duration}`);
 		const video = p.streams.find((s) => s.codec_type === 'video')!;
 		assert.deepEqual([video.width, video.height], [f.w, f.h]);
 		assert.ok(p.streams.some((s) => s.codec_type === 'audio'), 'no audio stream');

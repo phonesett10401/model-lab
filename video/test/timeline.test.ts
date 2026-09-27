@@ -2,14 +2,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { beatPulse, beats, beat, cues, DURATION, FPS, MUSIC, musicVolume, STAMP_AT } from '../src/timeline.ts';
 
-test('beats are contiguous and fill exactly 20 seconds, in story order', () => {
+test('beats are contiguous and fill exactly 21 seconds, in story order', () => {
 	let at = 0;
 	for (const b of beats) {
 		assert.equal(b.from, at, `${b.id} starts at ${b.from}, expected ${at}`);
 		at += b.duration;
 	}
 	assert.equal(at, DURATION);
-	assert.equal(DURATION / FPS, 20);
+	assert.equal(DURATION / FPS, 21);
 	assert.deepEqual(beats.map((b) => b.id), ['title', 'fly', 'focus', 'expand', 'upload', 'result', 'wrong', 'report', 'end']);
 });
 

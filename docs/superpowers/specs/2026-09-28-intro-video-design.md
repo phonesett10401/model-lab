@@ -136,3 +136,4 @@ Supersedes §3–§5 where they conflict.
   - end lockup.
 - **Throughout:** a corner brand mark, beat-synced glow, vignette and film grain.
 - **Size limits** scale with length: site copies wide ≤ 4 MB and tall ≤ 2.7 MB, re-encoded from the full-quality renders (wide CRF 29, tall CRF 31). The social copies stay full quality.
+- **Length update:** 21 s (630 frames); the end card holds 2.5 s with a slow push-in and fades to black with the music. Size limits stay at 4 MB / 2.7 MB.

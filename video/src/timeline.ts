@@ -1,5 +1,5 @@
 export const FPS = 30;
-export const DURATION = 600;
+export const DURATION = 630;
 
 /**
  * The music bed: "Tech Circuit Data Stream" (Alex Morgan, Pixabay licence).
@@ -30,7 +30,7 @@ export const beats: { id: BeatId; from: number; duration: number }[] = [
 	{ id: 'result', from: 349, duration: 69 },
 	{ id: 'wrong', from: 418, duration: 86 },
 	{ id: 'report', from: 504, duration: 51 },
-	{ id: 'end', from: 555, duration: 45 }
+	{ id: 'end', from: 555, duration: 75 }
 ];
 
 export const beat = (id: BeatId) => beats.find((b) => b.id === id)!;
@@ -76,11 +76,11 @@ export const cues: Cue[] = [
 	...COLUMNS_AT.map((f) => ({ sfx: 'paper' as const, at: report + f, volume: 0.4 }))
 ];
 
-/** Music level: quick fade in, a short duck so the thud cuts through, fade out over the last 24 frames. */
+/** Music level: quick fade in, a short duck so the thud cuts through, fade out over the last 30 frames. */
 export function musicVolume(frame: number): number {
 	const base = 0.68; // the track is mastered loud; keeps the mix's peak ~2 dB below full scale
 	if (frame < 12) return base * (frame / 12);
 	if (frame >= MUSIC.dropFrame && frame < MUSIC.dropFrame + 12) return 0.45;
-	if (frame >= DURATION - 24) return base * Math.max(0, (DURATION - frame) / 24);
+	if (frame >= DURATION - 30) return base * Math.max(0, (DURATION - frame) / 30);
 	return base;
 }
