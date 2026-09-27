@@ -7,6 +7,7 @@
 	import EntryIndex from '$lib/components/EntryIndex.svelte';
 	import EntryBench from '$lib/components/EntryBench.svelte';
 	import Sheet from '$lib/components/Sheet.svelte';
+	import Hero from '$lib/components/Hero.svelte';
 
 	const phone = new MediaQuery('max-width: 639px', false);
 
@@ -25,6 +26,8 @@
 	<meta name="description" content="Small AI models and audits, each with a report card that shows how it fails." />
 </svelte:head>
 
+<Hero />
+
 <section class="lab" aria-label="Archive">
 	<EntryIndex entries={catalogue} selected={phone.current ? (selected?.slug ?? null) : shown.slug} />
 	{#if !phone.current}
@@ -39,7 +42,7 @@
 {/if}
 
 <style>
-	.lab { max-width: var(--max); margin: 0 auto; padding: var(--space-3) var(--gutter); display: grid; gap: var(--space-4); }
+	.lab { max-width: var(--max); margin: 0 auto; padding: var(--space-3) var(--gutter); display: grid; gap: var(--space-4); scroll-margin-top: var(--space-2); }
 	.bench-wrap { min-width: 0; }
 	@media (min-width: 1024px) {
 		.lab { grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); align-items: start; }
