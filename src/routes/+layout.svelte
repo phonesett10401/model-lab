@@ -30,7 +30,7 @@
 {:else}
 	<a class="skip" href="#main">Skip to content</a>
 	<header class="topbar">
-		<a class="wordmark mono" href="/">SPECIMEN ARCHIVE</a>
+		<a class="wordmark mono" href="/">AI MODEL LAB</a>
 		<ThemeToggle />
 	</header>
 	<main id="main">{@render children()}</main>

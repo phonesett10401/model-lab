@@ -1,8 +1,8 @@
-# Specimen Archive
+# AI Model Lab
 
 **Small AI models, and where they're wrong.**
 
-A library of small, single-purpose models I train, and audits of models I attack. Every entry comes with an honest report card: what it was trained or tested on, how accurate it is per category, and the specific cases where it fails.
+A library of small, single-purpose AI models I train. Every model comes with an honest report card: what it was trained on, how accurate it is per category, and the specific cases where it fails.
 
 Models run **in the visitor's browser**. Nothing you upload leaves your device, and the site needs no server.
 
@@ -14,9 +14,9 @@ The framework is built. The real models are not trained yet.
 |---|---|---|---|
 | 01 | Creature categorizer | image model | planned |
 | 02 | Fresh or spoiled | image model | planned |
-| 03 | Gender classifier audit | audit | planned |
+| 03 | Gender classifier (bias study: accuracy reported per group) | image model | planned |
 
-Draft entries (text, audio, table and a sample audit) exercise every part of the interface. They show in local dev and preview deploys, **never in production**.
+Draft entries (text, audio, table and a sample audit) exercise every part of the interface. They show in local dev and preview deploys and are compiled out of production builds. Audits are also hidden on production for now.
 
 ## Honesty rules
 
@@ -26,7 +26,6 @@ These rules are enforced by tests, not by convention (`src/lib/validate.ts`):
 - **A model can only be marked live if its report card is complete:** measured metrics, at least one real failure, and a sample it gets wrong.
 - **"Unsure" is an answer.** Below a set confidence the demo says it isn't sure instead of picking a winner.
 - **Anything illustrative is labelled** SAMPLE or DRAFT.
-- **Audits are published** as read-only attack transcripts, with attack success rate measured before and after defences. There is no live chat.
 
 ## Run it
 

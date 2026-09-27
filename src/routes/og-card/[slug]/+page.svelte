@@ -8,14 +8,14 @@
 <svelte:head><meta name="robots" content="noindex" /></svelte:head>
 
 <div class="card" data-theme="light">
-	<p class="mono kicker">SPECIMEN ARCHIVE · VOL. 01</p>
+	<p class="mono kicker">AI MODEL LAB · VOL. 01</p>
 	{#if data.entry}
 		<p class="mono meta">No. {pad(data.entry.no)} · {kindLabel(data.entry)} <Stamp status={data.entry.status} /></p>
 		<h1 class="serif">{data.entry.name}</h1>
 		<p class="purpose">{data.entry.purpose}</p>
 	{:else}
 		<h1 class="serif">See what it sees. <em>And where it’s wrong.</em></h1>
-		<p class="purpose">Small AI models and audits, each with a report card that shows how it fails.</p>
+		<p class="purpose">Small AI models I train, each with a report card that shows how it fails.</p>
 	{/if}
 </div>
 

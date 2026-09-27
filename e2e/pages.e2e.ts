@@ -6,7 +6,7 @@ test('a planned model page is honest about having no numbers', async ({ page }) 
 	await expect(page.getByText('PLANNED', { exact: true })).toBeVisible();
 	await expect(page.getByText('not yet measured').first()).toBeVisible();
 	await expect(page.locator('main')).not.toContainText('%');
-	await expect(page).toHaveTitle('Creature categorizer · Specimen Archive');
+	await expect(page).toHaveTitle('Creature categorizer · AI Model Lab');
 	await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /\/og\/creature-categorizer\.png$/);
 });
 

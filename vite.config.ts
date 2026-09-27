@@ -21,6 +21,11 @@ export default defineConfig({
 			prerender: {
 				origin,
 				// Link-preview images are generated separately (pnpm og); src/lib/og.test.ts guards they exist.
+				// Audits are hidden on production for now, so /audits/[slug] has no pages there. Nothing else may go unseen.
+				handleUnseenRoutes: ({ routes, message }) => {
+					if (routes.every((r) => r === '/audits/[slug]')) return;
+					throw new Error(message);
+				},
 				handleHttpError: ({ path, message }) => {
 					if (path.startsWith('/og/')) return;
 					throw new Error(message);

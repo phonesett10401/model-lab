@@ -57,4 +57,9 @@ describe('drafts', () => {
 		expect(visible(allEntries, false).some((e) => e.draft)).toBe(false);
 		expect(visible(allEntries, true).length).toBe(allEntries.length);
 	});
+
+	it('audits are hidden on production for now', () => {
+		expect(visible(allEntries, false).some((e) => e.kind === 'audit')).toBe(false);
+		expect(visible(allEntries, false).find((e) => e.slug === 'gender-classifier')?.kind).toBe('model');
+	});
 });

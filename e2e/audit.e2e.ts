@@ -15,12 +15,6 @@ test('step through attack transcripts', async ({ page }) => {
 	await expect(viewer.getByRole('button', { name: 'Next attack' })).toBeDisabled();
 });
 
-test('a planned audit has no transcripts and says so', async ({ page }) => {
-	await page.goto('/audits/gender-classifier-audit');
-	await expect(page.getByRole('region', { name: 'Attack transcripts' })).toHaveCount(0);
-	await expect(page.getByText('Write-up in progress')).toBeVisible();
-});
-
 test('the home bench shows the viewer for audits', async ({ page }) => {
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await page.goto('/?entry=draft-document-assistant-audit');

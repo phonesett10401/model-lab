@@ -22,9 +22,9 @@
 
 <header class="hero">
 	<div class="copy">
-		<p class="kicker mono">SPECIMEN ARCHIVE · VOL. 01</p>
+		<p class="kicker mono">VOL. 01 · SMALL MODELS, HONEST REPORT CARDS</p>
 		<h1 class="serif">See what it sees. <em>And where it’s wrong.</em></h1>
-		<p class="lede soft">Small AI models I train, and audits of models I attack. Each has a report card that shows how it fails.</p>
+		<p class="lede soft">Small AI models I train. Each one has a report card that shows how it fails.</p>
 		<a class="cta btn" href="#archive">Open the archive ↓</a>
 	</div>
 

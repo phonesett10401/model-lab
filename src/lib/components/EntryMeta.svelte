@@ -3,7 +3,7 @@
 	import type { Entry } from '$lib/types';
 
 	let { entry }: { entry: Entry } = $props();
-	const title = $derived(`${entry.name} · Specimen Archive`);
+	const title = $derived(`${entry.name} · AI Model Lab`);
 	const image = $derived(`${page.url.origin}/og/${entry.slug}.png`);
 </script>
 

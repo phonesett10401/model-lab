@@ -47,7 +47,8 @@ test('back button returns to the previous selection', async ({ page }) => {
 test('audits are grouped separately', async ({ page }) => {
 	await page.goto('/');
 	await expect(page.getByRole('heading', { name: 'Audits' })).toBeVisible();
-	await expect(page.locator('a.plate', { hasText: 'Gender classifier audit' })).toContainText('AUDIT');
+	await expect(page.locator('a.plate', { hasText: 'Document assistant audit' })).toContainText('AUDIT');
+	await expect(page.locator('a.plate', { hasText: 'Gender classifier' })).toContainText('IMAGE'); // a model now
 });
 
 test('on a short laptop screen every plate in the index stays reachable without an inner scroll', async ({ page }) => {

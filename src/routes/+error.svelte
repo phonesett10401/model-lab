@@ -5,7 +5,7 @@
 	const notFound = $derived(page.status === 404);
 </script>
 
-<svelte:head><title>{notFound ? 'Not found' : 'Error'} · Specimen Archive</title></svelte:head>
+<svelte:head><title>{notFound ? 'Not found' : 'Error'} · AI Model Lab</title></svelte:head>
 
 <article class="err">
 	<p class="mono faint">No. {page.status} <Stamp status="missing" /></p>

@@ -1,5 +1,5 @@
 <footer class="footer">
-	<p class="mono">SPECIMEN ARCHIVE</p>
+	<p class="mono">AI MODEL LAB</p>
 	<p class="soft">
 		Models run in your browser: nothing you add leaves your device. Numbers appear only once they’ve been measured,
 		and every report card shows how the model fails.
