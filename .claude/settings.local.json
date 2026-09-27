@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "PowerShell($m = Get-ChildItem \"$env:USERPROFILE\\\\.claude\\\\plugins\\\\marketplaces\\\\ponytail\" -Recurse -Filter marketplace.json -ErrorAction SilentlyContinue | Select-Object -First 1; Get-Content $m.FullName -Raw)"
-    ]
-  }
-}
