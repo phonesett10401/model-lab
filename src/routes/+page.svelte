@@ -1,13 +1,23 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { MediaQuery } from 'svelte/reactivity';
 	import { catalogue, findEntry } from '$lib/entries';
 	import EntryIndex from '$lib/components/EntryIndex.svelte';
 	import EntryBench from '$lib/components/EntryBench.svelte';
+	import Sheet from '$lib/components/Sheet.svelte';
+
+	const phone = new MediaQuery('max-width: 639px', false);
 
 	// Query params can't be read while prerendering, so selection is client-side.
 	const requested = $derived(browser ? page.url.searchParams.get('entry') : null);
-	const shown = $derived((requested && findEntry(requested)) || catalogue[0]);
+	const selected = $derived((requested && findEntry(requested)) || null);
+	const shown = $derived(selected ?? catalogue[0]);
+
+	function close() {
+		goto('/', { replaceState: true, noScroll: true, keepFocus: true });
+	}
 </script>
 
 <svelte:head>
@@ -16,9 +26,17 @@
 </svelte:head>
 
 <section class="lab" aria-label="Archive">
-	<EntryIndex entries={catalogue} selected={shown.slug} />
-	<div class="bench-wrap"><EntryBench entry={shown} /></div>
+	<EntryIndex entries={catalogue} selected={phone.current ? (selected?.slug ?? null) : shown.slug} />
+	{#if !phone.current}
+		<div class="bench-wrap"><EntryBench entry={shown} /></div>
+	{/if}
 </section>
+
+{#if phone.current}
+	<Sheet open={!!selected} label={selected?.name ?? 'Entry'} onclose={close}>
+		{#if selected}<EntryBench entry={selected} />{/if}
+	</Sheet>
+{/if}
 
 <style>
 	.lab { max-width: var(--max); margin: 0 auto; padding: var(--space-3) var(--gutter); display: grid; gap: var(--space-4); }
