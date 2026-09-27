@@ -1,0 +1,26 @@
+{
+	"name": "ai-model-lab-video",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"sounds": "node scripts/make-sounds.mjs",
+		"studio": "remotion studio src/index.ts",
+		"stills": "node scripts/stills.mjs",
+		"render": "node scripts/render.mjs",
+		"test": "node --test \"test/*.test.ts\"",
+		"check": "node --test test/renders.check.ts",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@remotion/cli": "4.0.529",
+		"@remotion/fonts": "4.0.529",
+		"react": "^19.3.0",
+		"react-dom": "^19.3.0",
+		"remotion": "4.0.529"
+	},
+	"devDependencies": {
+		"@types/node": "^26.6.3",
+		"@types/react": "^19.3.0",
+		"typescript": "^7.0.2"
+	}
+}

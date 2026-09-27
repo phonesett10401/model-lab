@@ -27,3 +27,4 @@ test-results
 # Brainstorm companion + plan workspace
 .superpowers/
 .claude/settings.local.json
+video/out/
