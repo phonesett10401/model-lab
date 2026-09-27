@@ -1,42 +1,67 @@
-# sv
+# Specimen Archive
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+**Small AI models, and where they're wrong.**
 
-## Creating a project
+A library of small, single-purpose models I train, and audits of models I attack. Every entry comes with an honest report card: what it was trained or tested on, how accurate it is per category, and the specific cases where it fails.
 
-If you're seeing this, you've probably already done this step. Congrats!
+Models run **in the visitor's browser**. Nothing you upload leaves your device, and the site needs no server.
 
-```sh
-# create a new project
-npx sv create my-app
+## Status
+
+The framework is built. The real models are not trained yet.
+
+| No. | Entry | Type | Status |
+|---|---|---|---|
+| 01 | Creature categorizer | image model | planned |
+| 02 | Fresh or spoiled | image model | planned |
+| 03 | Gender classifier audit | audit | planned |
+
+Draft entries (text, audio, table and a sample audit) exercise every part of the interface. They show in local dev and preview deploys, **never in production**.
+
+## Honesty rules
+
+These rules are enforced by tests, not by convention (`src/lib/validate.ts`):
+
+- **No invented numbers.** An unmeasured value renders as "—" or "not yet measured". A planned model cannot contain a metric.
+- **A model can only be marked live if its report card is complete:** measured metrics, at least one real failure, and a sample it gets wrong.
+- **"Unsure" is an answer.** Below a set confidence the demo says it isn't sure instead of picking a winner.
+- **Anything illustrative is labelled** SAMPLE or DRAFT.
+- **Audits are published** as read-only attack transcripts, with attack success rate measured before and after defences. There is no live chat.
+
+## Run it
+
+Built with Node 24 and pnpm.
+
+```bash
+pnpm install
+pnpm dev            # http://localhost:5173
 ```
 
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-pnpm dlx sv@0.17.1 create --template minimal --types ts --add vitest="usages:unit" playwright sveltekit-adapter="adapter:static" --no-download-check --install pnpm .
+```bash
+pnpm check          # type check
+pnpm test:unit --run
+pnpm exec playwright install chromium webkit   # once
+pnpm test:e2e       # builds, then runs the browser tests in Chromium + WebKit
+pnpm build          # static site in build/
 ```
 
-## Developing
+## How it works
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+- **SvelteKit + Svelte 5 + TypeScript**, prerendered to static files (`adapter-static`) and deployed to Vercel.
+- **One data file drives everything:** `src/lib/entries.ts`. Each entry declares its kind, status, input type (image, text, audio or table), labels and report card.
+- **Pages:** `/` shows the hero, the archive index and the workbench; the selected entry is kept in the URL (`/?entry=…`). Each entry also has its own page at `/models/<slug>` or `/audits/<slug>`, with a link-preview image.
+- **Runtime slot:** a live model provides one `classify(input)` function (`src/lib/runtime/`). The rest of the site doesn't change when a real model arrives.
+- **Layout adapts to every size:** a phone sheet, a tablet strip, a laptop split and a wide three-column bench, in a light paper theme and a dark evening theme.
 
-```sh
-npm run dev
+## Adding a real model
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+1. Train it and measure it on held-out test data.
+2. Fill in its entry in `src/lib/entries.ts`: real metrics, real failures, and samples, including one it gets wrong.
+3. Register its runtime in `src/lib/runtime/index.ts`.
+4. Set its status to `live`. The tests refuse the change if anything above is missing.
+5. Regenerate the link-preview images with `pnpm build`, then `pnpm preview --port 4173` and, in another terminal, `pnpm og`.
 
-## Building
+## Design docs
 
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+- Spec: [docs/superpowers/specs/2026-09-27-model-lab-framework-design.md](docs/superpowers/specs/2026-09-27-model-lab-framework-design.md)
+- Build plan: [docs/superpowers/plans/2026-09-27-model-lab-framework.md](docs/superpowers/plans/2026-09-27-model-lab-framework.md)
