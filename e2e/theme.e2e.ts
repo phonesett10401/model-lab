@@ -8,12 +8,12 @@ test('follows the device, then remembers the toggle', async ({ page }) => {
 	await page.goto('/');
 	expect(await bg(page)).toBe('rgb(20, 18, 19)');
 
-	await page.getByRole('button', { name: 'Switch to Paper theme' }).click();
+	await page.getByRole('button', { name: 'Switch to Light theme' }).click();
 	expect(await bg(page)).toBe('rgb(245, 243, 242)');
 
 	await page.reload();
 	expect(await bg(page)).toBe('rgb(245, 243, 242)');
-	await expect(page.getByRole('button', { name: 'Switch to Evening theme' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Switch to Dark theme' })).toBeVisible();
 });
 
 test('fonts are self-hosted', async ({ page }) => {
@@ -32,6 +32,6 @@ test('the toggle accessible name contains its visible word (voice control)', asy
 		c.querySelectorAll('.visually-hidden, [aria-hidden="true"]').forEach((n) => n.remove());
 		return (c.textContent ?? '').trim();
 	});
-	expect(visible).toMatch(/^(Paper|Evening)$/);
+	expect(visible).toMatch(/^(Light|Dark)$/);
 	await expect(btn).toHaveAccessibleName(new RegExp(visible));
 });

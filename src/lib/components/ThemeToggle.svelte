@@ -11,11 +11,11 @@
 	}
 </script>
 
-<!-- Accessible name ("Switch to Paper theme") contains the visible word, for voice control. -->
+<!-- Accessible name ("Switch to Light theme") contains the visible word, for voice control. -->
 <button class="toggle mono" onclick={toggle}>
 	<span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
 	<span class="visually-hidden">Switch to</span>
-	{theme === 'dark' ? 'Paper' : 'Evening'}
+	{theme === 'dark' ? 'Light' : 'Dark'}
 	<span class="visually-hidden">theme</span>
 </button>
 
