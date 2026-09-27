@@ -1,0 +1,5 @@
+.superpowers/
+node_modules/
+.svelte-kit/
+build/
+.vercel/
