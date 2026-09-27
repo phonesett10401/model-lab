@@ -150,7 +150,7 @@ test('reduced motion shows every scene finished', async ({ page }) => {
 	await page.emulateMedia({ reducedMotion: 'reduce' });
 	await page.goto('/intro');
 	await page.evaluate(() => scrollTo(0, 0));
-	for (const i of [0, 1, 2, 3]) expect(await cssVar(page, `.scene[data-i="${i}"]`, '--t')).toBe(1);
+	for (const i of [0, 1, 2, 3]) await expect.poll(() => cssVar(page, `.scene[data-i="${i}"]`, '--t')).toBe(1);
 });
 
 for (const [w, h] of [[390, 844], [1280, 800]])
@@ -163,3 +163,21 @@ for (const [w, h] of [[390, 844], [1280, 800]])
 			expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(w);
 		}
 	});
+
+test('on the narrowest phone, every scene stays inside its picture once built', async ({ page }) => {
+	await page.setViewportSize({ width: 360, height: 740 });
+	await page.goto('/intro');
+	for (const [i, sel] of [[1, '.lock, .tag'], [2, '.card, .stamp'], [3, '.phone']] as const) {
+		await page.getByRole('heading', { name: heads[i] }).evaluate((el) => el.scrollIntoView({ block: 'center' }));
+		await expect.poll(() => cssVar(page, `.scene[data-i="${i}"]`, '--t')).toBeGreaterThan(0.95);
+		await page.waitForTimeout(600); // let the scene's fade-in settle
+		const out = await page.evaluate((sel) => {
+			const v = document.querySelector('.visual')!.getBoundingClientRect();
+			return [...document.querySelectorAll(sel)].filter((e) => e.closest('.scene.on')).filter((e) => {
+				const b = e.getBoundingClientRect();
+				return b.left < v.left - 1 || b.right > v.right + 1 || b.top < v.top - 1 || b.bottom > v.bottom + 1;
+			}).map((e) => e.className);
+		}, sel);
+		expect(out, `scene ${i}`).toEqual([]);
+	}
+});

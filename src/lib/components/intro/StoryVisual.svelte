@@ -89,25 +89,25 @@
 	.hero .bar { height: 6px; background: var(--red); }
 
 	/* 2 · Pipeline */
-	.pipe { --w: 76%; }
-	.line { position: absolute; left: 12%; width: var(--w); top: 50%; height: 60px; translate: 0 -50%; overflow: visible; }
+	.pipe { --w: 64%; --x: 18%; }
+	.line { position: absolute; left: var(--x); width: var(--w); top: 50%; height: 60px; translate: 0 -50%; overflow: visible; }
 	.line path { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; }
 	.track path { stroke: var(--hairline); }
 	/* Revealed with a clip, not a dash offset: dashes on a stretched, non-scaling stroke break up in Chrome. */
 	.lit { clip-path: inset(-50% calc((1 - var(--t)) * 100%) -50% 0); filter: drop-shadow(0 0 4px var(--red)); }
 	.lit path { stroke: var(--red); }
-	.station { position: absolute; top: calc(50% + 44px); left: calc(12% + var(--at) * var(--w)); translate: -50% 0; color: var(--ink-soft);
+	.station { position: absolute; top: calc(50% + 44px); left: calc(var(--x) + var(--at) * var(--w)); translate: -50% 0; color: var(--ink-soft);
 		opacity: clamp(0.3, calc((var(--t) - var(--at) + 0.08) * 12), 1); }
-	.traveller { position: absolute; top: calc(50% - 24px); left: calc(12% + var(--t) * var(--w)); translate: -50% -100%; width: min(24%, 110px); aspect-ratio: 1; }
+	.traveller { position: absolute; top: calc(50% - 24px); left: calc(var(--x) + var(--t) * var(--w)); translate: -50% -100%; width: min(22%, 110px); aspect-ratio: 1; }
 	.traveller img { width: 100%; height: 100%; object-fit: cover; border: 1px solid var(--hairline); box-shadow: 0 0 24px color-mix(in srgb, var(--red) 35%, transparent); }
-	.lock { --k: clamp(0, calc((var(--t) - 0.82) * 6), 1); position: absolute; inset: -10%; border: 2px solid var(--red); opacity: var(--k); scale: calc(1.5 - var(--k) * 0.5); box-shadow: 0 0 18px var(--red); }
-	.tag { position: absolute; bottom: 100%; left: -2px; background: var(--red); color: #1a0d0d; padding: 1px 6px; font-size: 11px; white-space: nowrap; }
+	.lock { --k: clamp(0, calc((var(--t) - 0.65) * 5), 1); position: absolute; inset: -10%; border: 2px solid var(--red); opacity: var(--k); scale: calc(1.5 - var(--k) * 0.5); box-shadow: 0 0 18px var(--red); }
+	.tag { position: absolute; bottom: 100%; right: -2px; background: var(--red); color: #1a0d0d; padding: 1px 6px; font-size: 11px; white-space: nowrap; }
 
 	/* 3 · Report cards */
 	.cards { perspective: 1000px; }
-	.fan { position: relative; width: min(46%, 200px); aspect-ratio: 3 / 4; transform-style: preserve-3d; transform: rotateX(calc(18deg - var(--t) * 10deg)); }
+	.fan { position: relative; width: min(36%, 200px); aspect-ratio: 3 / 4; transform-style: preserve-3d; transform: rotateX(calc(18deg - var(--t) * 10deg)); }
 	.card { position: absolute; inset: 0; display: grid; align-content: start; gap: 10px; padding: 14px; background: var(--plate); border: 1px solid var(--hairline); transform-origin: 50% 110%;
-		transform: translateX(calc(var(--k) * var(--t) * 62%)) rotateZ(calc(var(--k) * var(--t) * 12deg)) rotateY(calc(var(--k) * var(--t) * -18deg)) translateZ(calc(var(--k) * var(--k) * var(--t) * -40px)); box-shadow: 0 20px 40px rgb(0 0 0 / 0.5); }
+		transform: translateX(calc(var(--k) * var(--t) * 50%)) rotateZ(calc(var(--k) * var(--t) * 12deg)) rotateY(calc(var(--k) * var(--t) * -18deg)) translateZ(calc(var(--k) * var(--k) * var(--t) * -40px)); box-shadow: 0 20px 40px rgb(0 0 0 / 0.5); }
 	.ln { height: 4px; background: var(--ink); opacity: 0.35; }
 	.ln.short { width: 60%; }
 	.stamp { --k: clamp(0, calc((var(--t) - 0.6) * 6), 1); position: absolute; bottom: 16%; left: 50%; translate: -50% 0; border: 2px solid var(--red); color: var(--red); background: var(--paper); padding: 3px 12px; letter-spacing: 0.14em; white-space: nowrap;

@@ -7,8 +7,11 @@ export const storySteps = [
 
 const clamp = (x: number) => Math.min(1, Math.max(0, x));
 
-/** How much of the steps has scrolled above the middle of the screen, 0 → 1: the spine's fill. */
-export const filled = (top: number, height: number, viewport: number) => clamp((viewport / 2 - top) / height);
+/** How much of the steps has scrolled above the reading line (60% down the screen), 0 → 1: the spine's fill. */
+export const filled = (top: number, height: number, viewport: number) => clamp((viewport * 0.6 - top) / height);
 
-/** How built a step's scene is: 0 while the step's top is below 80% of the screen, 1 once the step is centred (and after). */
-export const enter = (top: number, height: number, viewport: number) => clamp((viewport * 0.8 - top) / (viewport * 0.3 + height / 2));
+/**
+ * How built a step's scene is: 0 while the step's top is below 80% of the screen, 1 once the step is being read,
+ * i.e. its middle is within 10% of the screen below centre (the heading sits above the middle), and after.
+ */
+export const enter = (top: number, height: number, viewport: number) => clamp((viewport * 0.8 - top) / (viewport * 0.2 + height / 2));
