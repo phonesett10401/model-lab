@@ -78,6 +78,7 @@ test('when the video ends, the page glides to the story (not if you scrolled, no
 
 test('the ending leads into the lab', async ({ page }) => {
 	await page.goto('/intro');
+	await expect(page.getByText('New models are added as they’re trained.')).toBeVisible();
 	await page.getByRole('link', { name: 'Open the lab →' }).click();
 	await expect(page).toHaveURL(/\/$/);
 });

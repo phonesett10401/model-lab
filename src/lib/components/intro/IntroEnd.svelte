@@ -1,5 +1,5 @@
 <section class="end">
-	<p class="serif line">New specimens are added as they’re trained.</p>
+	<p class="serif line">New models are added as they’re trained.</p>
 	<a class="btn open" href="/">Open the lab →</a>
 </section>
 

@@ -90,7 +90,7 @@ Prerendered like the rest of the site. Four stages:
 - When the video ends, the page smoothly scrolls to stage C, unless the visitor scrolled during the video or prefers reduced motion.
 
 **D. Ending**
-- "New specimens are added as they're trained." and a primary **Open the lab →** link to `/`.
+- "New models are added as they're trained." and a primary **Open the lab →** link to `/`.
 
 **Lab top bar**
 - A small "▶ Watch the intro" link to `/intro`.
