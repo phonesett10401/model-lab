@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { reducedMotion } from '$lib/motion.svelte';
 
 	let { onskip, onended }: { onskip: () => void; onended: () => void } = $props();
 
 	let video: HTMLVideoElement;
+	let muteButton = $state<HTMLButtonElement>();
 	let src = $state<string | undefined>(undefined);
 	let poster = $state('/intro/poster-wide.jpg');
 	let started = $state(false);
@@ -19,11 +20,17 @@
 		poster = tall ? '/intro/poster-tall.jpg' : '/intro/poster-wide.jpg';
 	});
 
-	// This click is the user gesture that lets the browser play with sound.
-	function enter() {
+	// This click is the user gesture that lets the browser play with sound: play() must run before any await.
+	async function enter() {
 		started = true;
 		video.muted = false;
 		video.play().catch(() => (blocked = true));
+		await tick();
+		muteButton?.focus(); // the Enter button is gone; keep keyboard users on the controls
+	}
+	function skip() {
+		video.pause(); // Skip means stop, not keep playing off-screen
+		onskip();
 	}
 	function toggleMute() {
 		muted = !muted;
@@ -48,6 +55,7 @@
 		aria-label="AI Model Lab intro, 15 seconds with sound. The story below says the same in words."
 		ontimeupdate={() => (progress = video.duration ? video.currentTime / video.duration : 0)}
 		{onended}
+		onplay={() => (blocked = false)}
 	></video>
 
 	{#if !started}
@@ -56,17 +64,22 @@
 			<h1 class="serif">Explore the lab.</h1>
 			<button class="btn enter" onclick={enter}>▶ Enter the lab</button>
 			<p class="mono hint">🔊 Best with sound · 15 seconds</p>
-			{#if reducedMotion.current}<button class="btn ghost" onclick={onskip}>Read instead</button>{/if}
+			{#if reducedMotion.current}<button class="btn ghost" onclick={skip}>Read instead</button>{/if}
 		</div>
-		<button class="skip mono" onclick={onskip}>Skip intro →</button>
+		<button class="skip mono" onclick={skip}>Skip intro →</button>
 	{:else}
-		{#if blocked}<p class="mono blocked">Your browser paused it: press play to start.</p>{/if}
-		<div class="controls">
-			<button class="mono" onclick={toggleMute} aria-pressed={muted}>{muted ? '🔇 Unmute' : '🔊 Mute'}</button>
-			<button class="mono" onclick={replay}>↻ Replay</button>
-			<button class="mono" onclick={onskip}>Skip ↓</button>
-		</div>
-		<div class="progress" style="transform: scaleX({progress})"></div>
+		<h1 class="visually-hidden">AI Model Lab intro</h1>
+		{#if blocked}
+			<!-- Native controls are showing; ours would sit on top of them. -->
+			<p class="mono blocked">Your browser paused it: press play to start.</p>
+		{:else}
+			<div class="controls">
+				<button class="mono" bind:this={muteButton} onclick={toggleMute} aria-pressed={muted}>{muted ? '🔇 Unmute' : '🔊 Mute'}</button>
+				<button class="mono" onclick={replay}>↻ Replay</button>
+				<button class="mono" onclick={skip}>Skip ↓</button>
+			</div>
+			<div class="progress" style="transform: scaleX({progress})"></div>
+		{/if}
 	{/if}
 </section>
 

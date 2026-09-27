@@ -90,3 +90,28 @@ test('the lab links to the intro and never downloads the video', async ({ page }
 	await expect(page.getByRole('link', { name: /Watch the intro/ })).toHaveAttribute('href', '/intro');
 	expect(videos).toEqual([]);
 });
+
+test('refused playback: the note goes once it plays, and our buttons never cover the native controls', async ({ page }) => {
+	await page.addInitScript(() => {
+		HTMLMediaElement.prototype.play = () => Promise.reject(new DOMException('blocked', 'NotAllowedError'));
+	});
+	await page.goto('/intro');
+	await page.waitForLoadState('networkidle');
+	await page.getByRole('button', { name: '▶ Enter the lab' }).click();
+	await expect(page.getByText(/press play/i)).toBeVisible();
+	await expect(page.getByRole('button', { name: /Replay/ })).toBeHidden();
+	await page.locator('video').evaluate((v) => v.dispatchEvent(new Event('play')));
+	await expect(page.getByText(/press play/i)).toBeHidden();
+	await expect(page.getByRole('button', { name: /Replay/ })).toBeVisible();
+});
+
+test('after Enter, focus moves to the controls and the page keeps its heading', async ({ page }) => {
+	await page.addInitScript(() => {
+		HTMLMediaElement.prototype.play = () => Promise.resolve();
+	});
+	await page.goto('/intro');
+	await page.waitForLoadState('networkidle');
+	await page.getByRole('button', { name: '▶ Enter the lab' }).click();
+	await expect(page.getByRole('button', { name: /Mute/ })).toBeFocused();
+	await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+});
