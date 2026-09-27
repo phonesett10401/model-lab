@@ -1,13 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import IntroStage from '$lib/components/intro/IntroStage.svelte';
+	import Story from '$lib/components/intro/Story.svelte';
+	import IntroEnd from '$lib/components/intro/IntroEnd.svelte';
 	import { reducedMotion } from '$lib/motion.svelte';
 
-	let story: HTMLElement;
+	let story = $state<HTMLElement>();
 	let userScrolled = false;
 
 	function toStory() {
-		story.scrollIntoView({ behavior: reducedMotion.current ? 'auto' : 'smooth' });
+		story?.scrollIntoView({ behavior: reducedMotion.current ? 'auto' : 'smooth' });
 	}
 	function ended() {
 		if (!userScrolled && !reducedMotion.current) toStory();
@@ -26,11 +28,11 @@
 
 <main class="intro">
 	<IntroStage onskip={toStory} onended={ended} />
-	<section id="story" bind:this={story} aria-label="What the lab is"></section>
+	<Story bind:el={story} />
+	<IntroEnd />
 </main>
 
 <style>
 	/* The intro is always dark: light-dark() tokens resolve against this element's scheme. */
 	.intro { color-scheme: dark; background: var(--paper); color: var(--ink); min-height: 100svh; }
-	#story { min-height: 60vh; }
 </style>
