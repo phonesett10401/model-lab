@@ -6,10 +6,13 @@
 	import '$lib/styles/tokens.css';
 	import '$lib/styles/base.css';
 	import { page } from '$app/state';
+	import { onNavigate } from '$app/navigation';
+	import { startMorph } from '$lib/morph';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import Footer from '$lib/components/Footer.svelte';
 
 	let { children } = $props();
+	onNavigate(startMorph);
 	const bare = $derived(page.route.id?.startsWith('/og-card') ?? false);
 </script>
 
