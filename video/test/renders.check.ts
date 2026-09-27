@@ -16,17 +16,18 @@ const files = [
 ];
 
 for (const f of files)
-	test(`${f.file}: 15 s, ${f.w}×${f.h}, with sound`, () => {
+	test(`${f.file}: 20 s, ${f.w}×${f.h}, with sound`, () => {
 		const p = probe(f.file);
-		assert.ok(Math.abs(Number(p.format.duration) - 15) <= 0.1, `duration ${p.format.duration}`);
+		assert.ok(Math.abs(Number(p.format.duration) - 20) <= 0.1, `duration ${p.format.duration}`);
 		const video = p.streams.find((s) => s.codec_type === 'video')!;
 		assert.deepEqual([video.width, video.height], [f.w, f.h]);
 		assert.ok(p.streams.some((s) => s.codec_type === 'audio'), 'no audio stream');
 	});
 
+// Limits scale with length: 3 MB / 2 MB at 15 s became 4 MB / 2.7 MB at 20 s.
 test('site copies meet their size targets', () => {
 	const mb = (p: string) => statSync(p).size / 1024 / 1024;
-	assert.ok(mb('../static/intro/intro-wide.mp4') <= 3, `wide ${mb('../static/intro/intro-wide.mp4').toFixed(2)} MB`);
-	assert.ok(mb('../static/intro/intro-tall.mp4') <= 2, `tall ${mb('../static/intro/intro-tall.mp4').toFixed(2)} MB`);
+	assert.ok(mb('../static/intro/intro-wide.mp4') <= 4, `wide ${mb('../static/intro/intro-wide.mp4').toFixed(2)} MB`);
+	assert.ok(mb('../static/intro/intro-tall.mp4') <= 2.7, `tall ${mb('../static/intro/intro-tall.mp4').toFixed(2)} MB`);
 	for (const p of ['../static/intro/poster-wide.jpg', '../static/intro/poster-tall.jpg']) assert.ok(statSync(p).size > 0, p);
 });

@@ -14,6 +14,10 @@ for (const layout of ['wide', 'square', 'tall'])
 for (const layout of ['wide', 'tall'])
 	run(['still', 'src/index.ts', 'Intro', `out/poster-${layout}.jpg`, '--frame=230', `--props=props/${layout}.json`, '--jpeg-quality=80']);
 
+// Site copies: a slower, tighter re-encode (the grain makes full-quality files heavy); social copies stay full quality.
+const siteCrf = { wide: 29, tall: 31 };
 mkdirSync('../static/intro', { recursive: true });
-for (const f of ['intro-wide.mp4', 'intro-tall.mp4', 'poster-wide.jpg', 'poster-tall.jpg']) copyFileSync(`out/${f}`, `../static/intro/${f}`);
+for (const layout of ['wide', 'tall'])
+	run(['ffmpeg', '-hide_banner', '-y', '-i', `out/intro-${layout}.mp4`, '-c:v', 'libx264', '-preset', 'slow', '-crf', String(siteCrf[layout]), '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-c:a', 'copy', `../static/intro/intro-${layout}.mp4`]);
+for (const f of ['poster-wide.jpg', 'poster-tall.jpg']) copyFileSync(`out/${f}`, `../static/intro/${f}`);
 console.log('copied to static/intro/');

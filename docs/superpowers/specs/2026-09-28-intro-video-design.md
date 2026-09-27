@@ -117,3 +117,22 @@ Prerendered like the rest of the site. Four stages:
 
 - The owner confirms usage rights for the octopus and cuttlefish photos before the site goes public.
 - The square and tall social copies are delivered as files; posting them is up to the owner.
+
+## 9. Revision (owner-approved): brand-first, 20 seconds, music bed
+
+Supersedes §3–§5 where they conflict.
+
+- **Length:** 20 s (600 frames at 30 fps).
+- **Music:** "Tech Circuit Data Stream" by Alex Morgan (Pixabay licence), from 7.6 s into the track, so its drop (22.1 s) lands on the WRONG stamp at 14.5 s. Every cut sits on the track's 105 BPM beat grid (tested). Sound effects sit on top; the music ducks briefly under the thud. The mix peaks at about −2 dBFS.
+- **Storyboard:**
+  - logo lockup with a light sweep, over a faint drifting swarm (0–2.5 s);
+  - a 3D swarm of specimen boxes orbiting the camera, with invented model names allowed here (owner's call);
+  - the creature categorizer glides to the centre with a red bloom pulsing on the beat;
+  - it swings open in 3D into the workbench;
+  - the octopus photo drops into a glowing zone while a progress ring fills;
+  - scan with a tech grid, detection-box corners and an "OCTOPUS · 94%" tag;
+  - WRONG on the drop, with flash, shake, RGB split and glitch slices;
+  - the report-card stack fans out in 3D;
+  - end lockup.
+- **Throughout:** a corner brand mark, beat-synced glow, vignette and film grain.
+- **Size limits** scale with length: site copies wide ≤ 4 MB and tall ≤ 2.7 MB, re-encoded from the full-quality renders (wide CRF 29, tall CRF 31). The social copies stay full quality.

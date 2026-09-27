@@ -20,7 +20,7 @@
 
 <svelte:head>
 	<title>Intro · AI Model Lab</title>
-	<meta name="description" content="A 15-second intro to AI Model Lab: small AI models, each with a report card that shows how it fails." />
+	<meta name="description" content="A 20-second intro to AI Model Lab: small AI models, each with a report card that shows how it fails." />
 	<meta property="og:title" content="AI Model Lab" />
 	<meta property="og:image" content="{page.url.origin}/intro/poster-wide.jpg" />
 	<meta name="twitter:card" content="summary_large_image" />

@@ -52,7 +52,7 @@
 		playsinline
 		preload="auto"
 		controls={blocked}
-		aria-label="AI Model Lab intro, 15 seconds with sound. The story below says the same in words."
+		aria-label="AI Model Lab intro, 20 seconds with sound. The story below says the same in words."
 		ontimeupdate={() => (progress = video.duration ? video.currentTime / video.duration : 0)}
 		{onended}
 		onplay={() => (blocked = false)}
@@ -63,7 +63,7 @@
 			<p class="mono name">AI MODEL LAB</p>
 			<h1 class="serif">Explore the lab.</h1>
 			<button class="btn enter" onclick={enter}>▶ Enter the lab</button>
-			<p class="mono hint">🔊 Best with sound · 15 seconds</p>
+			<p class="mono hint">🔊 Best with sound · 20 seconds</p>
 			{#if reducedMotion.current}<button class="btn ghost" onclick={skip}>Read instead</button>{/if}
 		</div>
 		<button class="skip mono" onclick={skip}>Skip intro →</button>
