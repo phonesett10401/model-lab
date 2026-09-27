@@ -51,3 +51,9 @@ The design the owner saw (confirm briefly, then build: "brainstorm briefly, then
 - **Prerender:** `handleHttpError` ignores `/og/*`; `handleUnseenRoutes` allows only `/audits/[slug]` to be empty (audits are hidden on production). Link-preview images are made with `pnpm og` against `pnpm preview`.
 - **Browser scroll restoration:** e2e tests that goto the same URL must `scrollTo(0,0)` first.
 - **The contrast test** (`src/lib/contrast.test.ts`) parses `light-dark()` pairs in `tokens.css`, so keep that format.
+
+## Scroll story — progress (branch `feat/intro-scroll-story`, WIP commit, not merged)
+
+- Done: `filled()` / `enter()` in `src/lib/intro-story.ts` (unit tested); `Story.svelte` has the spine (markers 01–04, fill), a rAF scroll listener, per-step build values `t[]`, and the scene switches as a step starts entering; `StoryVisual.svelte` has the stage (glow, flare, vignette fading into the page, grain) plus the 4 scenes (swarm, pipeline, card fan + stamp glitch, phone + shield + particles). Reduced motion → every `t` = 1, animations off.
+- New e2e tests in `e2e/intro.e2e.ts` (spine, scene build, reduced motion, no sideways scroll). **Not yet run green after the last changes.**
+- Left: (1) the Test lock-on box in scene 2 looked off-centre from the photo; check `.lock` / `.traveller` in StoryVisual. (2) Run `pnpm test:unit --run`, `pnpm test:e2e` (incl. axe on /intro), `pnpm check`. (3) Phone-width screenshots review (the contact-sheet approach: Playwright screenshots of each step at top 62% and centred). (4) Send stills to the owner, then the final review and merge.
