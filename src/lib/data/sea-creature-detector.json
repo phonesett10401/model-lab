@@ -1,0 +1,379 @@
+{
+	"classes": [
+		"fish",
+		"jellyfish",
+		"penguin",
+		"puffin",
+		"shark",
+		"starfish",
+		"stingray",
+		"dolphin",
+		"whale",
+		"sea turtle",
+		"seahorse",
+		"sea lion",
+		"seal",
+		"crab"
+	],
+	"threshold": 0.45,
+	"data": [
+		{
+			"label": "Sources",
+			"value": "Aquarium Combined (Roboflow, CC BY 4.0) and Open Images V7 (CC BY 2.0)"
+		},
+		{
+			"label": "Photos",
+			"value": "7,637 photos, 22,718 labelled creatures"
+		},
+		{
+			"label": "Split",
+			"value": "5,312 train · 1,558 validation · 767 test"
+		},
+		{
+			"label": "Base model",
+			"value": "YOLO26 Nano (Ultralytics, AGPL-3.0), 2.5M parameters"
+		},
+		{
+			"label": "Test score",
+			"value": "0.74 mAP@50 on 767 held-out photos"
+		},
+		{
+			"label": "Shows a creature from",
+			"value": "45% confidence"
+		},
+		{
+			"label": "Known gaps",
+			"value": "No octopus, manta ray or orca; mixes up seals and sea lions; misses small, distant fish"
+		},
+		{
+			"label": "Photo credits",
+			"value": "Every training photo’s author is listed in training/attribution/sea-v2.csv in the project repository"
+		}
+	],
+	"metrics": {
+		"fish": 0.619,
+		"jellyfish": 0.848,
+		"penguin": 0.767,
+		"puffin": 0.617,
+		"shark": 0.839,
+		"starfish": 0.862,
+		"stingray": 0.769,
+		"dolphin": 0.784,
+		"whale": 0.701,
+		"sea turtle": 0.869,
+		"seahorse": 0.631,
+		"sea lion": 0.626,
+		"seal": 0.682,
+		"crab": 0.735
+	},
+	"samples": [
+		{
+			"id": "aquarium",
+			"title": "Aquarium tank",
+			"input": {
+				"type": "image",
+				"src": "/samples/sea/aquarium.jpg",
+				"alt": "Test photo showing fish, shark"
+			},
+			"credit": "Photo: Roboflow, Aquarium Combined dataset · CC BY 4.0",
+			"expected": [
+				{
+					"label": "fish",
+					"score": 0.8286,
+					"box": [
+						0.5749,
+						0.0074,
+						0.7527,
+						0.0776
+					]
+				},
+				{
+					"label": "shark",
+					"score": 0.8204,
+					"box": [
+						0.7207,
+						0.2246,
+						0.9612,
+						0.3016
+					]
+				},
+				{
+					"label": "fish",
+					"score": 0.801,
+					"box": [
+						0.45,
+						0.4704,
+						0.6104,
+						0.5234
+					]
+				},
+				{
+					"label": "shark",
+					"score": 0.793,
+					"box": [
+						0.3082,
+						0.5312,
+						0.6218,
+						0.6212
+					]
+				},
+				{
+					"label": "fish",
+					"score": 0.719,
+					"box": [
+						0.4418,
+						0.0317,
+						0.624,
+						0.1068
+					]
+				},
+				{
+					"label": "fish",
+					"score": 0.7183,
+					"box": [
+						0.6777,
+						0.0654,
+						0.8161,
+						0.1126
+					]
+				},
+				{
+					"label": "fish",
+					"score": 0.6414,
+					"box": [
+						0.0644,
+						0.0006,
+						0.1951,
+						0.0385
+					]
+				},
+				{
+					"label": "fish",
+					"score": 0.5096,
+					"box": [
+						0.5879,
+						0.0753,
+						0.7137,
+						0.1319
+					]
+				}
+			]
+		},
+		{
+			"id": "dolphin",
+			"title": "Dolphin",
+			"input": {
+				"type": "image",
+				"src": "/samples/sea/dolphin.jpg",
+				"alt": "Test photo showing dolphin"
+			},
+			"credit": "Photo: bp6316 on Flickr, via Open Images · CC BY 2.0",
+			"expected": [
+				{
+					"label": "dolphin",
+					"score": 0.6596,
+					"box": [
+						0.0065,
+						0.1842,
+						0.9423,
+						0.8946
+					]
+				}
+			]
+		},
+		{
+			"id": "sea-turtle",
+			"title": "Sea turtle",
+			"input": {
+				"type": "image",
+				"src": "/samples/sea/sea-turtle.jpg",
+				"alt": "Test photo showing sea turtle"
+			},
+			"credit": "Photo: Tim Sheerman-Chase on Flickr, via Open Images · CC BY 2.0",
+			"expected": [
+				{
+					"label": "sea turtle",
+					"score": 0.8559,
+					"box": [
+						0.2038,
+						0.0,
+						1.0,
+						0.9979
+					]
+				}
+			]
+		},
+		{
+			"id": "seal-or-sea-lion",
+			"title": "Seal or sea lion?",
+			"input": {
+				"type": "image",
+				"src": "/samples/sea/seal-or-sea-lion.jpg",
+				"alt": "Test photo showing seal"
+			},
+			"credit": "Photo: Gabriel Pollard on Flickr, via Open Images · CC BY 2.0",
+			"expected": [
+				{
+					"label": "sea lion",
+					"score": 0.7902,
+					"box": [
+						0.0742,
+						0.3061,
+						0.9138,
+						0.7812
+					]
+				}
+			],
+			"knownFailure": true
+		},
+		{
+			"id": "whale-or-dolphin",
+			"title": "Whale or dolphin?",
+			"input": {
+				"type": "image",
+				"src": "/samples/sea/whale-or-dolphin.jpg",
+				"alt": "Test photo showing whale"
+			},
+			"credit": "Photo: Tommy Wong on Flickr, via Open Images · CC BY 2.0",
+			"expected": [
+				{
+					"label": "dolphin",
+					"score": 0.4587,
+					"box": [
+						0.3258,
+						0.4099,
+						0.6946,
+						0.5685
+					]
+				}
+			],
+			"knownFailure": true
+		},
+		{
+			"id": "missed-fish",
+			"title": "School of fish",
+			"input": {
+				"type": "image",
+				"src": "/samples/sea/missed-fish.jpg",
+				"alt": "Test photo showing fish"
+			},
+			"credit": "Photo: James Emery on Flickr, via Open Images · CC BY 2.0",
+			"expected": [
+				{
+					"label": "fish",
+					"score": 0.8681,
+					"box": [
+						0.1123,
+						0.2146,
+						0.7955,
+						0.6693
+					]
+				},
+				{
+					"label": "fish",
+					"score": 0.8143,
+					"box": [
+						0.3149,
+						0.633,
+						0.5728,
+						0.8709
+					]
+				},
+				{
+					"label": "fish",
+					"score": 0.7924,
+					"box": [
+						0.8245,
+						0.3303,
+						1.0,
+						0.5291
+					]
+				},
+				{
+					"label": "fish",
+					"score": 0.7145,
+					"box": [
+						0.5973,
+						0.8736,
+						0.8118,
+						1.0
+					]
+				},
+				{
+					"label": "fish",
+					"score": 0.6826,
+					"box": [
+						0.0833,
+						0.7116,
+						0.2765,
+						0.8491
+					]
+				},
+				{
+					"label": "fish",
+					"score": 0.6798,
+					"box": [
+						0.6631,
+						0.0594,
+						0.7554,
+						0.218
+					]
+				},
+				{
+					"label": "fish",
+					"score": 0.6685,
+					"box": [
+						0.2598,
+						0.0735,
+						0.4472,
+						0.2484
+					]
+				},
+				{
+					"label": "fish",
+					"score": 0.5564,
+					"box": [
+						0.0,
+						0.6097,
+						0.0857,
+						0.8465
+					]
+				},
+				{
+					"label": "fish",
+					"score": 0.5555,
+					"box": [
+						0.024,
+						0.0951,
+						0.221,
+						0.2848
+					]
+				}
+			],
+			"knownFailure": true
+		}
+	],
+	"failures": [
+		{
+			"truth": "seal",
+			"said": "sea lion",
+			"score": 0.7902,
+			"why": "Seals and sea lions look alike, and it often swaps them.",
+			"sampleId": "seal-or-sea-lion"
+		},
+		{
+			"truth": "whale",
+			"said": "dolphin",
+			"score": 0.4587,
+			"why": "Whales and dolphins share a shape; at a distance it can swap them.",
+			"sampleId": "whale-or-dolphin"
+		},
+		{
+			"truth": "23 fish",
+			"said": "9 fish",
+			"score": 0.8681,
+			"why": "It missed 14 of the fish: small, distant or blurred fish are its most common miss.",
+			"sampleId": "missed-fish"
+		}
+	]
+}
