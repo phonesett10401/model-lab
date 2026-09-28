@@ -1,40 +1,15 @@
 import type { ModelInput, Prediction } from '$lib/types';
 import type { Runtime } from './index';
 import { SIZE, decode, letterbox, nms, toOriginal } from './yolo';
-// The engine files as Vite's own hashed, same-origin assets: one copy in the build, cached as immutable.
-// (These imports are just URLs; nothing is fetched until a visitor runs the model.)
-import engineUrl from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url';
-import engineGlueUrl from 'onnxruntime-web/ort-wasm-simd-threaded.mjs?url';
+import { ENGINE_MB, openSession, type Ort } from './engine';
+export { ENGINE_MB, ENGINE_URL } from './engine';
 
 export const MODEL_URL = '/models/sea-creature-detector-v2.onnx';
 export const MODEL_MB = 9.8;
-export const ENGINE_MB = 14.2;
 export const CLASSES = ['fish', 'jellyfish', 'penguin', 'puffin', 'shark', 'starfish', 'stingray', 'dolphin', 'whale', 'sea turtle', 'seahorse', 'sea lion', 'seal', 'crab'];
 const ANCHORS = 8400;
 const CANDIDATE_CONF = 0.25; // the display threshold (entry.unsureBelow) is applied later; filtering after NMS is equivalent
 const IOU = 0.7;
-
-export const ENGINE_URL = engineUrl;
-
-/** Streams a file, reporting bytes received so far. */
-async function fetchBytes(url: string, onBytes: (got: number) => void): Promise<Uint8Array> {
-	const res = await fetch(url);
-	if (!res.ok || !res.body) throw new Error(`download failed: ${url} ${res.status}`);
-	const reader = res.body.getReader();
-	const parts: Uint8Array[] = [];
-	let got = 0;
-	for (;;) {
-		const { done, value } = await reader.read();
-		if (done) break;
-		parts.push(value);
-		got += value.length;
-		onBytes(got);
-	}
-	const bytes = new Uint8Array(got);
-	let at = 0;
-	for (const p of parts) { bytes.set(p, at); at += p.length; }
-	return bytes;
-}
 
 function pixels(bmp: ImageBitmap): { tensor: Float32Array; lb: ReturnType<typeof letterbox> } {
 	const lb = letterbox(bmp.width, bmp.height);
@@ -56,28 +31,13 @@ function pixels(bmp: ImageBitmap): { tensor: Float32Array; lb: ReturnType<typeof
 }
 
 function create(): Runtime {
-	type Ort = typeof import('onnxruntime-web/wasm');
 	let ort: Ort | undefined;
 	let session: import('onnxruntime-web/wasm').InferenceSession | undefined;
 	return {
 		sizeLabel: `${MODEL_MB} MB model + ${ENGINE_MB} MB engine`,
 		async load(onProgress) {
 			if (session) return;
-			ort ??= await import('onnxruntime-web/wasm');
-			ort.env.wasm.wasmPaths = { mjs: engineGlueUrl, wasm: engineUrl };
-			ort.env.wasm.numThreads = globalThis.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
-			// Download the model AND the engine ourselves, with one progress bar over both (the engine is the bigger part).
-			// Handing ONNX Runtime the engine bytes means a dropped download just fails this try: if ONNX Runtime fetched
-			// the engine itself and that failed, it would refuse every later try until the page was reloaded.
-			const total = (MODEL_MB + ENGINE_MB) * 1e6; // sizes are checked against the real files by a unit test
-			const got = { model: 0, engine: 0 };
-			const report = () => onProgress(Math.min(1, (got.model + got.engine) / total));
-			const [model, engine] = await Promise.all([
-				fetchBytes(MODEL_URL, (n) => { got.model = n; report(); }),
-				fetchBytes(ENGINE_URL, (n) => { got.engine = n; report(); })
-			]); // a failed download throws here: session stays unset, so the next try starts over
-			ort.env.wasm.wasmBinary = engine;
-			session = await ort.InferenceSession.create(model, { executionProviders: ['wasm'] });
+			({ ort, session } = await openSession(MODEL_URL, MODEL_MB, onProgress));
 		},
 		async classify(input: ModelInput): Promise<Prediction[]> {
 			if (input.type !== 'image') throw new Error('the sea creature detector takes photos');
