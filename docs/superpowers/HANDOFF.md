@@ -21,8 +21,11 @@ Last updated: 2026-09-28. Owner: Phone Sett (GitHub `phonesett10401`, private re
 
 ## Current state
 
-- Branch `feat/sea-creature-detector` (built on `feat/training-setup`) puts the detector live; ask the owner before merging or pushing. The intro scroll story is done and live.
-- Tests: `pnpm test:unit --run` (47), `pnpm test:e2e` (197 passed, 25 skipped; `e2e/detector.e2e.ts` runs the real model in Chromium and WebKit), `cd video && pnpm test` (10).
+- Everything is merged and pushed (`master` = `origin/master`, last feature commit `b12d92e`, 2026-09-29). Live: the Sea creature detector, the intro video (re-rendered with the new name), the scroll story. No open branches.
+- Tests: `pnpm test:unit --run` (51), `pnpm test:e2e` (209 passed, 25 skipped; `e2e/detector.e2e.ts` runs the real model in Chromium and WebKit; a11y scans the detector after a result), `cd video && pnpm test` (10), `cd video && pnpm check` (4).
+- Open, not urgent: `sea-detector.ts` doesn't close the ImageBitmap if `session.run` throws (use try/finally).
+- Owner's next plans: widen the detector (more creatures), then update the intro video's SAMPLE report-card scene (it still shows octopus/squid/cuttlefish and "iNaturalist"); audio and text models later (Google AI Edge / MediaPipe Model Maker is a good fit for audio); a private RAG document-assistant target for red-teaming.
+- Shareable project overview for contributors: artifact https://claude.ai/artifact/7T9D5mvDGx1oYb8yJqEPF5 and `Downloads/AI-Model-Lab-Overview.pdf` on the owner's laptop.
 - Specs and plans: `docs/superpowers/specs/*`, `docs/superpowers/plans/*`.
 
 ## Models and training (local, on the owner's RTX 5060)
@@ -33,7 +36,7 @@ Last updated: 2026-09-28. Owner: Phone Sett (GitHub `phonesett10401`, private re
 - **v2 results (767 frozen test photos):** 0.74 mAP@50 overall, 0.82 on aquarium photos; known gaps: seal vs sea lion, dolphin vs whale, small wild fish; no octopus, manta or orca.
 - **Next model ideas:** widen with iNaturalist + auto-labelling (octopus, manta ray, orca, lionfish…); friends may send ONNX models (put them in `training/incoming/<name>/`, re-measure before publishing).
 
-## Done: the /intro scroll story (kept for reference)
+## Done: the /intro scroll story design (kept for reference)
 
 The design the owner saw (confirm briefly, then build: "brainstorm briefly, then build"):
 
