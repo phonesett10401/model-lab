@@ -60,7 +60,7 @@ The design the owner saw (confirm briefly, then build: "brainstorm briefly, then
 - **Browser scroll restoration:** e2e tests that goto the same URL must `scrollTo(0,0)` first.
 - **The contrast test** (`src/lib/contrast.test.ts`) parses `light-dark()` pairs in `tokens.css`, so keep that format.
 
-## Scroll story — built (branch `feat/intro-scroll-story`, awaiting owner's review of stills, not merged)
+## Scroll story — built, merged and live
 
 - `filled()` / `enter()` in `src/lib/intro-story.ts` drive the spine fill and each scene's build (`--t`, 0 → 1: starts when a step's top passes 80% down the screen, finished when it's being read). The picture switches as the next step starts building.
 - Tests: unit (`intro-story.test.ts`), e2e in `e2e/intro.e2e.ts` (spine, build, reduced motion, no sideways scroll, scenes fit at 360px). Full suite green: 30 unit, 179+ e2e.
