@@ -7,7 +7,7 @@ import { COLUMNS_AT, RECORDED_AT } from '../timeline';
 import { stacked, unit, type Layout } from '../layout';
 
 // Every model in the lab gets a card; they fan out in 3D, and the top one is No. 01 with the failure just filed.
-const cards = ['No. 03 · Gender classifier', 'No. 02 · Fresh or spoiled', 'No. 01 · Creature categorizer'];
+const cards = ['No. 03 · Gender classifier', 'No. 02 · Fresh or spoiled', 'No. 01 · Sea creature detector'];
 const sections: { title: string; lines: string[] }[] = [
 	{ title: 'DATA', lines: ['Source · iNaturalist', 'Split · —'] },
 	{ title: 'ACCURACY', lines: ['octopus · —', 'squid · —', 'cuttlefish · —'] },
