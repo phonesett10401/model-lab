@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { MediaQuery } from 'svelte/reactivity';
 	import { checkFile, readableImage } from '$lib/input-checks';
+	import { tagStyle } from '$lib/tags';
 	import type { ModelInput, Prediction } from '$lib/types';
 
 	let {
@@ -58,7 +59,7 @@
 					{/each}
 				</svg>
 				{#each boxes.slice(0, 12) as b, i (i)}
-					{#if b.box}<span class="tag mono" aria-hidden="true" style="left: {b.box[0] * 100}%; top: {b.box[1] * 100}%">{i + 1} {b.label}</span>{/if}
+					{#if b.box}<span class="tag mono" aria-hidden="true" style={tagStyle(b.box)}>{i + 1} {b.label}</span>{/if}
 				{/each}
 			{/if}
 		</div>
