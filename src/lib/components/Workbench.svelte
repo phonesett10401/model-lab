@@ -2,12 +2,15 @@
 	import EntryHeader from './EntryHeader.svelte';
 	import PredictionBars from './PredictionBars.svelte';
 	import DetectionList from './DetectionList.svelte';
+	import EventTimeline from './EventTimeline.svelte';
+	import EventList from './EventList.svelte';
 	import ReportCard from './ReportCard.svelte';
 	import ImageInput from './inputs/ImageInput.svelte';
 	import TextInput from './inputs/TextInput.svelte';
 	import AudioInput from './inputs/AudioInput.svelte';
 	import TableInput from './inputs/TableInput.svelte';
-	import { getRuntime, type Runtime } from '$lib/runtime';
+	import { getRuntime, UserError, type ClipInfo, type Runtime } from '$lib/runtime';
+	import { summarizeEvents } from '$lib/runtime/events';
 	import { initialBench, lastResult, step, type BenchState } from '$lib/bench';
 	import { latestOnly } from '$lib/latest';
 	import { summarize } from '$lib/predictions';
@@ -31,6 +34,7 @@
 	const reportShows = $derived<ReportTab[]>(wide ? ['data', 'metrics', 'fails'] : current === 'demo' ? [] : [current as ReportTab]);
 	const id = $derived(`wb-${entry.slug}`);
 	const detect = $derived(entry.task === 'detect');
+	const events = $derived(entry.task === 'events');
 	const sureFrom = $derived(Math.round(entry.unsureBelow * 100));
 
 	// ----- runtime + state -----
@@ -67,6 +71,8 @@
 	let shownValues = $state<Record<string, string | number> | null>(null);
 	/** The sample on screen, for its photo credit (null for the visitor's own photos). */
 	let shownCredit = $state<Sample | null>(null);
+	/** Sound models: the clip the result describes (length, cut or not, waveform). */
+	let clip = $state<ClipInfo | null>(null);
 
 	async function run(input: ModelInput, isLatest = latest()) {
 		if (!runtime) return;
@@ -79,9 +85,12 @@
 			if (!isLatest()) return;
 			bench = step(bench, { type: 'examine' });
 			const predictions = await runtime.classify(input);
-			if (isLatest()) bench = step(bench, { type: 'done', predictions, threshold: entry.unsureBelow, detect });
-		} catch {
-			if (isLatest()) bench = step(bench, { type: 'fail', reason: 'The model failed to run. Try again.' });
+			if (isLatest()) {
+				clip = runtime.lastClip ?? null;
+				bench = step(bench, { type: 'done', predictions, threshold: entry.unsureBelow, detect, events });
+			}
+		} catch (e) {
+			if (isLatest()) bench = step(bench, { type: 'fail', reason: e instanceof UserError ? e.message : 'The model failed to run. Try again.' });
 		}
 	}
 
@@ -178,6 +187,16 @@
 					<p class="mono faint">Runs on your device. Nothing you add is uploaded.</p>
 				{:else if bench.kind === 'examining'}
 					<p class="mono">Examining…</p>
+				{:else if bench.kind === 'result' && events}
+					<p class="answer serif">{bench.unsure ? 'No sounds it knows' : summarizeEvents(bench.predictions)}</p>
+					{#if clip?.trimmed}<p class="note warn">Only the first 30 seconds were checked.</p>{/if}
+					{#if bench.unsure}
+						<p class="note warn">Nothing it knows cleared its confidence bar. It listens for: {entry.labels.join(', ')}.</p>
+					{:else}
+						<EventTimeline predictions={bench.predictions} seconds={clip?.seconds ?? 0} bars={clip?.peaks ?? []} />
+						<EventList predictions={bench.predictions} src={shownAudio} />
+						<p class="mono faint">Each sound has its own confidence bar, set on held-out clips.</p>
+					{/if}
 				{:else if bench.kind === 'result' && detect}
 					<p class="answer serif">{bench.unsure ? 'No sea creatures found' : summarize(bench.predictions)}</p>
 					{#if bench.unsure}
@@ -196,7 +215,7 @@
 					<p class="note" role="alert">{bench.reason}</p>
 					{#if previous}
 						<p class="mono faint">Previous result:</p>
-						{#if detect}<DetectionList predictions={previous} />{:else}<PredictionBars predictions={previous} />{/if}
+						{#if events}<EventList predictions={previous} src={null} />{:else if detect}<DetectionList predictions={previous} />{:else}<PredictionBars predictions={previous} />{/if}
 					{/if}
 				{/if}
 			</div>

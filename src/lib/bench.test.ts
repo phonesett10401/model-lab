@@ -14,3 +14,10 @@ describe('detection results', () => {
 		expect(s.kind === 'result' && s.unsure).toBe(true);
 	});
 });
+
+it('sound events keep every event, in time order; none found is the unsure state', () => {
+	const ev = [{ label: 'speech', score: 0.9, start: 2, end: 3 }, { label: 'dog bark', score: 0.4, start: 0.5, end: 1 }]; // time order differs from score order
+	const r = step({ kind: 'examining', last: null }, { type: 'done', predictions: ev, threshold: 0.5, events: true });
+	expect(r).toEqual({ kind: 'result', predictions: [ev[1], ev[0]], unsure: false }); // no threshold filter: the runtime already applied each sound's own
+	expect(step({ kind: 'examining', last: null }, { type: 'done', predictions: [], threshold: 0.5, events: true })).toMatchObject({ unsure: true });
+});

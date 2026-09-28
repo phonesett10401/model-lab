@@ -14,7 +14,7 @@ export type BenchEvent =
 	| { type: 'load' }
 	| { type: 'progress'; value: number | null }
 	| { type: 'examine' }
-	| { type: 'done'; predictions: Prediction[]; threshold: number; detect?: boolean }
+	| { type: 'done'; predictions: Prediction[]; threshold: number; detect?: boolean; events?: boolean }
 	| { type: 'fail'; reason: string }
 	| { type: 'reset' };
 
@@ -31,6 +31,11 @@ export function step(s: BenchState, e: BenchEvent): BenchState {
 		case 'examine':
 			return { kind: 'examining', last: lastResult(s) };
 		case 'done': {
+			if (e.events) {
+				// Sound events arrive already thresholded (each sound has its own bar); keep them in time order.
+				const predictions = [...e.predictions].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
+				return { kind: 'result', predictions, unsure: predictions.length === 0 };
+			}
 			if (e.detect) {
 				// A detector reports everything it found above the threshold; nothing found is the "unsure" state.
 				const predictions = e.predictions.filter((p) => p.score >= e.threshold).sort((a, b) => b.score - a.score);
