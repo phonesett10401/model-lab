@@ -4,7 +4,7 @@ Last updated: 2026-09-28. Owner: Phone Sett (GitHub `phonesett10401`, private re
 
 ## What this is
 
-**AI Model Lab**: a public library of small AI models the owner trains (on Roboflow; they hand over ONNX/TF.js exports plus real test results). Each model has an honest report card. The framework is built; no real model is live yet (all three are `planned`: Creature categorizer, Fresh or spoiled, Gender classifier).
+**AI Model Lab**: a public library of small AI models the owner trains. Each model has an honest report card. **One model is live: the Sea creature detector** (`/models/sea-creature-detector`, old address `/models/creature-categorizer` redirects). Fresh or spoiled and Gender classifier are still `planned`. The repo `phonesett10401/model-lab` is **public** (YOLO is AGPL-3.0); the owner is fine with draft/audit sources being visible there, and the production build still leaves them out.
 
 - **Site:** SvelteKit 2 + Svelte 5 runes + TypeScript, `adapter-static` (everything prerendered), deployed on Vercel. `vercel.json`: `outputDirectory: build`, `cleanUrls`.
 - **Lab:** `/` (hero + archive index + workbench), `/models/[slug]`, `/audits/[slug]`, archive-style 404.
@@ -21,11 +21,19 @@ Last updated: 2026-09-28. Owner: Phone Sett (GitHub `phonesett10401`, private re
 
 ## Current state
 
-- `master` is at `349f7df` and **11 commits ahead of `origin/master` (not pushed; ask the owner)**. Working tree clean (except the untracked `.claude/`, which is intentionally not committed).
-- Tests: `pnpm test:unit --run` (28), `pnpm test:e2e` (169 passed, 23 skipped), `cd video && pnpm test` (10), `cd video && pnpm check` (4, needs rendered files).
-- Specs and plans: `docs/superpowers/specs/*`, `docs/superpowers/plans/*`. The intro spec's §9 records the owner-approved 21 s rebrand.
+- Branch `feat/sea-creature-detector` (built on `feat/training-setup`) puts the detector live; ask the owner before merging or pushing. The intro scroll story is done and live.
+- Tests: `pnpm test:unit --run` (47), `pnpm test:e2e` (197 passed, 25 skipped; `e2e/detector.e2e.ts` runs the real model in Chromium and WebKit), `cd video && pnpm test` (10).
+- Specs and plans: `docs/superpowers/specs/*`, `docs/superpowers/plans/*`.
 
-## NEXT TASK: make the /intro scroll story visually stunning (owner asked; design proposed, not yet built)
+## Models and training (local, on the owner's RTX 5060)
+
+- **How a model runs on the site:** static ONNX file in `static/models/`, ONNX Runtime Web engine copied to `static/ort/` by `scripts/copy-ort.mjs` (runs before `dev`/`build`; `static/ort/` is git-ignored). `src/lib/runtime/yolo.ts` matches Ultralytics' letterbox, decode and NMS; `sea-detector.ts` is the runtime; entries with `task: 'detect'` draw boxes (`ImageInput`) and list detections (`DetectionList`). Nothing loads until a visitor runs the model.
+- **Training env:** conda env `modellab-train` (Python 3.12, PyTorch cu128, Ultralytics 8.4, onnxruntime, open_clip). Python: `C:\Users\phone\miniconda3\envs\modellab-train\python.exe`. API keys live in `training/.env` (git-ignored; check with `training/check_keys.py`, which never prints keys).
+- **Pipeline (`training/`):** `openimages_select.py` → `openimages_download.py` → `openimages_foodfilter.py` → `prepare_sea_v2.py` (merges with `prepare_aquarium.py`'s output) → `train.py <data.yaml> <run>` → `evaluate.py <data.yaml> <run> [aq_|oi_]` (square 640 input, exactly as the site runs) → `pick_examples.py` (writes `src/lib/data/sea-creature-detector.json` and `static/samples/sea/`; never type report numbers by hand). Datasets, runs and weights stay local (git-ignored); `training/attribution/sea-v2.csv` credits every training photo.
+- **v2 results (767 frozen test photos):** 0.74 mAP@50 overall, 0.82 on aquarium photos; known gaps: seal vs sea lion, dolphin vs whale, small wild fish; no octopus, manta or orca.
+- **Next model ideas:** widen with iNaturalist + auto-labelling (octopus, manta ray, orca, lionfish…); friends may send ONNX models (put them in `training/incoming/<name>/`, re-measure before publishing).
+
+## Done: the /intro scroll story (kept for reference)
 
 The design the owner saw (confirm briefly, then build: "brainstorm briefly, then build"):
 
