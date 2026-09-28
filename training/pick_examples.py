@@ -19,10 +19,11 @@ SITE = HERE.parent
 OUT_JSON = SITE / 'src' / 'lib' / 'data' / 'sea-creature-detector.json'
 OUT_IMG = SITE / 'static' / 'samples' / 'sea'
 THRESHOLD = 0.45
+MARGIN = 0.03  # failure examples must score at least this far above THRESHOLD
 SQUARE = dict(imgsz=640, rect=False)
 PAIR_NOTES = {
     frozenset({'seal', 'sea lion'}): 'Seals and sea lions look alike, and it often swaps them.',
-    frozenset({'whale', 'dolphin'}): 'Whales and dolphins share a shape; at a distance it can swap them.',
+    frozenset({'shark', 'fish'}): 'Sharks are fish-shaped; small or distant sharks can be called plain fish.',
 }
 # Rejected at human review: a walrus labelled "seal"; an orca labelled "dolphin" (with a watermark); a child as the main subject.
 SKIP = {'oi_1ab339d4231ca8cc.jpg', 'oi_70e4c253551475d0.jpg', 'oi_8f6679d10b325117.jpg'}
@@ -36,7 +37,8 @@ def credit(name, attr):
 
 
 def main():
-    model = YOLO(RUN / 'weights' / 'best.pt')
+    # The exported ONNX file is exactly what the site runs, so record its outputs (not the PyTorch weights').
+    model = YOLO(RUN / 'weights' / 'best.onnx', task='detect')
     names = model.names
     attr = {r['file']: r for r in csv.DictReader(open(DATA / 'attribution.csv', encoding='utf8'))}
     rows = []
@@ -64,10 +66,14 @@ def main():
         best = max(only, key=lambda r: max((b[2] - b[0]) * (b[3] - b[1]) for _, b in r['gt']))
         picks.append((cls.replace(' ', '-'), title, best, None))
 
-    for pair, title in [(('seal', 'sea lion'), 'Seal or sea lion?'), (('whale', 'dolphin'), 'Whale or dolphin?')]:
-        cands = [r for r in rows if len(r['gt']) == 1 and r['wrong'] and {names[r['wrong'][0][0][0]], names[r['wrong'][0][1][0]]} == set(pair)]
-        r = max(cands, key=lambda r: r['wrong'][0][1][2])
-        (tc, _), (pc, _, ps) = r['wrong'][0]
+    # Whale vs dolphin is also a common mix-up, but Open Images labels orcas as both, so no example of it is honest to show.
+    for pair, title in [(('seal', 'sea lion'), 'Seal or sea lion?'), (('shark', 'fish'), 'Shark or fish?')]:
+        # A clear margin over the display threshold, so small browser-to-browser score drift can't hide the example.
+        # Prefer the simplest photo (fewest creatures), then the most confident mix-up.
+        cands = [(r, w) for r in rows for w in r['wrong']
+                 if {names[w[0][0]], names[w[1][0]]} == set(pair) and w[1][2] >= THRESHOLD + MARGIN]
+        r, w = min(cands, key=lambda rw: (len(rw[0]['gt']), -rw[1][1][2]))
+        (tc, _), (pc, _, ps) = w
         fail = {'truth': names[tc], 'said': names[pc], 'score': round(ps, 4), 'why': PAIR_NOTES[frozenset(pair)]}
         picks.append((pair[0].replace(' ', '-') + '-or-' + pair[1].replace(' ', '-'), title, r, fail))
 

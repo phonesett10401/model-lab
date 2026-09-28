@@ -10,10 +10,12 @@ const ANCHORS = 8400;
 const CANDIDATE_CONF = 0.25; // the display threshold (entry.unsureBelow) is applied later; filtering after NMS is equivalent
 const IOU = 0.7;
 
-async function fetchBytes(url: string, onProgress: (p: number | null) => void): Promise<Uint8Array> {
+export const ENGINE_URL = '/ort/ort-wasm-simd-threaded.wasm';
+
+/** Streams a file, reporting bytes received so far. */
+async function fetchBytes(url: string, onBytes: (got: number) => void): Promise<Uint8Array> {
 	const res = await fetch(url);
-	if (!res.ok || !res.body) throw new Error(`model download failed: ${res.status}`);
-	const total = Number(res.headers.get('content-length')) || 0;
+	if (!res.ok || !res.body) throw new Error(`download failed: ${url} ${res.status}`);
 	const reader = res.body.getReader();
 	const parts: Uint8Array[] = [];
 	let got = 0;
@@ -22,7 +24,7 @@ async function fetchBytes(url: string, onProgress: (p: number | null) => void): 
 		if (done) break;
 		parts.push(value);
 		got += value.length;
-		onProgress(total ? got / total : null);
+		onBytes(got);
 	}
 	const bytes = new Uint8Array(got);
 	let at = 0;
@@ -60,8 +62,18 @@ function create(): Runtime {
 			ort ??= await import('onnxruntime-web/wasm');
 			ort.env.wasm.wasmPaths = '/ort/';
 			ort.env.wasm.numThreads = globalThis.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
-			const bytes = await fetchBytes(MODEL_URL, onProgress); // throws on a failed download: session stays unset, so the next try starts over
-			session = await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] });
+			// Download the model AND the engine ourselves, with one progress bar over both (the engine is the bigger part).
+			// Handing ONNX Runtime the engine bytes means a dropped download just fails this try: if ONNX Runtime fetched
+			// the engine itself and that failed, it would refuse every later try until the page was reloaded.
+			const total = (MODEL_MB + ENGINE_MB) * 1e6; // sizes are checked against the real files by a unit test
+			const got = { model: 0, engine: 0 };
+			const report = () => onProgress(Math.min(1, (got.model + got.engine) / total));
+			const [model, engine] = await Promise.all([
+				fetchBytes(MODEL_URL, (n) => { got.model = n; report(); }),
+				fetchBytes(ENGINE_URL, (n) => { got.engine = n; report(); })
+			]); // a failed download throws here: session stays unset, so the next try starts over
+			ort.env.wasm.wasmBinary = engine;
+			session = await ort.InferenceSession.create(model, { executionProviders: ['wasm'] });
 		},
 		async classify(input: ModelInput): Promise<Prediction[]> {
 			if (input.type !== 'image') throw new Error('the sea creature detector takes photos');

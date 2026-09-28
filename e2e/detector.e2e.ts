@@ -33,6 +33,7 @@ test('every sample gives the same creatures, scores and boxes the model was meas
 	for (const s of sea.samples) {
 		await runs(page, () => page.getByRole('button', { name: s.title, exact: true }).click());
 		const got = await found(page);
+		expect(got.length, `${s.id}: number of creatures`).toBe(Math.min(s.expected.length, 12));
 		expect(got.map((g) => g.label).sort()).toEqual(s.expected.slice(0, got.length).map((e) => e.label).sort());
 		// Match each recorded box to the page's closest box of the same creature: near-tied scores may list in either order.
 		for (const e of s.expected.slice(0, got.length)) {
@@ -72,10 +73,14 @@ test('a photo with no known creature says so and lists what it knows', async ({ 
 
 test('an EXIF-rotated phone photo finds the same creatures as the upright one', async ({ page }) => {
 	await page.goto('/models/sea-creature-detector');
-	await runs(page, () => page.getByRole('button', { name: 'Dolphin', exact: true }).click(), 'result');
-	const upright = (await found(page)).map((g) => g.label).sort();
-	await runs(page, () => page.locator('input[type=file]:not([capture])').setInputFiles('e2e/fixtures/rotated-dolphin.jpg'), 'result');
-	expect((await found(page)).map((g) => g.label).sort()).toEqual(upright);
+	// The aquarium sample: many small, off-centre creatures, so a sideways reading can't land its boxes in the same places by chance.
+	await runs(page, () => page.getByRole('button', { name: 'Aquarium tank', exact: true }).click(), 'result');
+	const upright = await found(page);
+	await runs(page, () => page.locator('input[type=file]:not([capture])').setInputFiles('e2e/fixtures/rotated-aquarium.jpg'), 'result');
+	const rotated = await found(page);
+	expect(rotated.map((g) => g.label).sort()).toEqual(upright.map((g) => g.label).sort());
+	// Same photo, so every box must land in the same place on the photo as the visitor sees it.
+	for (const u of upright) expect(Math.max(...rotated.filter((r) => r.label === u.label).map((r) => iou(r.box, u.box)))).toBeGreaterThan(0.8);
 });
 
 test('a failed download shows an error, and the next try works', async ({ page }) => {
@@ -85,6 +90,31 @@ test('a failed download shows an error, and the next try works', async ({ page }
 	await page.getByRole('button', { name: 'Dolphin', exact: true }).click();
 	await expect(page.getByRole('alert')).toContainText('failed to run');
 	await page.getByRole('button', { name: 'Dolphin', exact: true }).click();
+	await expect(demo(page)).toHaveAttribute('data-state', 'result', { timeout: 60_000 });
+});
+
+test('a failed engine download shows an error, and the next try works', async ({ page }) => {
+	let first = true;
+	await page.route('**/ort/ort-wasm-simd-threaded.wasm', (route) => (first ? ((first = false), route.abort()) : route.continue()));
+	await page.goto('/models/sea-creature-detector');
+	await page.getByRole('button', { name: 'Dolphin', exact: true }).click();
+	await expect(page.getByRole('alert')).toContainText('failed to run');
+	await page.getByRole('button', { name: 'Dolphin', exact: true }).click();
+	await expect(demo(page)).toHaveAttribute('data-state', 'result', { timeout: 60_000 });
+});
+
+test('the progress bar counts the engine too, not just the model', async ({ page }) => {
+	let release!: () => void;
+	const held = new Promise<void>((r) => (release = r));
+	await page.route('**/ort/ort-wasm-simd-threaded.wasm', async (route) => { await held; await route.continue(); });
+	await page.goto('/models/sea-creature-detector');
+	await page.getByRole('button', { name: 'Dolphin', exact: true }).click();
+	await expect(demo(page)).toHaveAttribute('data-state', 'loading');
+	await page.waitForTimeout(1500); // the 9.8 MB model is local and arrives well within this; the engine is held
+	const value = await page.locator('.out progress').evaluate((p: HTMLProgressElement) => (p.hasAttribute('value') ? p.value : null));
+	release();
+	expect(value).not.toBeNull();
+	expect(value!).toBeLessThan(0.6); // model is ~41% of the 24 MB; a full bar here would mean the engine isn't counted
 	await expect(demo(page)).toHaveAttribute('data-state', 'result', { timeout: 60_000 });
 });
 
