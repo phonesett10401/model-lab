@@ -16,7 +16,7 @@ A sound stays only if it has enough clean clips (target ≥ 150 after licence fi
 
 ## 1. Data
 
-- **Source:** FSD50K (Freesound, Zenodo). Map our 16 sounds to FSD50K / AudioSet-ontology labels; the mapping lives in one table in the selection script.
+- **Source:** FSD50K (Freesound, Zenodo). Map our 17 sounds to FSD50K / AudioSet-ontology labels; the mapping lives in one table in the selection script.
 - **Licence:** keep only **CC0 and CC BY** clips (FSD50K metadata gives each clip's licence). Non-commercial clips are excluded. Every kept clip's author, Freesound link and licence go to `training/attribution/sounds-v1.csv`.
 - **Top-up:** if a sound is short of clips, fetch more from Freesound with the owner's API key (key read from `training/.env`, never printed), same licence filter, and review a sample by ear before use.
 - **"Nothing I know" negatives:** clips from other FSD50K classes, plus room tone and plain noise, labelled with no target sound. These teach the model to stay quiet instead of guessing.
