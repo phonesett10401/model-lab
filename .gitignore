@@ -32,6 +32,7 @@ video/out/
 # Model training: datasets, runs and weights stay local (large, and some sources are training-only)
 training/data/
 training/runs/
+training/vendor/
 *.pt
 training/*.log
 __pycache__/
