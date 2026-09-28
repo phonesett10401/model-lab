@@ -28,3 +28,8 @@ test-results
 .superpowers/
 .claude/settings.local.json
 video/out/
+
+# Model training: datasets, runs and weights stay local (large, and some sources are training-only)
+training/data/
+training/runs/
+*.pt
