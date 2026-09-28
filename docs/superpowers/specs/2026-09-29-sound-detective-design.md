@@ -30,7 +30,7 @@ A sound stays only if it has enough clean clips (target ≥ 150 after licence fi
 - **Input:** 32 kHz mono, log-mel spectrogram with the parameters EfficientAT was pretrained with. Training on short crops that match the browser's slice length (≈1 s; exact window and step fixed by validation, then frozen).
 - **Augmentation:** mixing two clips (teaches overlap), added background noise, gain changes.
 - **Two sizes** (≈1M and ≈5M parameters). Pick by measured score against download size; the report card shows the trade-off.
-- **Export:** ONNX (the model only; the spectrogram is computed in JS, see §3).
+- **Export:** ONNX, with the spectrogram inside the model (see §4).
 
 ## 3. Measuring (never typed by hand)
 
@@ -47,7 +47,7 @@ A sound stays only if it has enough clean clips (target ≥ 150 after licence fi
 
 **Runtime `src/lib/runtime/sound-detective.ts`** (same shape as `sea-detector.ts`):
 1. Decode with Web Audio, mix to mono, resample to 32 kHz (`OfflineAudioContext`).
-2. Log-mel spectrogram in JS (`src/lib/runtime/mel.ts`), matching Python's numbers.
+2. The spectrogram is part of the ONNX model (fixed conv layers equal to EfficientAT's front end, tested in `training/test_sounds_model.py`), so the browser only decodes, resamples and slices audio.
 3. ONNX Runtime scores each slice.
 4. `src/lib/runtime/events.ts`: smooth scores, threshold per sound, merge neighbouring slices into events `{label, start, end, score}`.
 - Same engine file as the detector (shipped once), same own-download with retry and combined progress bar. Nothing loads until a visitor records, uploads or picks a sample. The audio never leaves the device.
@@ -70,7 +70,7 @@ A sound stays only if it has enough clean clips (target ≥ 150 after licence fi
 
 ## 5. Tests
 
-- **Unit (Vitest):** mel matches Python reference values on a fixed clip; event merging (gaps, overlaps, events at the very start/end, a single slice, all silence); headline wording and plurals.
+- **Unit (Vitest):** slicing matches Python's window_starts; event merging (gaps, overlaps, events at the very start/end, a single slice, all silence); headline wording and plurals.
 - **E2E (Playwright, Chromium + WebKit):** live mode (Chromium only, since WebKit has no fake microphone) with a fake microphone playing a known clip (expected sounds appear while listening; auto-stop after 2 min using a shortened test limit; stops when the tab is hidden; mic denied message; stopping gives a normal result); every sample gives the recorded events (same labels, times within ±0.25 s, scores within 0.03); overlap shows on separate lanes; a silent clip says "No sounds it knows"; stereo 44.1 kHz MP3 and a >30 s upload work; too-short clip message; failed model/engine download recovers; home page never downloads the model; axe after a result in Light and Dark.
 - **Python:** selection rules, synthetic-clip builder, evaluation maths.
 
