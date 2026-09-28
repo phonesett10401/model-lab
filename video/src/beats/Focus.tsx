@@ -9,7 +9,7 @@ import { unit, type Layout } from '../layout';
 /** The sea creature detector plate, in its hero state. */
 export const HeroPlate: React.FC<{ u: number; label: number }> = ({ u, label }) => (
 	<div style={{ width: 420 * u, background: c.plate, border: `${3 * u}px solid ${c.red}`, boxShadow: `0 0 ${60 * u}px rgba(255,79,79,0.55), inset 0 0 ${30 * u}px rgba(255,79,79,0.18)`, padding: `${26 * u}px ${30 * u}px` }}>
-		<div style={{ fontFamily: font.mono, fontSize: 18 * u, color: c.red, letterSpacing: '0.14em', opacity: label }}>SPECIMEN 01 OF THE LAB</div>
+		<div style={{ fontFamily: font.mono, fontSize: 18 * u, color: c.red, letterSpacing: '0.14em', opacity: label }}>MODEL 01 OF THE LAB</div>
 		<div style={{ fontFamily: font.serif, fontSize: 46 * u, color: c.ink, marginTop: 8 * u }}>Sea creature detector</div>
 		<div style={{ marginTop: 12 * u, opacity: label }}><Stamp size={18 * u}>SAMPLE</Stamp></div>
 	</div>
