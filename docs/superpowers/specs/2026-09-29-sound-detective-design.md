@@ -4,7 +4,7 @@ Date: 2026-09-29. Status: approved in chat, awaiting written-spec review.
 
 ## Goal
 
-Model No. 4 of the lab: **Sound detective**. A visitor records (up to 15 s) or uploads a clip; the model finds which of 16 everyday sounds happen **and when**, including sounds that overlap, and shows them as lanes on a timeline. Runs entirely in the browser, like the Sea creature detector. Honest report card; every number comes from a script.
+Model No. 4 of the lab: **Sound detective**. A visitor records (up to 15 s) or uploads a clip; the model finds which of 16 everyday sounds happen **and when**, including sounds that overlap, and shows them as lanes on a timeline. A live listening mode shows sounds as they happen. Runs entirely in the browser, like the Sea creature detector. Honest report card; every number comes from a script.
 
 ## Sounds (v1, 16)
 
@@ -60,10 +60,18 @@ A sound stays only if it has enough clean clips (target ≥ 150 after licence fi
 
 **Samples** carry Freesound credit + licence links (existing `Sample.credit*` fields).
 
+**Live listening** (a third button, "◉ Listen live", next to Record and Upload):
+- The mic stream is read in small chunks (AudioWorklet), resampled to 32 kHz; every ≈0.5 s the latest slice goes through the same mel → model → event-merging code as clips. No separate model, no separate numbers.
+- The timeline scrolls, showing the last ≈30 s; lanes appear as sounds are heard; a large "now hearing" label shows the current sound(s), or "Listening…" when nothing clears the threshold.
+- Privacy and battery: nothing is saved or uploaded; audio is scored and discarded except the last 30 s held in memory for the result. A visible red "Listening" indicator; the button becomes "■ Stop". Auto-stops after 2 minutes, when the tab is hidden, or when leaving the page. Stopping turns the last ≤30 s into a normal result (lanes, list, tap to replay).
+- Slow devices: if scoring can't keep up with real time, slices are skipped rather than queued, and a note says "Your device is busy, some moments were skipped".
+- Errors: mic denied / unsupported reuse the existing messages; the model download happens before listening starts (progress bar), so the first seconds aren't lost.
+- Report card note: live mode scores ≈0.5 s steps, so very short sounds are missed more often than in clips; measured on the synthetic clips by streaming them through the live path, if the numbers differ.
+
 ## 5. Tests
 
 - **Unit (Vitest):** mel matches Python reference values on a fixed clip; event merging (gaps, overlaps, events at the very start/end, a single slice, all silence); headline wording and plurals.
-- **E2E (Playwright, Chromium + WebKit):** every sample gives the recorded events (same labels, times within ±0.25 s, scores within 0.03); overlap shows on separate lanes; a silent clip says "No sounds it knows"; stereo 44.1 kHz MP3 and a >30 s upload work; too-short clip message; failed model/engine download recovers; home page never downloads the model; axe after a result in Light and Dark.
+- **E2E (Playwright, Chromium + WebKit):** live mode with Chromium's fake microphone playing a known clip (expected sounds appear while listening; auto-stop after 2 min using a shortened test limit; stops when the tab is hidden; mic denied message; stopping gives a normal result); every sample gives the recorded events (same labels, times within ±0.25 s, scores within 0.03); overlap shows on separate lanes; a silent clip says "No sounds it knows"; stereo 44.1 kHz MP3 and a >30 s upload work; too-short clip message; failed model/engine download recovers; home page never downloads the model; axe after a result in Light and Dark.
 - **Python:** selection rules, synthetic-clip builder, evaluation maths.
 
 ## 6. Report card
@@ -75,7 +83,7 @@ A sound stays only if it has enough clean clips (target ≥ 150 after licence fi
 
 ## Out of scope (later versions)
 
-Live listening (always-on mic), more sounds, the speech translator.
+More sounds, the speech translator.
 
 ## Owner rules that apply
 
