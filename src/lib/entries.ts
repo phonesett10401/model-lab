@@ -1,4 +1,5 @@
-import type { AuditEntry, Entry, ModelEntry } from './types';
+import sea from './data/sea-creature-detector.json';
+import type { AuditEntry, Entry, Failure, ModelEntry, Sample } from './types';
 
 const span = (text: string, phrase: string): [number, number] => {
 	const i = text.indexOf(phrase);
@@ -8,20 +9,16 @@ const span = (text: string, phrase: string): [number, number] => {
 
 // ---------- Real entries ----------
 
+// Numbers, samples and failures come from the evaluation (training/pick_examples.py), never typed by hand.
 const creature: ModelEntry = {
-	kind: 'model', slug: 'creature-categorizer', no: 1, name: 'Creature categorizer',
-	purpose: 'Names the sea creature in a photo, and says when it isn’t sure.',
-	status: 'planned', input: 'image', labels: [], unsureBelow: 0.6, samples: [],
+	kind: 'model', slug: 'sea-creature-detector', no: 1, name: 'Sea creature detector',
+	purpose: 'Finds sea creatures in a photo, draws a box around each one and names it.',
+	status: 'live', task: 'detect', input: 'image', labels: sea.classes, unsureBelow: sea.threshold,
+	samples: sea.samples as Sample[],
 	report: {
-		data: [
-			{ label: 'Source', value: 'iNaturalist research-grade observations' },
-			{ label: 'Photos', value: null },
-			{ label: 'Split', value: null },
-			{ label: 'Base model', value: 'Small pretrained vision model' },
-			{ label: 'Known gaps', value: null }
-		],
-		metrics: { title: 'Accuracy per category', rows: [{ label: 'All categories', value: null }] },
-		failures: []
+		data: sea.data,
+		metrics: { title: 'Detection score per creature (mAP@50)', rows: Object.entries(sea.metrics).map(([label, value]) => ({ label, value })) },
+		failures: sea.failures as Failure[]
 	}
 };
 

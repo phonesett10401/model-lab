@@ -12,7 +12,7 @@ The framework is built. The real models are not trained yet.
 
 | No. | Entry | Type | Status |
 |---|---|---|---|
-| 01 | Creature categorizer | image model | planned |
+| 01 | Sea creature detector | image detector | live |
 | 02 | Fresh or spoiled | image model | planned |
 | 03 | Gender classifier (bias study: accuracy reported per group) | image model | planned |
 

@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test';
 
 test('a planned model page is honest about having no numbers', async ({ page }) => {
-	await page.goto('/models/creature-categorizer');
-	await expect(page.getByRole('heading', { level: 1, name: 'Creature categorizer' })).toBeVisible();
+	await page.goto('/models/sea-creature-detector');
+	await expect(page.getByRole('heading', { level: 1, name: 'Sea creature detector' })).toBeVisible();
 	await expect(page.getByText('PLANNED', { exact: true })).toBeVisible();
 	await expect(page.getByText('not yet measured').first()).toBeVisible();
 	await expect(page.locator('main')).not.toContainText('%');
-	await expect(page).toHaveTitle('Creature categorizer · AI Model Lab');
-	await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /\/og\/creature-categorizer\.png$/);
+	await expect(page).toHaveTitle('Sea creature detector · AI Model Lab');
+	await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /\/og\/sea-creature-detector\.png$/);
 });
 
 test('a draft model shows measured metrics, worst first, with DRAFT stamp', async ({ page }) => {

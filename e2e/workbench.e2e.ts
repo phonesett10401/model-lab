@@ -4,7 +4,7 @@ test.use({ viewport: { width: 1280, height: 900 } });
 const demo = (page: import('@playwright/test').Page) => page.locator('.demo');
 
 test('a planned model is clearly not live', async ({ page }) => {
-	await page.goto('/?entry=creature-categorizer');
+	await page.goto('/?entry=fresh-or-spoiled');
 	await expect(demo(page)).toHaveAttribute('data-state', 'not-live');
 	await expect(page.getByRole('button', { name: 'Upload' })).toBeDisabled();
 	await expect(page.getByText(/no made-up results/)).toBeVisible();

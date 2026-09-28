@@ -2,5 +2,6 @@
 	"$schema": "https://openapi.vercel.sh/vercel.json",
 	"outputDirectory": "build",
 	"cleanUrls": true,
-	"trailingSlash": false
+	"trailingSlash": false,
+	"redirects": [{ "source": "/models/creature-categorizer", "destination": "/models/sea-creature-detector", "permanent": true }]
 }

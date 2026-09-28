@@ -5,7 +5,7 @@ test.use({ viewport: { width: 1280, height: 900 } });
 test('shows the first entry by default and selects on click', async ({ page }) => {
 	await page.goto('/');
 	const bench = page.locator('[data-bench-title]');
-	await expect(bench).toHaveText('Creature categorizer');
+	await expect(bench).toHaveText('Sea creature detector');
 	await page.locator('a.plate', { hasText: 'Review mood reader' }).click();
 	await expect(page).toHaveURL(/\?entry=draft-review-mood/);
 	await expect(bench).toHaveText('Review mood reader');
@@ -14,7 +14,7 @@ test('shows the first entry by default and selects on click', async ({ page }) =
 
 test('an unknown slug falls back to the first entry', async ({ page }) => {
 	await page.goto('/?entry=typo-slug');
-	await expect(page.locator('[data-bench-title]')).toHaveText('Creature categorizer');
+	await expect(page.locator('[data-bench-title]')).toHaveText('Sea creature detector');
 });
 
 test('a shared link opens that entry', async ({ page }) => {
