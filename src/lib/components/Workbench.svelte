@@ -15,6 +15,8 @@
 	import { latestOnly } from '$lib/latest';
 	import { summarize } from '$lib/predictions';
 	import { reducedMotion } from '$lib/motion.svelte';
+	import { startListening, type LiveView } from '$lib/live';
+	import { wavBlob } from '$lib/runtime/audio';
 	import type { ModelEntry, ModelInput, Sample } from '$lib/types';
 
 	let { entry, header = true }: { entry: ModelEntry; header?: boolean } = $props();
@@ -50,11 +52,13 @@
 
 	let loaded = false;
 	let bench = $state<BenchState>(initialBench);
+	/** Live listening (sound models): the scrolling view while the mic is on. */
+	let listening = $state<LiveView | null>(null);
 	const latest = latestOnly();
 	const busy = $derived(bench.kind === 'loading' || bench.kind === 'examining');
 	const live = $derived(checked && runtime !== null);
 	const view = $derived(
-		!checked ? 'ready' : !live ? 'not-live' : bench.kind === 'result' ? (bench.unsure ? 'unsure' : 'result') : bench.kind
+		listening ? 'listening' : !checked ? 'ready' : !live ? 'not-live' : bench.kind === 'result' ? (bench.unsure ? 'unsure' : 'result') : bench.kind
 	);
 	const previous = $derived(bench.kind === 'error' ? lastResult(bench) : null);
 
@@ -74,15 +78,20 @@
 	/** Sound models: the clip the result describes (length, cut or not, waveform). */
 	let clip = $state<ClipInfo | null>(null);
 
+	/** Downloads the model if needed (progress bar). False if a newer run took over meanwhile. */
+	async function ensureLoaded(isLatest: () => boolean): Promise<boolean> {
+		if (!loaded) {
+			bench = step(bench, { type: 'load' });
+			await runtime!.load((p) => { if (isLatest()) bench = step(bench, { type: 'progress', value: p }); });
+			loaded = true;
+		}
+		return isLatest();
+	}
+
 	async function run(input: ModelInput, isLatest = latest()) {
 		if (!runtime) return;
 		try {
-			if (!loaded) {
-				bench = step(bench, { type: 'load' });
-				await runtime.load((p) => { if (isLatest()) bench = step(bench, { type: 'progress', value: p }); });
-				loaded = true;
-			}
-			if (!isLatest()) return;
+			if (!(await ensureLoaded(isLatest))) return;
 			bench = step(bench, { type: 'examine' });
 			const predictions = await runtime.classify(input);
 			if (isLatest()) {
@@ -118,6 +127,43 @@
 		if (s) runSample(s);
 	};
 	const fail = (reason: string) => (bench = step(bench, { type: 'fail', reason }));
+
+	// ----- live listening (sound models) -----
+	let stopLive: (() => void) | null = null;
+	let liveUrl: string | null = null;
+	let leaving = false;
+
+	async function listen() {
+		if (!runtime) return;
+		const isLatest = latest();
+		shownCredit = null;
+		try {
+			if (!(await ensureLoaded(isLatest))) return;
+			bench = step(bench, { type: 'reset' });
+			listening = { predictions: [], now: [], from: 0, skipped: 0 };
+			stopLive = await startListening(runtime, {
+				onView: (v) => { if (isLatest() && listening) listening = v; },
+				onStop: (samples) => {
+					listening = null;
+					stopLive = null;
+					if (leaving || !isLatest() || samples.length === 0) return;
+					// What was heard becomes an ordinary clip: same result, lanes and replay as a recording.
+					const blob = wavBlob(samples);
+					if (liveUrl) URL.revokeObjectURL(liveUrl);
+					shownAudio = liveUrl = URL.createObjectURL(blob);
+					run({ type: 'audio', blob }, isLatest);
+				}
+			});
+		} catch (e) {
+			listening = null;
+			if (isLatest()) bench = step(bench, { type: 'fail', reason: e instanceof UserError ? e.message : 'The model failed to run. Try again.' });
+		}
+	}
+	$effect(() => () => {
+		leaving = true; // leaving mid-listen turns the mic off and discards what was heard
+		stopLive?.();
+		if (liveUrl) URL.revokeObjectURL(liveUrl);
+	});
 </script>
 
 <article class="bench" class:wide class:split bind:clientWidth={width}>
@@ -162,7 +208,11 @@
 			{:else if entry.input === 'text'}
 				<TextInput disabled={!live || busy} examining={bench.kind === 'examining'} bind:shown={shownText} onsubmit={(i) => run(i)} onerror={fail} />
 			{:else if entry.input === 'audio'}
-				<AudioInput disabled={!live || busy} examining={bench.kind === 'examining'} bind:shown={shownAudio} onsubmit={(i) => run(i)} onerror={fail} />
+				<AudioInput
+					disabled={!live || busy || !!listening} examining={bench.kind === 'examining'} bind:shown={shownAudio}
+					onsubmit={(i) => { shownCredit = null; run(i); }} onerror={fail}
+					canListen={events} listening={!!listening} onlisten={listen} onstoplisten={() => stopLive?.()}
+				/>
 			{:else}
 				<TableInput fields={entry.fields ?? []} disabled={!live || busy} examining={bench.kind === 'examining'} bind:shown={shownValues} onsubmit={(i) => run(i)} onerror={fail} />
 			{/if}
@@ -171,7 +221,7 @@
 				<div class="samples">
 					<p class="mono faint">Try a sample:</p>
 					{#each entry.samples as s (s.id)}
-						<button class="btn ghost" disabled={busy} onclick={() => runSample(s)}>{s.title}</button>
+						<button class="btn ghost" disabled={busy || !!listening} onclick={() => runSample(s)}>{s.title}</button>
 					{/each}
 				</div>
 			{/if}
@@ -181,6 +231,12 @@
 			<div class="out" aria-live="polite" bind:this={out}>
 				{#if view === 'not-live'}
 					<p class="soft">This model is {entry.status === 'planned' ? 'planned' : 'still training'}. The demo opens once it has been measured, and there are no made-up results in the meantime.</p>
+				{:else if listening}
+					<p class="mono live" role="status"><span class="dot" aria-hidden="true"></span> Listening</p>
+					<p class="answer serif">{listening.now.length ? listening.now.join(' + ') : 'Listening…'}</p>
+					<EventTimeline predictions={listening.predictions} seconds={30} from={listening.from} />
+					{#if listening.skipped}<p class="note warn">Your device is busy, some moments were skipped.</p>{/if}
+					<p class="mono faint">Stops by itself after 2 minutes. Nothing is recorded or uploaded.</p>
 				{:else if bench.kind === 'loading'}
 					<p class="mono">Downloading model · {runtime?.sizeLabel} · only the first time</p>
 					<progress max="1" value={bench.progress ?? undefined}></progress>
@@ -244,4 +300,6 @@
 	.note { padding: 0.5rem 0.75rem; border-left: 2px solid var(--red); background: var(--plate); }
 	.note.warn { border-left-color: var(--amber); }
 	progress { width: 100%; accent-color: var(--ink); }
+	.live { color: var(--red); display: flex; align-items: center; gap: 0.4rem; }
+	.dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--red); }
 </style>

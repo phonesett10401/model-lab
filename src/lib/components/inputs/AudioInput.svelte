@@ -4,8 +4,12 @@
 	import type { ModelInput } from '$lib/types';
 
 	let {
-		disabled, examining, shown = $bindable(null), onsubmit, onerror
-	}: { disabled: boolean; examining: boolean; shown: string | null; onsubmit: (i: ModelInput) => void; onerror: (r: string) => void } = $props();
+		disabled, examining, shown = $bindable(null), onsubmit, onerror,
+		canListen = false, listening = false, onlisten = () => {}, onstoplisten = () => {}
+	}: {
+		disabled: boolean; examining: boolean; shown: string | null; onsubmit: (i: ModelInput) => void; onerror: (r: string) => void;
+		canListen?: boolean; listening?: boolean; onlisten?: () => void; onstoplisten?: () => void;
+	} = $props();
 
 	let upload: HTMLInputElement;
 	let bars = $state<number[]>([]);
@@ -95,13 +99,16 @@
 <div class="audio">
 	<div class="wave" aria-hidden="true">
 		{#each bars as b, i (i)}<i style="transform: scaleY({Math.max(0.04, b)})"></i>{/each}
-		{#if !bars.length}<p class="soft">{disabled ? 'Demo opens when this model is measured' : 'Record up to 15 seconds, or upload a clip'}</p>{/if}
+		{#if !bars.length}<p class="soft">{listening ? 'Listening…' : disabled ? 'Demo opens when this model is measured' : canListen ? 'Record up to 15 seconds, upload a clip, or listen live' : 'Record up to 15 seconds, or upload a clip'}</p>{/if}
 		{#if examining}<span class="playhead"></span>{/if}
 	</div>
 	{#if shown}<audio controls src={shown}></audio>{/if}
 	<div class="actions">
-		<button class="btn" disabled={disabled || starting} aria-pressed={recording} onclick={toggleRecord}>{recording ? '■ Stop' : '● Record'}</button>
+		<button class="btn" disabled={disabled || starting || listening} aria-pressed={recording} onclick={toggleRecord}>{recording ? '■ Stop' : '● Record'}</button>
 		<button class="btn ghost" {disabled} onclick={() => upload.click()}>Upload</button>
+		{#if canListen}
+			<button class="btn" aria-pressed={listening} disabled={(disabled && !listening) || recording} onclick={() => (listening ? onstoplisten() : onlisten())}>{listening ? '■ Stop listening' : '◉ Listen live'}</button>
+		{/if}
 		<input bind:this={upload} type="file" accept="audio/*" hidden onchange={(e) => take(e.currentTarget.files?.[0])} />
 	</div>
 </div>

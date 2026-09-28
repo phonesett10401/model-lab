@@ -7,7 +7,7 @@ export default defineConfig({
 	use: { baseURL: 'http://localhost:4173' },
 	projects: [
 		{ name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: '**/intro-video.e2e.ts' },
-		{ name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: '**/intro-video.e2e.ts' },
+		{ name: 'webkit', use: { ...devices['Desktop Safari'] }, testIgnore: ['**/intro-video.e2e.ts', '**/live.e2e.ts'] }, // live tests need Chromium's fake microphone
 		// Playwright's bundled Chromium can't decode H.264; real playback is tested in installed Google Chrome.
 		{ name: 'chrome', use: { ...devices['Desktop Chrome'], channel: 'chrome' }, testMatch: '**/intro-video.e2e.ts' }
 	]
