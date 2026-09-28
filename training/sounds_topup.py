@@ -45,8 +45,18 @@ def need(rows):
     return {c: (TARGET - n if n < MIN_TRAIN else 0) for c, n in have.items()}
 
 
+def polite_get(url, **kw):
+    """Freesound answers bursts with 403/429 for a while: back off and retry instead of failing."""
+    for wait in (0, 5, 15, 30, 60, 120):
+        time.sleep(wait)
+        r = requests.get(url, timeout=30, **kw)
+        if r.status_code not in (403, 429, 503):
+            return r
+    return r
+
+
 def search(sound, key, page):
-    r = requests.get('https://freesound.org/apiv2/search/text/', timeout=30, params={
+    r = polite_get('https://freesound.org/apiv2/search/text/', params={
         'query': QUERIES[sound], 'token': key, 'page': page, 'page_size': 150,
         'filter': 'license:("Attribution" OR "Creative Commons 0") duration:[0.5 TO 30]',
         'fields': 'id,name,license,username,duration,previews'})
@@ -85,8 +95,12 @@ def main():
             for res in search(sound, key, page):
                 if len(got) >= n or not usable(res, known):
                     continue
-                mp3 = requests.get(res['previews']['preview-hq-mp3'], timeout=30).content
-                x, sr = sf.read(io.BytesIO(mp3), dtype='float32')
+                resp = polite_get(res['previews']['preview-hq-mp3'])
+                try:
+                    x, sr = sf.read(io.BytesIO(resp.content), dtype='float32')
+                except sf.LibsndfileError:
+                    continue  # not audio (an error page): skip this clip
+                time.sleep(0.3)
                 x = to_32k(x, sr)
                 score = audioset_score(net, x, ids[sound])
                 if score < AUDIOSET_MIN:
@@ -97,7 +111,6 @@ def main():
                 got.append({'fname': fname, 'split': 'train', 'source': 'freesound', 'sounds': sound,
                             'licence': res['license'], 'uploader': res['username'],
                             'url': f"https://freesound.org/s/{res['id']}/", 'seconds': f'{len(x) / SR:.3f}'})
-                time.sleep(0.2)
             page += 1
         print(f'{sound}: added {len(got)} of {n} needed', flush=True)
         added += got
