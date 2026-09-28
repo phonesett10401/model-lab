@@ -9,6 +9,9 @@ export interface Prediction {
 	score: number;
 	/** Detectors only: x0, y0, x1, y1 as fractions of the original photo. */
 	box?: [number, number, number, number];
+	/** Sound events only: when it starts and ends, in seconds from the start of the clip. */
+	start?: number;
+	end?: number;
 }
 
 export type SampleInput =
@@ -78,8 +81,8 @@ export interface ModelEntry extends EntryBase {
 	kind: 'model';
 	status: ModelStatus;
 	input: InputType;
-	/** 'detect' draws boxes and lists everything found; default 'classify' shows the top answers. */
-	task?: 'classify' | 'detect';
+	/** 'detect' draws boxes; 'events' marks sounds on a timeline; default 'classify' shows the top answers. */
+	task?: 'classify' | 'detect' | 'events';
 	labels: string[];
 	unsureBelow: number;
 	samples: Sample[];
