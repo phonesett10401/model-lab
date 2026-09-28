@@ -1,6 +1,7 @@
 <script lang="ts">
 	import EntryHeader from './EntryHeader.svelte';
 	import PredictionBars from './PredictionBars.svelte';
+	import DetectionList from './DetectionList.svelte';
 	import ReportCard from './ReportCard.svelte';
 	import ImageInput from './inputs/ImageInput.svelte';
 	import TextInput from './inputs/TextInput.svelte';
@@ -9,6 +10,7 @@
 	import { getRuntime, type Runtime } from '$lib/runtime';
 	import { initialBench, lastResult, step, type BenchState } from '$lib/bench';
 	import { latestOnly } from '$lib/latest';
+	import { summarize } from '$lib/predictions';
 	import { reducedMotion } from '$lib/motion.svelte';
 	import type { ModelEntry, ModelInput, Sample } from '$lib/types';
 
@@ -28,6 +30,8 @@
 	const current = $derived(tabs.includes(active) ? active : tabs[0]);
 	const reportShows = $derived<ReportTab[]>(wide ? ['data', 'metrics', 'fails'] : current === 'demo' ? [] : [current as ReportTab]);
 	const id = $derived(`wb-${entry.slug}`);
+	const detect = $derived(entry.task === 'detect');
+	const sureFrom = $derived(Math.round(entry.unsureBelow * 100));
 
 	// ----- runtime + state -----
 	let runtime = $state<Runtime | null>(null);
@@ -61,6 +65,7 @@
 	let shownText = $state('');
 	let shownAudio = $state<string | null>(null);
 	let shownValues = $state<Record<string, string | number> | null>(null);
+	let shownCredit = $state<string | null>(null);
 
 	async function run(input: ModelInput, isLatest = latest()) {
 		if (!runtime) return;
@@ -73,7 +78,7 @@
 			if (!isLatest()) return;
 			bench = step(bench, { type: 'examine' });
 			const predictions = await runtime.classify(input);
-			if (isLatest()) bench = step(bench, { type: 'done', predictions, threshold: entry.unsureBelow });
+			if (isLatest()) bench = step(bench, { type: 'done', predictions, threshold: entry.unsureBelow, detect });
 		} catch {
 			if (isLatest()) bench = step(bench, { type: 'fail', reason: 'The model failed to run. Try again.' });
 		}
@@ -82,6 +87,7 @@
 	async function runSample(s: Sample) {
 		const isLatest = latest();
 		active = 'demo';
+		shownCredit = s.credit ?? null;
 		const i = s.input;
 		if (i.type === 'text') {
 			shownText = i.text;
@@ -129,7 +135,12 @@
 		>
 			<div class="input-col">
 			{#if entry.input === 'image'}
-				<ImageInput disabled={!live || busy} examining={bench.kind === 'examining'} bind:shown={shownImage} onsubmit={(i) => run(i)} onerror={fail} />
+				<ImageInput
+					disabled={!live || busy} examining={bench.kind === 'examining'} bind:shown={shownImage}
+					boxes={detect && bench.kind === 'result' ? bench.predictions : null}
+					onsubmit={(i) => { shownCredit = null; run(i); }} onerror={fail}
+				/>
+				{#if shownCredit}<p class="mono faint credit">{shownCredit}</p>{/if}
 			{:else if entry.input === 'text'}
 				<TextInput disabled={!live || busy} examining={bench.kind === 'examining'} bind:shown={shownText} onsubmit={(i) => run(i)} onerror={fail} />
 			{:else if entry.input === 'audio'}
@@ -158,6 +169,14 @@
 					<p class="mono faint">Runs on your device. Nothing you add is uploaded.</p>
 				{:else if bench.kind === 'examining'}
 					<p class="mono">Examining…</p>
+				{:else if bench.kind === 'result' && detect}
+					<p class="answer serif">{bench.unsure ? 'No sea creatures found' : summarize(bench.predictions)}</p>
+					{#if bench.unsure}
+						<p class="note warn">Nothing it knows cleared {sureFrom}% confidence. It looks for: {entry.labels.join(', ')}.</p>
+					{:else}
+						<DetectionList predictions={bench.predictions} />
+						<p class="mono faint">Shows creatures it is at least {sureFrom}% sure of.</p>
+					{/if}
 				{:else if bench.kind === 'result'}
 					<p class="answer serif">{bench.unsure ? 'Not sure' : bench.predictions[0].label}</p>
 					<PredictionBars predictions={bench.predictions} />
@@ -168,7 +187,7 @@
 					<p class="note" role="alert">{bench.reason}</p>
 					{#if previous}
 						<p class="mono faint">Previous result:</p>
-						<PredictionBars predictions={previous} />
+						{#if detect}<DetectionList predictions={previous} />{:else}<PredictionBars predictions={previous} />{/if}
 					{/if}
 				{/if}
 			</div>

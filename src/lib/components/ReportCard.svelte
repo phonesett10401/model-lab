@@ -50,7 +50,7 @@
 				{#each report.failures as f, i (i)}
 					<li>
 						<p class="mono">true: {f.truth}</p>
-						<p class="mono said">said: {f.said} · {pct(f.score)}%</p>
+						<p class="mono said">said: {f.said}{f.score > 0 ? ` · ${pct(f.score)}%` : ''}</p>
 						<p class="soft">{f.why}</p>
 						{#if onpick && f.sampleId}
 							<button class="btn ghost" onclick={() => onpick(f.sampleId!)}>Try this one</button>
