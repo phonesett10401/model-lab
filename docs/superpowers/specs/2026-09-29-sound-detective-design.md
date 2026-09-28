@@ -71,7 +71,7 @@ A sound stays only if it has enough clean clips (target ≥ 150 after licence fi
 ## 5. Tests
 
 - **Unit (Vitest):** mel matches Python reference values on a fixed clip; event merging (gaps, overlaps, events at the very start/end, a single slice, all silence); headline wording and plurals.
-- **E2E (Playwright, Chromium + WebKit):** live mode with Chromium's fake microphone playing a known clip (expected sounds appear while listening; auto-stop after 2 min using a shortened test limit; stops when the tab is hidden; mic denied message; stopping gives a normal result); every sample gives the recorded events (same labels, times within ±0.25 s, scores within 0.03); overlap shows on separate lanes; a silent clip says "No sounds it knows"; stereo 44.1 kHz MP3 and a >30 s upload work; too-short clip message; failed model/engine download recovers; home page never downloads the model; axe after a result in Light and Dark.
+- **E2E (Playwright, Chromium + WebKit):** live mode (Chromium only, since WebKit has no fake microphone) with a fake microphone playing a known clip (expected sounds appear while listening; auto-stop after 2 min using a shortened test limit; stops when the tab is hidden; mic denied message; stopping gives a normal result); every sample gives the recorded events (same labels, times within ±0.25 s, scores within 0.03); overlap shows on separate lanes; a silent clip says "No sounds it knows"; stereo 44.1 kHz MP3 and a >30 s upload work; too-short clip message; failed model/engine download recovers; home page never downloads the model; axe after a result in Light and Dark.
 - **Python:** selection rules, synthetic-clip builder, evaluation maths.
 
 ## 6. Report card
