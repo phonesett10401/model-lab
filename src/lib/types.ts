@@ -7,6 +7,8 @@ export type Measured = number | null;
 export interface Prediction {
 	label: string;
 	score: number;
+	/** Detectors only: x0, y0, x1, y1 as fractions of the original photo. */
+	box?: [number, number, number, number];
 }
 
 export type SampleInput =
@@ -22,6 +24,8 @@ export interface Sample {
 	/** Output recorded from the model for this exact sample. */
 	expected: Prediction[];
 	knownFailure?: boolean;
+	/** Who made the sample (photographer, dataset, licence). Shown with the sample. */
+	credit?: string;
 }
 
 export interface Failure {
@@ -69,6 +73,8 @@ export interface ModelEntry extends EntryBase {
 	kind: 'model';
 	status: ModelStatus;
 	input: InputType;
+	/** 'detect' draws boxes and lists everything found; default 'classify' shows the top answers. */
+	task?: 'classify' | 'detect';
 	labels: string[];
 	unsureBelow: number;
 	samples: Sample[];

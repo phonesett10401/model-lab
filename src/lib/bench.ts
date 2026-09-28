@@ -14,7 +14,7 @@ export type BenchEvent =
 	| { type: 'load' }
 	| { type: 'progress'; value: number | null }
 	| { type: 'examine' }
-	| { type: 'done'; predictions: Prediction[]; threshold: number }
+	| { type: 'done'; predictions: Prediction[]; threshold: number; detect?: boolean }
 	| { type: 'fail'; reason: string }
 	| { type: 'reset' };
 
@@ -31,6 +31,11 @@ export function step(s: BenchState, e: BenchEvent): BenchState {
 		case 'examine':
 			return { kind: 'examining', last: lastResult(s) };
 		case 'done': {
+			if (e.detect) {
+				// A detector reports everything it found above the threshold; nothing found is the "unsure" state.
+				const predictions = e.predictions.filter((p) => p.score >= e.threshold).sort((a, b) => b.score - a.score);
+				return { kind: 'result', predictions, unsure: predictions.length === 0 };
+			}
 			const predictions = topN(e.predictions);
 			return { kind: 'result', predictions, unsure: isUnsure(predictions, e.threshold) };
 		}
