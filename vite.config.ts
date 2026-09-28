@@ -10,6 +10,8 @@ const origin = process.env.VERCEL_PROJECT_PRODUCTION_URL
 
 export default defineConfig({
 	define: { __SHOW_DRAFTS__: JSON.stringify(showDrafts) },
+	// Vite's dependency pre-bundling breaks onnxruntime-web's own loading of its engine files.
+	optimizeDeps: { exclude: ['onnxruntime-web'] },
 	plugins: [
 		sveltekit({
 			compilerOptions: {

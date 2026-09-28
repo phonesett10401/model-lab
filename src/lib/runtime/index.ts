@@ -8,8 +8,10 @@ export interface Runtime {
 	classify(input: ModelInput): Promise<Prediction[]>;
 }
 
-/** Real models register here: slug → lazy import of their runtime (Web Worker + transformers.js). */
-export const registry: Record<string, () => Promise<Runtime>> = {};
+/** Real models register here: slug → lazy import of their runtime. */
+export const registry: Record<string, () => Promise<Runtime>> = {
+	'sea-creature-detector': () => import('./sea-detector').then((m) => m.seaDetector())
+};
 
 export async function getRuntime(entry: ModelEntry): Promise<Runtime | null> {
 	if (entry.status !== 'live') return null;
