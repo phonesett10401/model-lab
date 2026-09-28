@@ -46,22 +46,32 @@ def compare(gt, pred):
 
 if __name__ == '__main__':
     data, name = Path(sys.argv[1]), sys.argv[2]
+    # Optional file-name prefix to score one source on its own, e.g. aq_ (aquarium) or oi_ (Open Images).
+    prefix = sys.argv[3] if len(sys.argv) > 3 else ''
+    tag = f'-{prefix.rstrip("_")}' if prefix else ''
     run = Path(__file__).parent / 'runs' / name
-    report = run / 'report'
+    report = run / f'report{tag}'
     (report / 'failures').mkdir(parents=True, exist_ok=True)
     model = YOLO(run / 'weights' / 'best.pt')
     names = model.names
+    root = data.parent
+    test_images = sorted(p for p in (root / 'images' / 'test').iterdir() if p.name.startswith(prefix))
+    val_data = data
+    if prefix:  # a data file whose test split is just this source's photos (labels are found by swapping images/ → labels/)
+        listing = run / f'test{tag}.txt'
+        listing.write_text('\n'.join(p.as_posix() for p in test_images), encoding='utf8')
+        val_data = run / f'data{tag}.yaml'
+        val_data.write_text(data.read_text(encoding='utf8').replace('test: images/test', f'test: {listing.as_posix()}'), encoding='utf8')
 
     # 1. Test-split metrics, once.
-    m = model.val(data=str(data), split='test', batch=16, **SQUARE, plots=True, project=str(run), name='test', exist_ok=True)
+    m = model.val(data=str(val_data), split='test', batch=16, **SQUARE, plots=True, project=str(run), name=f'test{tag}', exist_ok=True)
     per_class = {names[c]: {'mAP50': round(float(m.box.ap50[i]), 3), 'precision': round(float(m.box.p[i]), 3), 'recall': round(float(m.box.r[i]), 3)}
                  for i, c in enumerate(m.box.ap_class_index)}
     overall = {'mAP50': round(float(m.box.map50), 3), 'mAP50-95': round(float(m.box.map), 3), 'precision': round(float(m.box.mp), 3), 'recall': round(float(m.box.mr), 3)}
 
     # 2. Per-image comparison on the test images, for failure examples.
-    root = data.parent
     rows = []
-    for img in sorted((root / 'images' / 'test').iterdir()):
+    for img in test_images:
         r = model.predict(img, conf=CONF, verbose=False, **SQUARE)[0]
         h, w = r.orig_shape
         gt = truth(root / 'labels' / 'test' / (img.stem + '.txt'), w, h)
