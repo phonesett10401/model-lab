@@ -33,3 +33,4 @@ video/out/
 training/data/
 training/runs/
 *.pt
+training/*.log
