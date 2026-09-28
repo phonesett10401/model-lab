@@ -4,9 +4,9 @@ Date: 2026-09-29. Status: approved in chat, awaiting written-spec review.
 
 ## Goal
 
-Model No. 4 of the lab: **Sound detective**. A visitor records (up to 15 s) or uploads a clip; the model finds which of 16 everyday sounds happen **and when**, including sounds that overlap, and shows them as lanes on a timeline. A live listening mode shows sounds as they happen. Runs entirely in the browser, like the Sea creature detector. Honest report card; every number comes from a script.
+Model No. 4 of the lab: **Sound detective**. A visitor records (up to 15 s) or uploads a clip; the model finds which of 17 everyday sounds happen **and when**, including sounds that overlap, and shows them as lanes on a timeline. A live listening mode shows sounds as they happen. Runs entirely in the browser, like the Sea creature detector. Honest report card; every number comes from a script.
 
-## Sounds (v1, 16)
+## Sounds (v1, 17)
 
 | Home | Street | Weather | People |
 |---|---|---|---|
@@ -79,7 +79,7 @@ A sound stays only if it has enough clean clips (target ≥ 150 after licence fi
 - **Data:** sources and licences, clip counts, split, base model and size.
 - **Metrics:** score per sound; timeline accuracy (from the synthetic test); small vs medium model accuracy and download.
 - **How it fails:** real clips it got wrong, with the reason.
-- **Known gaps:** only 16 sounds; phone mics differ from training audio; quiet sounds under speech get missed (confirmed or corrected by measurement).
+- **Known gaps:** only 17 sounds; phone mics differ from training audio; quiet sounds under speech get missed (confirmed or corrected by measurement).
 
 ## Out of scope (later versions)
 
