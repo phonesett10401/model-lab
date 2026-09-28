@@ -1,9 +1,12 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
 // The spec's parity check, done in the real browser: the page must reproduce the outputs Ultralytics recorded.
 const sea = JSON.parse(readFileSync('src/lib/data/sea-creature-detector.json', 'utf8')) as {
-	samples: { id: string; title: string; credit: string; expected: { label: string; score: number; box: number[] }[] }[];
+	samples: {
+		id: string; title: string; credit: string; creditUrl: string; license: string; licenseUrl: string;
+		expected: { label: string; score: number; box: number[] }[];
+	}[];
 };
 
 test.use({ viewport: { width: 1280, height: 900 } });
@@ -95,7 +98,7 @@ test('a failed download shows an error, and the next try works', async ({ page }
 
 test('a failed engine download shows an error, and the next try works', async ({ page }) => {
 	let first = true;
-	await page.route('**/ort/ort-wasm-simd-threaded.wasm', (route) => (first ? ((first = false), route.abort()) : route.continue()));
+	await page.route('**/ort-wasm-simd-threaded*.wasm', (route) => (first ? ((first = false), route.abort()) : route.continue()));
 	await page.goto('/models/sea-creature-detector');
 	await page.getByRole('button', { name: 'Dolphin', exact: true }).click();
 	await expect(page.getByRole('alert')).toContainText('failed to run');
@@ -106,7 +109,7 @@ test('a failed engine download shows an error, and the next try works', async ({
 test('the progress bar counts the engine too, not just the model', async ({ page }) => {
 	let release!: () => void;
 	const held = new Promise<void>((r) => (release = r));
-	await page.route('**/ort/ort-wasm-simd-threaded.wasm', async (route) => { await held; await route.continue(); });
+	await page.route('**/ort-wasm-simd-threaded*.wasm', async (route) => { await held; await route.continue(); });
 	await page.goto('/models/sea-creature-detector');
 	await page.getByRole('button', { name: 'Dolphin', exact: true }).click();
 	await expect(demo(page)).toHaveAttribute('data-state', 'loading');
@@ -118,9 +121,23 @@ test('the progress bar counts the engine too, not just the model', async ({ page
 	await expect(demo(page)).toHaveAttribute('data-state', 'result', { timeout: 60_000 });
 });
 
+test('the built site ships the engine exactly once', () => {
+	const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? walk(`${dir}/${d.name}`) : [d.name]));
+	expect(walk('build').filter((f) => /^ort-wasm-simd-threaded.*\.wasm$/.test(f))).toHaveLength(1);
+});
+
+test('each sample credits its photographer and licence with links', async ({ page }) => {
+	await page.goto('/models/sea-creature-detector');
+	for (const s of sea.samples) {
+		await runs(page, () => page.getByRole('button', { name: s.title, exact: true }).click());
+		await expect(page.getByRole('link', { name: s.credit, exact: true })).toHaveAttribute('href', s.creditUrl);
+		await expect(page.getByRole('link', { name: s.license, exact: true })).toHaveAttribute('href', s.licenseUrl);
+	}
+});
+
 test('the home page never downloads the model or the engine', async ({ page }) => {
 	const heavy: string[] = [];
-	page.on('request', (r) => { if (/\.onnx$|\/ort\//.test(r.url())) heavy.push(r.url()); });
+	page.on('request', (r) => { if (/\.onnx$|ort-wasm/.test(r.url())) heavy.push(r.url()); });
 	await page.goto('/');
 	await page.waitForLoadState('networkidle');
 	expect(heavy).toEqual([]);

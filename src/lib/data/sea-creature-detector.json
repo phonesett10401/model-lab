@@ -75,7 +75,10 @@
 				"src": "/samples/sea/aquarium.jpg",
 				"alt": "Test photo showing fish, shark"
 			},
-			"credit": "Photo: Roboflow, Aquarium Combined dataset · CC BY 4.0",
+			"credit": "Photo: Roboflow, Aquarium Combined dataset",
+			"creditUrl": "https://universe.roboflow.com/brad-dwyer/aquarium-combined",
+			"license": "CC BY 4.0",
+			"licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
 			"expected": [
 				{
 					"label": "fish",
@@ -167,7 +170,10 @@
 				"src": "/samples/sea/dolphin.jpg",
 				"alt": "Test photo showing dolphin"
 			},
-			"credit": "Photo: bp6316 on Flickr, via Open Images · CC BY 2.0",
+			"credit": "Photo: bp6316 on Flickr, via Open Images",
+			"creditUrl": "https://www.flickr.com/photos/bp6316/7582703650/",
+			"license": "CC BY 2.0",
+			"licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
 			"expected": [
 				{
 					"label": "dolphin",
@@ -189,7 +195,10 @@
 				"src": "/samples/sea/sea-turtle.jpg",
 				"alt": "Test photo showing sea turtle"
 			},
-			"credit": "Photo: Tim Sheerman-Chase on Flickr, via Open Images · CC BY 2.0",
+			"credit": "Photo: Tim Sheerman-Chase on Flickr, via Open Images",
+			"creditUrl": "https://www.flickr.com/photos/tim_uk/2693839316",
+			"license": "CC BY 2.0",
+			"licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
 			"expected": [
 				{
 					"label": "sea turtle",
@@ -211,7 +220,10 @@
 				"src": "/samples/sea/seal-or-sea-lion.jpg",
 				"alt": "Test photo showing seal"
 			},
-			"credit": "Photo: Gabriel Pollard on Flickr, via Open Images · CC BY 2.0",
+			"credit": "Photo: Gabriel Pollard on Flickr, via Open Images",
+			"creditUrl": "https://www.flickr.com/photos/nzgabriel/14424800225",
+			"license": "CC BY 2.0",
+			"licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
 			"expected": [
 				{
 					"label": "sea lion",
@@ -234,7 +246,10 @@
 				"src": "/samples/sea/shark-or-fish.jpg",
 				"alt": "Test photo showing shark"
 			},
-			"credit": "Photo: cdorobek on Flickr, via Open Images · CC BY 2.0",
+			"credit": "Photo: cdorobek on Flickr, via Open Images",
+			"creditUrl": "https://www.flickr.com/photos/cdorobek/7873561318",
+			"license": "CC BY 2.0",
+			"licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
 			"expected": [
 				{
 					"label": "fish",
@@ -257,7 +272,10 @@
 				"src": "/samples/sea/missed-fish.jpg",
 				"alt": "Test photo showing fish"
 			},
-			"credit": "Photo: James Emery on Flickr, via Open Images · CC BY 2.0",
+			"credit": "Photo: James Emery on Flickr, via Open Images",
+			"creditUrl": "https://www.flickr.com/photos/emeryjl/3040279817",
+			"license": "CC BY 2.0",
+			"licenseUrl": "https://creativecommons.org/licenses/by/2.0/",
 			"expected": [
 				{
 					"label": "fish",

@@ -13,6 +13,18 @@ for (const scheme of ['light', 'dark'] as const)
 			expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`)).toEqual([]);
 		});
 
+for (const scheme of ['light', 'dark'] as const)
+	test(`axe: the detector after a result (${scheme})`, async ({ page }) => {
+		test.setTimeout(90_000);
+		await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+		await page.goto('/models/sea-creature-detector');
+		await page.getByRole('button', { name: 'Aquarium tank', exact: true }).click();
+		await expect(page.locator('.demo')).toHaveAttribute('data-state', 'result', { timeout: 60_000 });
+		await expect(page.locator('.drop .tag').first()).toBeVisible(); // the boxes, tags, list and credit are all on screen
+		const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+		expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`)).toEqual([]);
+	});
+
 test('keyboard only: reach the archive, run a sample, open the page', async ({ page }) => {
 	await page.setViewportSize({ width: 1280, height: 900 });
 	await page.goto('/?entry=draft-shape-sorter');

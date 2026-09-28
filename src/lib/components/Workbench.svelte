@@ -65,7 +65,8 @@
 	let shownText = $state('');
 	let shownAudio = $state<string | null>(null);
 	let shownValues = $state<Record<string, string | number> | null>(null);
-	let shownCredit = $state<string | null>(null);
+	/** The sample on screen, for its photo credit (null for the visitor's own photos). */
+	let shownCredit = $state<Sample | null>(null);
 
 	async function run(input: ModelInput, isLatest = latest()) {
 		if (!runtime) return;
@@ -87,7 +88,7 @@
 	async function runSample(s: Sample) {
 		const isLatest = latest();
 		active = 'demo';
-		shownCredit = s.credit ?? null;
+		shownCredit = s.credit ? s : null;
 		const i = s.input;
 		if (i.type === 'text') {
 			shownText = i.text;
@@ -140,7 +141,15 @@
 					boxes={detect && bench.kind === 'result' ? bench.predictions : null}
 					onsubmit={(i) => { shownCredit = null; run(i); }} onerror={fail}
 				/>
-				{#if shownCredit}<p class="mono faint credit">{shownCredit}</p>{/if}
+				{#if shownCredit}
+					<p class="mono faint credit">
+						{#if shownCredit.creditUrl}<a href={shownCredit.creditUrl} target="_blank" rel="noopener">{shownCredit.credit}</a>{:else}{shownCredit.credit}{/if}
+						{#if shownCredit.license}
+							·
+							{#if shownCredit.licenseUrl}<a href={shownCredit.licenseUrl} target="_blank" rel="noopener license">{shownCredit.license}</a>{:else}{shownCredit.license}{/if}
+						{/if}
+					</p>
+				{/if}
 			{:else if entry.input === 'text'}
 				<TextInput disabled={!live || busy} examining={bench.kind === 'examining'} bind:shown={shownText} onsubmit={(i) => run(i)} onerror={fail} />
 			{:else if entry.input === 'audio'}

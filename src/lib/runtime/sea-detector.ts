@@ -1,6 +1,10 @@
 import type { ModelInput, Prediction } from '$lib/types';
 import type { Runtime } from './index';
 import { SIZE, decode, letterbox, nms, toOriginal } from './yolo';
+// The engine files as Vite's own hashed, same-origin assets: one copy in the build, cached as immutable.
+// (These imports are just URLs; nothing is fetched until a visitor runs the model.)
+import engineUrl from 'onnxruntime-web/ort-wasm-simd-threaded.wasm?url';
+import engineGlueUrl from 'onnxruntime-web/ort-wasm-simd-threaded.mjs?url';
 
 export const MODEL_URL = '/models/sea-creature-detector-v2.onnx';
 export const MODEL_MB = 9.8;
@@ -10,7 +14,7 @@ const ANCHORS = 8400;
 const CANDIDATE_CONF = 0.25; // the display threshold (entry.unsureBelow) is applied later; filtering after NMS is equivalent
 const IOU = 0.7;
 
-export const ENGINE_URL = '/ort/ort-wasm-simd-threaded.wasm';
+export const ENGINE_URL = engineUrl;
 
 /** Streams a file, reporting bytes received so far. */
 async function fetchBytes(url: string, onBytes: (got: number) => void): Promise<Uint8Array> {
@@ -60,7 +64,7 @@ function create(): Runtime {
 		async load(onProgress) {
 			if (session) return;
 			ort ??= await import('onnxruntime-web/wasm');
-			ort.env.wasm.wasmPaths = '/ort/';
+			ort.env.wasm.wasmPaths = { mjs: engineGlueUrl, wasm: engineUrl };
 			ort.env.wasm.numThreads = globalThis.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
 			// Download the model AND the engine ourselves, with one progress bar over both (the engine is the bigger part).
 			// Handing ONNX Runtime the engine bytes means a dropped download just fails this try: if ONNX Runtime fetched

@@ -24,8 +24,13 @@ export interface Sample {
 	/** Output recorded from the model for this exact sample. */
 	expected: Prediction[];
 	knownFailure?: boolean;
-	/** Who made the sample (photographer, dataset, licence). Shown with the sample. */
+	/** Who made the sample (photographer or dataset). Shown with the sample, linked to creditUrl. */
 	credit?: string;
+	/** The photo's own page (e.g. on Flickr) or the dataset's page. */
+	creditUrl?: string;
+	/** Licence name and its official page, e.g. "CC BY 2.0". */
+	license?: string;
+	licenseUrl?: string;
 }
 
 export interface Failure {

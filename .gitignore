@@ -35,4 +35,3 @@ training/runs/
 *.pt
 training/*.log
 __pycache__/
-static/ort/

@@ -30,10 +30,13 @@ SKIP = {'oi_1ab339d4231ca8cc.jpg', 'oi_70e4c253551475d0.jpg', 'oi_8f6679d10b3251
 
 
 def credit(name, attr):
+    """Attribution as CC licences ask for it: who made it, where it's from (linked), and the licence (linked)."""
     a = attr[name]
     if a['source'].startswith('Aquarium'):
-        return 'Photo: Roboflow, Aquarium Combined dataset · CC BY 4.0'
-    return f"Photo: {a['author']} on Flickr, via Open Images · CC BY 2.0"
+        return {'credit': 'Photo: Roboflow, Aquarium Combined dataset', 'creditUrl': a['link'],
+                'license': 'CC BY 4.0', 'licenseUrl': 'https://creativecommons.org/licenses/by/4.0/'}
+    return {'credit': f"Photo: {a['author']} on Flickr, via Open Images", 'creditUrl': a['link'],
+            'license': 'CC BY 2.0', 'licenseUrl': 'https://creativecommons.org/licenses/by/2.0/'}
 
 
 def main():
@@ -92,7 +95,7 @@ def main():
         shutil.copy2(r['img'], OUT_IMG / f'{sid}.jpg')
         creatures = ', '.join(sorted(r['classes']))
         s = {'id': sid, 'title': title, 'input': {'type': 'image', 'src': f'/samples/sea/{sid}.jpg', 'alt': f'Test photo showing {creatures}'},
-             'credit': credit(r['img'].name, attr), 'expected': r['expected']}
+             **credit(r['img'].name, attr), 'expected': r['expected']}
         if fail:
             s['knownFailure'] = True
             failures.append({**fail, 'sampleId': sid})
