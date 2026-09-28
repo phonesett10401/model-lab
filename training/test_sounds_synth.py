@@ -14,7 +14,7 @@ mix, truth = s.place(bg, [part, ('speech', np.full(c.SR, 0.2, np.float32))], np.
 assert len(mix) == len(bg) and len(truth) == 2
 k = next(t for t in truth if t['label'] == 'knocking')
 i0 = int(round(k['start'] * c.SR))
-assert np.allclose(mix[i0:i0 + 100], 0.5, atol=0.21)                   # the knock is where the truth says
+assert np.allclose(mix[i0 + 20:i0 + 120], 0.5, atol=0.21)  # the knock is where the truth says (times are rounded to 1 ms = 32 samples)
 sp = next(t for t in truth if t['label'] == 'speech')
 assert sp['start'] < k['end'] and k['start'] < sp['end']                # overlap requested -> they overlap
 print('synth checks passed')
