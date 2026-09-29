@@ -119,10 +119,10 @@ def main():
     ]
     out = {'classes': CLASSES, 'thresholds': th, 'threshold': min(th), 'window': 1, 'step': 0.5, 'data': data,
            'metrics': rep['per_sound'], 'samples': samples, 'failures': failures}
-    OUT_JSON.write_text(json.dumps(out, indent='\t', ensure_ascii=False) + '\n', encoding='utf8')
+    OUT_JSON.write_text(json.dumps(out, indent='\t', ensure_ascii=False) + '\n', encoding='utf8', newline='\n')
     (HERE / 'attribution').mkdir(exist_ok=True)
     with open(HERE / 'attribution' / 'sounds-v1.csv', 'w', newline='', encoding='utf8') as fh:
-        w = csv.writer(fh)
+        w = csv.writer(fh, lineterminator='\n')
         w.writerow(['file', 'author', 'link', 'licence'])
         w.writerows([[r['fname'], r['uploader'], r['url'], r['licence']] for r in clips])
     # e2e fixtures from the first sample
