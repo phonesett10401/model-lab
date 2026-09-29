@@ -30,4 +30,6 @@ it('lanes list each sound once, first heard first', () => {
 it('clock shows minutes, seconds and tenths', () => {
 	expect(clock(0.75)).toBe('0:00.8');
 	expect(clock(65.25)).toBe('1:05.3');
+	expect(clock(59.97)).toBe('1:00.0'); // never "0:60.0"
+	expect(clock(119.97)).toBe('2:00.0');
 });

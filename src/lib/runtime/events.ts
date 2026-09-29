@@ -45,4 +45,7 @@ export function summarizeEvents(p: Prediction[]): string {
 	}).join(', ');
 }
 
-export const clock = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
+export function clock(s: number): string {
+	const tenths = Math.round(s * 10); // round first, so 59.97 s reads 1:00.0, not 0:60.0
+	return `${Math.floor(tenths / 600)}:${((tenths % 600) / 10).toFixed(1).padStart(4, '0')}`;
+}
