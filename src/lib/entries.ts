@@ -1,4 +1,5 @@
 import sea from './data/sea-creature-detector.json';
+import sounds from './data/sound-detective.json';
 import type { AuditEntry, Entry, Failure, ModelEntry, Sample } from './types';
 
 const span = (text: string, phrase: string): [number, number] => {
@@ -56,6 +57,19 @@ const gender: ModelEntry = {
 };
 
 // ---------- Drafts (dev + preview only; sample data, clearly labelled) ----------
+
+// Numbers, samples and failures come from the evaluation (training/sounds_pick_examples.py), never typed by hand.
+const soundDetective: ModelEntry = {
+	kind: 'model', slug: 'sound-detective', no: 4, name: 'Sound detective',
+	purpose: 'Listens to a recording and marks which everyday sounds happen, and when.',
+	status: 'live', task: 'events', input: 'audio', labels: sounds.classes, unsureBelow: sounds.threshold,
+	samples: sounds.samples as Sample[],
+	report: {
+		data: sounds.data,
+		metrics: { title: 'Score per sound (average precision)', rows: Object.entries(sounds.metrics).map(([label, value]) => ({ label, value })) },
+		failures: sounds.failures as Failure[]
+	}
+};
 
 const draftShapes: ModelEntry = {
 	kind: 'model', slug: 'draft-shape-sorter', no: 90, name: 'Shape sorter', draft: true,
@@ -168,7 +182,7 @@ const draftAudit: AuditEntry = {
 
 // Drafts are compiled out of production builds entirely (not just hidden), so their sample content never ships.
 export const allEntries: Entry[] = [
-	creature, produce, gender,
+	creature, produce, gender, soundDetective,
 	...(__SHOW_DRAFTS__ ? [draftShapes, draftMood, draftSounds, draftPlants, draftAudit] : [])
 ];
 
