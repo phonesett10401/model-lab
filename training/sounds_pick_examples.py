@@ -112,6 +112,7 @@ def main():
         {'label': 'Test score', 'value': f"{sz['map']:.2f} mean average precision on {rep['test_clips']:,} held-out clips"},
         {'label': 'Size trade-off', 'value': f"{rep['size']}: {sz['map']:.2f} for {sz['mb']} MB; {other}: {rep['sizes'][other]['map']:.2f} for {rep['sizes'][other]['mb']} MB"},
         {'label': 'Timing', 'value': f"Finds {round(tl['recall'] * 100)}% of sounds within 0.5 s of when they start ({tl['clips']} test mixes); {round(tl['precision'] * 100)}% of what it marks is right"},
+        {'label': 'Second by second', 'value': f"{tl['segment']['f1']:.2f} F1 on which sounds are on in each second of the same mixes"},
         {'label': 'Listens in', 'value': '1 second slices, every half second; live mode uses the same slices'},
         {'label': 'Known gaps', 'value': f'Only {len(CLASSES)} sounds; phone mics sound different from the training clips; quiet sounds under speech get missed'},
         {'label': 'Sound credits', 'value': 'Every training clip’s author is listed in training/attribution/sounds-v1.csv in the project repository'},
