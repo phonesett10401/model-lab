@@ -21,10 +21,10 @@ Last updated: 2026-09-28. Owner: Phone Sett (GitHub `phonesett10401`, private re
 
 ## Current state
 
-- Everything is merged and pushed (`master` = `origin/master`, last feature commit `b12d92e`, 2026-09-29). Live: the Sea creature detector, the intro video (re-rendered with the new name), the scroll story. No open branches.
-- Tests: `pnpm test:unit --run` (77), Python `training/test_sounds_*.py` (8 scripts), `pnpm test:e2e` (209 passed, 25 skipped; `e2e/detector.e2e.ts` runs the real model in Chromium and WebKit; a11y scans the detector after a result), `cd video && pnpm test` (10), `cd video && pnpm check` (4).
-- Open, not urgent: `sea-detector.ts` doesn't close the ImageBitmap if `session.run` throws (use try/finally).
-- Owner's next plans: widen the detector (more creatures), then update the intro video's SAMPLE report-card scene (it still shows octopus/squid/cuttlefish and "iNaturalist"); audio and text models later (Google AI Edge / MediaPipe Model Maker is a good fit for audio); a private RAG document-assistant target for red-teaming.
+- Everything is merged and pushed (2026-09-29). Live: the Sea creature detector, the Sound detective (merged from `feat/sound-detective`), the intro video (labels the detector "Model 01 of the lab"), the scroll story.
+- Tests: `pnpm test:unit --run` (77), Python `training/test_sounds_*.py` (8 scripts), `pnpm test:e2e` (237 passed, 38 skipped: sound tests skip Windows WebKit, which has no Web Audio; `e2e/detector.e2e.ts` and `e2e/sounds.e2e.ts` run the real models; `e2e/live.e2e.ts` uses Chromium's fake microphone), `cd video && pnpm test` (10), `cd video && pnpm check` (4).
+- Open, not urgent: `sea-detector.ts` doesn't close the ImageBitmap if `session.run` throws (use try/finally). Sound detective minors: resampled-upload e2e checks labels only (not timings); no CI fixture for "long silence then one knock"; its entry sits under the "Drafts" comment in `entries.ts`.
+- Owner's next plans: widen the sea detector (more creatures), then update the intro video's SAMPLE report-card scene (it still shows octopus/squid/cuttlefish and "iNaturalist"); Sound detective v2 (better timing from timestamped data, more sounds); the speech translator later; text models; a private RAG document-assistant target for red-teaming.
 - Shareable project overview for contributors: artifact https://claude.ai/artifact/7T9D5mvDGx1oYb8yJqEPF5 and `Downloads/AI-Model-Lab-Overview.pdf` on the owner's laptop.
 - Specs and plans: `docs/superpowers/specs/*`, `docs/superpowers/plans/*`.
 
