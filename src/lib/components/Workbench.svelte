@@ -138,7 +138,8 @@
 		const isLatest = latest();
 		shownCredit = null;
 		try {
-			if (!(await ensureLoaded(isLatest))) return;
+			// Leaving mid-download must not then ask for the microphone on the next page.
+			if (!(await ensureLoaded(isLatest)) || leaving) return;
 			const stop = await startListening(runtime, {
 				onView: (v) => { if (stopLive) listening = v; }, // a slice scored after Stop must not reopen the view
 				onStop: (samples) => {
@@ -237,10 +238,11 @@
 					<p class="soft">This model is {entry.status === 'planned' ? 'planned' : 'still training'}. The demo opens once it has been measured, and there are no made-up results in the meantime.</p>
 				{:else if listening}
 					<p class="mono live" role="status"><span class="dot" aria-hidden="true"></span> Listening</p>
-					<p class="answer serif">{listening.now.length ? listening.now.join(' + ') : 'Listening…'}</p>
+					<!-- Changes every half second: not announced (the "Listening" status above is). -->
+					<p class="answer serif" aria-live="off">{listening.now.length ? listening.now.join(' + ') : 'Listening…'}</p>
 					<EventTimeline predictions={listening.predictions} seconds={30} from={listening.from} />
 					{#if listening.skipped}<p class="note warn">Your device is busy, some moments were skipped.</p>{/if}
-					<p class="mono faint">Stops by itself after 2 minutes. Nothing is recorded or uploaded.</p>
+					<p class="mono faint">Stops by itself after 2 minutes. Only the last 30 seconds are kept, on your device. Nothing is uploaded.</p>
 				{:else if bench.kind === 'loading'}
 					<p class="mono">Downloading model · {runtime?.sizeLabel} · only the first time</p>
 					<progress max="1" value={bench.progress ?? undefined}></progress>

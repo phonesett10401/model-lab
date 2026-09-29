@@ -106,6 +106,7 @@ export async function startListening(rt: Runtime, h: { onView(v: LiveView): void
 		const source = ctx.createMediaStreamSource(stream);
 		node = new AudioWorkletNode(ctx, 'capture');
 		source.connect(node).connect(ctx.destination); // the worklet outputs silence; connecting keeps it running
+		await ctx.resume(); // a context made after awaits may start suspended (Safari), which would hear only silence
 	} catch {
 		stream.getTracks().forEach((t) => t.stop());
 		void ctx?.close();
