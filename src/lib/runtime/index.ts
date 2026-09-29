@@ -25,7 +25,8 @@ export interface Runtime {
 
 /** Real models register here: slug → lazy import of their runtime. */
 export const registry: Record<string, () => Promise<Runtime>> = {
-	'sea-creature-detector': () => import('./sea-detector').then((m) => m.seaDetector())
+	'sea-creature-detector': () => import('./sea-detector').then((m) => m.seaDetector()),
+	'sound-detective': () => import('./sound-detective').then((m) => m.soundDetective())
 };
 
 export async function getRuntime(entry: ModelEntry): Promise<Runtime | null> {
