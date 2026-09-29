@@ -1,9 +1,10 @@
 """Measure both sizes on the frozen test clips, pick one, set per-sound thresholds on validation clips, measure
 timing on the synthetic clips, export ONNX (the file the site runs) and check it matches PyTorch.
-Usage: python sounds_evaluate.py
+Usage: python sounds_evaluate.py [mn04|mn10]   (a size given here overrides the automatic choice)
 """
 import json
 import shutil
+import sys
 from collections import Counter
 
 import numpy as np
@@ -108,7 +109,7 @@ def export(net, out):
                       dynamic_axes={'audio': {0: 'slices'}, 'scores': {0: 'slices'}}, opset_version=17, dynamo=False)
 
 
-def main():
+def main(chosen=None):
     REPORT.mkdir(parents=True, exist_ok=True)
     test, val = rows('test'), rows('val')
     sizes = {}
@@ -118,7 +119,7 @@ def main():
         sizes[size] = {'map': round(float(np.nanmean(list(ap.values()))), 4),
                        'mb': round((REPORT / f'{size}.onnx').stat().st_size / 1e6, 1), 'ap': ap}
         print(size, sizes[size]['map'], f"{sizes[size]['mb']} MB", flush=True)
-    size = 'mn10' if sizes['mn10']['map'] - sizes['mn04']['map'] >= MN10_MARGIN else 'mn04'
+    size = chosen or ('mn10' if sizes['mn10']['map'] - sizes['mn04']['map'] >= MN10_MARGIN else 'mn04')
     net = load_net(size)
     _, Sv, Yv = evaluate(net, val)
     clip_level = [best_threshold(Yv[:, i], Sv[:, i]) for i in range(len(CLASSES))]
@@ -167,4 +168,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1] if len(sys.argv) > 1 else None)
