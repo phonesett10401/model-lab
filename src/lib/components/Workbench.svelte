@@ -139,10 +139,8 @@
 		shownCredit = null;
 		try {
 			if (!(await ensureLoaded(isLatest))) return;
-			bench = step(bench, { type: 'reset' });
-			listening = { predictions: [], now: [], from: 0, skipped: 0 };
-			stopLive = await startListening(runtime, {
-				onView: (v) => { if (isLatest() && listening) listening = v; },
+			const stop = await startListening(runtime, {
+				onView: (v) => { if (stopLive) listening = v; }, // a slice scored after Stop must not reopen the view
 				onStop: (samples) => {
 					listening = null;
 					stopLive = null;
@@ -154,6 +152,11 @@
 					run({ type: 'audio', blob }, isLatest);
 				}
 			});
+			// The mic can finish starting after the visitor left or started something else: turn it straight off.
+			if (leaving || !isLatest()) return stop();
+			stopLive = stop;
+			bench = step(bench, { type: 'reset' });
+			listening = { predictions: [], now: [], from: 0, skipped: 0 };
 		} catch (e) {
 			listening = null;
 			if (isLatest()) bench = step(bench, { type: 'fail', reason: e instanceof UserError ? e.message : 'The model failed to run. Try again.' });
