@@ -261,60 +261,42 @@
 				"src": "/samples/sounds/false-alarm.wav",
 				"description": "Test clip with laughing"
 			},
-			"credit": "Sound: deathicated on Freesound",
-			"creditUrl": "https://freesound.org/s/137894/",
+			"credit": "Sound: Lomond on Freesound",
+			"creditUrl": "https://freesound.org/s/155942/",
 			"license": "CC BY 3.0",
 			"licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
 			"expected": [
 				{
-					"label": "cat meow",
-					"score": 0.9996,
-					"start": 0.0,
-					"end": 6.75
-				},
-				{
-					"label": "engine / traffic",
-					"score": 0.7036,
-					"start": 7.25,
-					"end": 7.75
+					"label": "crying",
+					"score": 0.7694,
+					"start": 2.25,
+					"end": 3.25
 				},
 				{
 					"label": "cat meow",
-					"score": 0.9941,
-					"start": 8.25,
-					"end": 9.25
+					"score": 0.9995,
+					"start": 3.75,
+					"end": 4.25
 				},
 				{
-					"label": "footsteps",
-					"score": 0.8742,
-					"start": 9.25,
-					"end": 11.75
-				},
-				{
-					"label": "footsteps",
-					"score": 0.4267,
-					"start": 13.25,
-					"end": 14.01
-				},
-				{
-					"label": "speech",
-					"score": 0.7415,
-					"start": 13.25,
-					"end": 13.75
+					"label": "dog bark",
+					"score": 0.9219,
+					"start": 4.75,
+					"end": 5.25
 				}
 			],
 			"knownFailure": true
 		},
 		{
 			"id": "missed",
-			"title": "Doorbell (it misses this)",
+			"title": "Car horn (it misses this)",
 			"input": {
 				"type": "audio",
 				"src": "/samples/sounds/missed.wav",
-				"description": "Test clip with doorbell"
+				"description": "Test clip with car horn"
 			},
-			"credit": "Sound: dm103 on Freesound",
-			"creditUrl": "https://freesound.org/s/400695/",
+			"credit": "Sound: lmbubec on Freesound",
+			"creditUrl": "https://freesound.org/s/118807/",
 			"license": "CC0 1.0",
 			"licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
 			"expected": [],
@@ -325,15 +307,15 @@
 		{
 			"truth": "laughing",
 			"said": "cat meow",
-			"score": 0.9996,
-			"why": "It heard cat meow where there was only laughing.",
+			"score": 0.9995,
+			"why": "The clip is labelled laughing; it heard cat meow.",
 			"sampleId": "false-alarm"
 		},
 		{
-			"truth": "doorbell",
+			"truth": "car horn",
 			"said": "nothing",
-			"score": 0.934,
-			"why": "Its doorbell score peaked at 93%, under the 95% bar.",
+			"score": 0.9144,
+			"why": "Its car horn score peaked at 91%, under the 95% bar.",
 			"sampleId": "missed"
 		}
 	]

@@ -21,7 +21,9 @@ OUT_JSON = SITE / 'src' / 'lib' / 'data' / 'sound-detective.json'
 OUT_AUDIO = SITE / 'static' / 'samples' / 'sounds'
 FIX = SITE / 'e2e' / 'fixtures'
 MARGIN = 0.05  # failure examples must clear the threshold by this much, so browser drift can't hide them
-SKIP = set()   # clips rejected at the owner's listening check (fname)
+# Clips rejected at the owner's listening check (fname): 137894 is a purring cat with a chuckle (labelled laughing),
+# 400695 is a bicycle bell that FSD50K files under Doorbell.
+SKIP = {'137894', '400695'}
 WANT = [('dog bark', 'Dog barking'), ('glass breaking', 'Glass breaking'), ('siren', 'Siren'), ('doorbell', 'Doorbell')]
 WHY = {frozenset({'footsteps', 'knocking'}): 'Footsteps and knocking are both short thumps.',
        frozenset({'rain', 'running tap'}): 'Rain and a running tap are both steady splashing.',
@@ -30,6 +32,16 @@ WHY = {frozenset({'footsteps', 'knocking'}): 'Footsteps and knocking are both sh
 LIC = {'/publicdomain/zero/': ('CC0 1.0', 'https://creativecommons.org/publicdomain/zero/1.0/'),
        '/licenses/by/3.0': ('CC BY 3.0', 'https://creativecommons.org/licenses/by/3.0/'),
        '/licenses/by/4.0': ('CC BY 4.0', 'https://creativecommons.org/licenses/by/4.0/')}
+
+
+def fsd(path):
+    from huggingface_hub import hf_hub_download
+    return hf_hub_download('Fhrozen/FSD50k', path, repo_type='dataset')
+
+
+# Full FSD50K labels and titles, printed next to each pick so a human can vet it (e.g. a "doorbell" that is a bike bell).
+FSD = {r['fname']: r for r in csv.DictReader(open(fsd('labels/eval.csv'), encoding='utf8'))}
+FSD_INFO = json.load(open(fsd('metadata/eval_clips_info_FSD50K.json'), encoding='utf8'))
 
 
 def licence(url):
@@ -71,7 +83,7 @@ def main():
     if alarms:
         f, e = max(alarms, key=lambda fe: fe[1]['score'])
         t = sorted(f['truth'])[0]
-        why = WHY.get(frozenset({t, e['label']}), f"It heard {e['label']} where there was only {', '.join(sorted(f['truth']))}.")
+        why = WHY.get(frozenset({t, e['label']}), f"The clip is labelled {', '.join(sorted(f['truth']))}; it heard {e['label']}.")
         picks.append(('false-alarm', f"{t.capitalize()} (it gets this wrong)", f, {'truth': t, 'said': e['label'], 'score': e['score'], 'why': why}))
     missed = [f for f in found if len(f['truth']) == 1 and not f['said']]
     if missed:
@@ -99,6 +111,7 @@ def main():
             failures.append({**fail, 'sampleId': sid})
         samples.append(s)
         print(f"{sid:14} {f['r']['fname']} truth={sorted(f['truth'])} said={[e['label'] for e in ev]}")
+        print(f"{'':14} all labels: {FSD[f['r']['fname']]['labels']} | title: {FSD_INFO[f['r']['fname']]['title']}")
     clips = list(csv.DictReader(open(DATA / 'clips.csv', encoding='utf8')))
     count = lambda split: sum(1 for r in clips if r['split'] == split)
     sz = rep['sizes'][rep['size']]
