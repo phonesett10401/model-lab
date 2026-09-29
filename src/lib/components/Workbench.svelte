@@ -196,15 +196,6 @@
 					boxes={detect && bench.kind === 'result' ? bench.predictions : null}
 					onsubmit={(i) => { shownCredit = null; run(i); }} onerror={fail}
 				/>
-				{#if shownCredit}
-					<p class="mono faint credit">
-						{#if shownCredit.creditUrl}<a href={shownCredit.creditUrl} target="_blank" rel="noopener">{shownCredit.credit}</a>{:else}{shownCredit.credit}{/if}
-						{#if shownCredit.license}
-							·
-							{#if shownCredit.licenseUrl}<a href={shownCredit.licenseUrl} target="_blank" rel="noopener license">{shownCredit.license}</a>{:else}{shownCredit.license}{/if}
-						{/if}
-					</p>
-				{/if}
 			{:else if entry.input === 'text'}
 				<TextInput disabled={!live || busy} examining={bench.kind === 'examining'} bind:shown={shownText} onsubmit={(i) => run(i)} onerror={fail} />
 			{:else if entry.input === 'audio'}
@@ -215,6 +206,16 @@
 				/>
 			{:else}
 				<TableInput fields={entry.fields ?? []} disabled={!live || busy} examining={bench.kind === 'examining'} bind:shown={shownValues} onsubmit={(i) => run(i)} onerror={fail} />
+			{/if}
+
+			{#if shownCredit}
+				<p class="mono faint credit">
+					{#if shownCredit.creditUrl}<a href={shownCredit.creditUrl} target="_blank" rel="noopener">{shownCredit.credit}</a>{:else}{shownCredit.credit}{/if}
+					{#if shownCredit.license}
+						·
+						{#if shownCredit.licenseUrl}<a href={shownCredit.licenseUrl} target="_blank" rel="noopener license">{shownCredit.license}</a>{:else}{shownCredit.license}{/if}
+					{/if}
+				</p>
 			{/if}
 
 			{#if live && entry.samples.length}

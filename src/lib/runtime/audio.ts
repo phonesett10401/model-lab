@@ -1,3 +1,5 @@
+import { UserError } from './index';
+
 export const SR = 32000;
 export const WIN = SR;
 export const STEP = SR / 2;
@@ -20,6 +22,7 @@ export function slices(x: Float32Array): { data: Float32Array; count: number } {
 
 /** Browser-only: decode any audio the browser can read, mixed to mono at 32 kHz (decodeAudioData resamples to the context's rate). */
 export async function decode32kMono(blob: Blob): Promise<Float32Array> {
+	if (typeof OfflineAudioContext === 'undefined') throw new UserError('This browser can’t read audio. Try another browser.');
 	const ctx = new OfflineAudioContext(1, 1, SR);
 	const audio = await ctx.decodeAudioData(await blob.arrayBuffer());
 	if (audio.numberOfChannels === 1) return audio.getChannelData(0).slice();

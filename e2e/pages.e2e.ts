@@ -19,6 +19,16 @@ test('the live detector page shows its measured report card', async ({ page }) =
 	await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /\/og\/sea-creature-detector\.png$/);
 });
 
+test('the sound detective page shows its measured report card', async ({ page }) => {
+	await page.goto('/models/sound-detective');
+	await expect(page.getByRole('heading', { level: 1, name: 'Sound detective' })).toBeVisible();
+	await expect(page.getByText('LIVE', { exact: true }).first()).toBeVisible();
+	await expect(page.getByText('SCORE PER SOUND (AVERAGE PRECISION)')).toBeVisible();
+	await expect(page.getByRole('listitem', { name: /^speech, \d+ percent$/ })).toBeVisible();
+	await expect(page).toHaveTitle('Sound detective · AI Model Lab');
+	await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /\/og\/sound-detective\.png$/);
+});
+
 test('a draft model shows measured metrics, worst first, with DRAFT stamp', async ({ page }) => {
 	await page.goto('/models/draft-shape-sorter');
 	await expect(page.getByText('DRAFT', { exact: true }).first()).toBeVisible();
