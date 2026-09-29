@@ -40,6 +40,8 @@ test('live listening stops by itself after 2 minutes', async ({ page }) => {
 	await page.goto('/models/sound-detective');
 	await page.getByRole('button', { name: '◉ Listen live' }).click();
 	await expect(page.locator('.demo')).toHaveAttribute('data-state', 'listening', { timeout: 60_000 });
+	// Let it hear something first: stopping after under half a second rightly says "Too short".
+	await expect(page.locator(`.timeline [data-lane="${clip.expected[0].label}"]`)).toHaveCount(1, { timeout: 20_000 });
 	await page.clock.fastForward(120_000);
 	await expect(page.locator('.demo')).toHaveAttribute('data-state', /result|unsure|examining/, { timeout: 30_000 });
 	expect(await liveTracks(page)).toBe(0);
