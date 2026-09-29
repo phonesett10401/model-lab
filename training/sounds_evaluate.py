@@ -18,6 +18,7 @@ from sounds_train import clip_scores, evaluate, load, path, rows
 REPORT = RUNS / 'sounds-v1-report'
 SITE_MODEL = HERE.parent / 'static' / 'models' / 'sound-detective-v1.onnx'
 GRID = np.round(np.arange(0.10, 0.901, 0.05), 2)
+TUNE_GRID = np.round(np.arange(0.10, 0.951, 0.05), 2)
 MN10_MARGIN = 0.03  # the bigger model must beat the small one by this much mAP to be worth its download
 
 
@@ -43,6 +44,48 @@ def best_threshold(y, s):
         return 2 * tp / max(1, p.sum() + (y == 1).sum())
     # Highest F1; ties go to the higher threshold (fewer false alarms).
     return float(max(GRID, key=lambda th: (round(f1(th), 9), th)))
+
+
+def tune_event_thresholds(clips, labels, fallback):
+    """Per sound, the threshold with the best event F1 on clips with known times ([(scores, seconds, truth)]),
+    judged slice by slice exactly as the timeline works. Ties go to the higher threshold; a sound with no
+    known events keeps its fallback."""
+    out = []
+    for c, label in enumerate(labels):
+        if not any(t['label'] == label for _, _, truth in clips for t in truth):
+            out.append(float(fallback[c]))
+            continue
+        def f1(th):
+            TP = FP = FN = 0
+            for scores, seconds, truth in clips:
+                pred = events(scores[:, [c]], [th], seconds, [label])
+                tp, fp, fn, _ = match([t for t in truth if t['label'] == label], pred)
+                TP, FP, FN = TP + tp, FP + fp, FN + fn
+            return 2 * TP / max(1, 2 * TP + FP + FN)
+        out.append(float(max(TUNE_GRID, key=lambda th: (round(f1(th), 9), th))))
+    return out
+
+
+def segment_counts(truth, pred, seconds):
+    """(hits, predicted, true) over 1 s segments: which sounds are on in each second (the usual DCASE segment score)."""
+    def on(evs):
+        return {(e['label'], k) for e in evs for k in range(int(np.ceil(seconds))) if e['start'] < k + 1 and e['end'] > k}
+    t, p = on(truth), on(pred)
+    return len(t & p), len(p), len(t)
+
+
+def segment_pr(truth, pred, seconds):
+    hit, n_p, n_t = segment_counts(truth, pred, seconds)
+    return hit / max(1, n_p), hit / max(1, n_t)
+
+
+def scored_synth(net, folder):
+    clips = json.loads((DATA / folder / 'truth.json').read_text(encoding='utf8'))
+    out = []
+    for clip in clips:
+        x = load(DATA / folder / clip['file'])
+        out.append((clip_scores(net, x), len(x) / SR, clip['events']))
+    return out
 
 
 def load_net(size):
@@ -78,7 +121,10 @@ def main():
     size = 'mn10' if sizes['mn10']['map'] - sizes['mn04']['map'] >= MN10_MARGIN else 'mn04'
     net = load_net(size)
     _, Sv, Yv = evaluate(net, val)
-    thresholds = [best_threshold(Yv[:, i], Sv[:, i]) for i in range(len(CLASSES))]
+    clip_level = [best_threshold(Yv[:, i], Sv[:, i]) for i in range(len(CLASSES))]
+    # The timeline works slice by slice, so each sound's bar is tuned on validation mixes with known times
+    # (clip-level tuning pushes bars too high: a clip's best slice is almost always confident).
+    thresholds = tune_event_thresholds(scored_synth(net, 'synth-val'), CLASSES, fallback=clip_level)
     # Clip-level mix-ups on test: a sound it said that the clip doesn't have, next to what the clip does have.
     _, St, Yt = evaluate(net, test)
     confusions = Counter()
@@ -86,16 +132,17 @@ def main():
         for i in np.where((s >= thresholds) & (y == 0))[0]:
             for j in np.where(y == 1)[0]:
                 confusions[(CLASSES[j], CLASSES[i])] += 1
-    # Timing on synthetic clips with known times.
-    synth = json.loads((DATA / 'synth' / 'truth.json').read_text(encoding='utf8'))
+    # Timing on synthetic TEST clips with known times.
+    synth = scored_synth(net, 'synth')
     TP = FP = FN = 0
-    errs = []
-    for clip in synth:
-        x = load(DATA / 'synth' / clip['file'])
-        pred = events(clip_scores(net, x), thresholds, len(x) / SR, CLASSES)
-        tp, fp, fn, err = match(clip['events'], pred)
+    errs, seg = [], np.zeros(3)
+    for scores, seconds, truth in synth:
+        pred = events(scores, thresholds, seconds, CLASSES)
+        tp, fp, fn, err = match(truth, pred)
         TP, FP, FN, errs = TP + tp, FP + fp, FN + fn, errs + err
+        seg += segment_counts(truth, pred, seconds)
     p, r = TP / max(1, TP + FP), TP / max(1, TP + FN)
+    sp, sr = seg[0] / max(1, seg[1]), seg[0] / max(1, seg[2])
     # The exported file must give PyTorch's answers, batch of one included.
     onnx = REPORT / f'{size}.onnx'
     sess = ort.InferenceSession(str(onnx), providers=['CPUExecutionProvider'])
@@ -110,7 +157,9 @@ def main():
     report = {'size': size, 'sizes': {k: {'map': v['map'], 'mb': v['mb']} for k, v in sizes.items()},
               'per_sound': {c: round(v, 4) for c, v in sizes[size]['ap'].items()}, 'thresholds': thresholds,
               'timeline': {'precision': round(p, 3), 'recall': round(r, 3), 'f1': round(2 * p * r / max(1e-9, p + r), 3),
-                           'onset_error_s': round(float(np.mean(errs)), 2) if errs else None, 'clips': len(synth)},
+                           'onset_error_s': round(float(np.mean(errs)), 2) if errs else None, 'clips': len(synth),
+                           'segment': {'precision': round(sp, 3), 'recall': round(sr, 3), 'f1': round(2 * sp * sr / max(1e-9, sp + sr), 3)}},
+              'clip_level_thresholds': clip_level,
               'test_clips': len(test),
               'confusions': [{'truth': a, 'said': b, 'count': n} for (a, b), n in confusions.most_common(10)]}
     (REPORT / 'metrics.json').write_text(json.dumps(report, indent=1), encoding='utf8')

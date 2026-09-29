@@ -2,10 +2,12 @@
 
 Each 10 s clip: a quiet test negative as background, 1-3 sounds cut from test clips that contain exactly one of our
 sounds (their loudest stretch, 0.3-3 s), placed at random times; 40% of clips with 2+ sounds force an overlap.
-Usage: python sounds_synth.py
+Usage: python sounds_synth.py [val]   (default: test clips -> data/sounds-v1/synth; "val": validation clips -> synth-val,
+used only to tune the thresholds)
 """
 import csv
 import json
+import sys
 
 import numpy as np
 import soundfile as sf
@@ -39,15 +41,15 @@ def place(bg, parts, rng, overlap=False):
     return np.clip(mix, -1, 1), truth
 
 
-def main():
-    rng = np.random.default_rng(0)
-    rows = [r for r in csv.DictReader(open(DATA / 'clips.csv', encoding='utf8')) if r['split'] == 'test']
+def main(split='test'):
+    rng = np.random.default_rng(0 if split == 'test' else 1)
+    rows = [r for r in csv.DictReader(open(DATA / 'clips.csv', encoding='utf8')) if r['split'] == split]
     singles = [r for r in rows if r['sounds'] and '|' not in r['sounds']]
     negatives = [r for r in rows if not r['sounds']]
-    out = DATA / 'synth'
+    out = DATA / ('synth' if split == 'test' else f'synth-{split}')
     out.mkdir(parents=True, exist_ok=True)
     truth_all = []
-    for i in range(N_CLIPS):
+    for i in range(N_CLIPS if split == 'test' else 3 * N_CLIPS):  # more tuning mixes: ~12 events per sound is too few
         n_bg = negatives[rng.integers(len(negatives))]
         bg = np.resize(load(path(n_bg)), CLIP_S * SR)
         bg = bg / (np.abs(bg).max() + 1e-9) * 0.03
@@ -68,4 +70,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1] if len(sys.argv) > 1 else 'test')

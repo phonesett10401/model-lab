@@ -13,3 +13,14 @@ y = np.array([1, 1, 0, 0, 0])
 s = np.array([0.9, 0.6, 0.55, 0.2, 0.1])
 assert abs(e.best_threshold(y, s) - 0.6) < 1e-9       # 0.6 keeps both positives and drops 0.55
 print('evaluation checks passed')
+
+# Per-sound thresholds are tuned on slices (the way the timeline works), not on whole clips.
+labels = ['a', 'b']
+scores = np.array([[0.1, 0.0], [0.6, 0.0], [0.1, 0.0], [0.1, 0.0], [0.4, 0.0], [0.1, 0.0]])  # 3.5 s clip
+clips = [(scores, 3.5, [{'label': 'a', 'start': 0.75, 'end': 1.25}])]  # the 0.6 bump is real, the 0.4 one isn't
+th = e.tune_event_thresholds(clips, labels, fallback=[0.9, 0.9])
+assert th[0] == 0.6 and th[1] == 0.9, th   # highest threshold that still finds it and drops the 0.4 false alarm; b keeps its fallback
+# Segment score: which sounds are on in each 1 s segment.
+p, r = e.segment_pr([{'label': 'a', 'start': 0.2, 'end': 1.5}], [{'label': 'a', 'start': 1.2, 'end': 2.5}], 3.0)
+assert (round(p, 2), round(r, 2)) == (0.5, 0.5), (p, r)   # truth covers segments 0,1; prediction 1,2
+print('tuning checks passed')
