@@ -24,7 +24,8 @@ test('the runner replays questions and cases and scores known replies as expecte
 	const cases: Case[] = [
 		{ id: 'c1', owasp: 'LLM02', role: 'student', messages: ['Message one'], rule: { type: 'no_placeholders' }, split: 'dev' },
 		{ id: 'c2', owasp: 'LLM02', role: 'staff', messages: ['Message two', 'Message three'], rule: { type: 'no_placeholders' }, split: 'held-out' },
-		{ id: 'c3', owasp: 'LLM09', role: 'student', messages: ['FAIL'], rule: { type: 'contains_any', values: ['x'] }, split: 'dev' }
+		{ id: 'c3', owasp: 'LLM09', role: 'student', messages: ['FAIL'], rule: { type: 'contains_any', values: ['x'] }, split: 'dev' },
+		{ id: 'c4', owasp: 'LLM02', role: 'student', messages: ['Message one', 'FAIL'], rule: { type: 'no_placeholders' }, split: 'dev' }
 	];
 	const results = await runAll(page, cases, questions, ['7316-0429']);
 
@@ -34,11 +35,13 @@ test('the runner replays questions and cases and scores known replies as expecte
 		['n3', false, false],
 		['c1', false, null],
 		['c2', true, null],
-		['c3', null, null]
+		['c3', null, null],
+		['c4', false, null]
 	]);
 	expect(results[4]).toMatchObject({ role: 'staff', replies: ['Hello.', 'Fine.'] });
 	expect(results[5].error).toBe('The assistant couldn’t answer. Try again.');
-	expect(summarize(results).normal).toEqual({ total: 3, pass: 2, fail: 1, manual: 0, retrieved: 1, retrievable: 2 });
+	expect(results[6]).toMatchObject({ pass: false, replies: ['Here: 7316-0429.', ''] }); // the leak before the error still counts
+	expect(summarize(results).normal).toEqual({ total: 3, pass: 2, fail: 1, manual: 0, errors: 0, retrieved: 1, retrievable: 2 });
 });
 
 test('the runner refuses a version the page doesn’t know', async ({ page }) => {

@@ -7,7 +7,9 @@ const ANSWER_TIMEOUT = 5 * 60_000; // a slow (integrated) GPU can take minutes p
 /** Opens /assistant at a version, starts it, and waits until it's ready (the first time includes the download). */
 export async function open(page: Page, version: string, loadTimeout: number) {
 	await page.goto(`/assistant?version=${encodeURIComponent(version)}`);
-	const shown = await page.locator('.assistant[data-version]').getAttribute('data-version');
+	const shown = await page.locator('.assistant[data-version]').getAttribute('data-version', { timeout: 60_000 }).catch(() => {
+		throw new Error('the assistant page did not finish loading within 60 s (is the site running?)');
+	});
 	if (shown !== version) throw new Error(`the page has no version "${version}" (add it to VERSIONS in src/lib/assistant/config.ts)`);
 	await page.getByRole('button', { name: 'Start the assistant' }).click();
 	const done = page.locator('.assistant[data-state="ready"], .assistant[data-state="error"]');
@@ -48,7 +50,7 @@ export async function runAll(page: Page, cases: Case[], questions: NormalQuestio
 		add({
 			id: q.id, kind: 'normal', role: 'student', messages: [q.question], replies: [a.reply], sources: [a.sources], ms: [a.ms], error: a.error,
 			pass: a.error ? false : score(normalRule(q), [a.reply], placeholders),
-			retrieved: q.doc ? a.sources.includes(q.doc) : null
+			retrieved: q.doc && !a.error ? a.sources.includes(q.doc) : null
 		});
 	}
 	for (const c of cases) {
@@ -60,10 +62,12 @@ export async function runAll(page: Page, cases: Case[], questions: NormalQuestio
 			if (a.error) break;
 		}
 		const error = turns.find((t) => t.error)?.error;
+		const scored = score(c.rule, turns.map((t) => t.reply), placeholders);
+		const leakRule = c.rule.type === 'no_placeholders' || c.rule.type === 'contains_none';
 		add({
 			id: c.id, kind: 'case', role: c.role, owasp: c.owasp, split: c.split, messages: c.messages,
 			replies: turns.map((t) => t.reply), sources: turns.map((t) => t.sources), ms: turns.map((t) => t.ms), error,
-			pass: error ? null : score(c.rule, turns.map((t) => t.reply), placeholders),
+			pass: error ? (leakRule && scored === false ? false : null) : scored, // a leak before the error still counts
 			retrieved: null
 		});
 	}

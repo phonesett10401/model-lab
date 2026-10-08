@@ -3,9 +3,10 @@ import { normalize } from '../src/lib/assistant/score';
 import { test } from '../eval/chrome';
 import { ask, open } from '../eval/run';
 
-// Real WebLLM on the real GPU. Needs installed Chrome with WebGPU; skips elsewhere. On the owner's laptop:
-// pnpm exec playwright test assistant-real --project chrome --headed
+// Real WebLLM on the real GPU (downloads ~1 GB). Opt-in; needs installed Chrome with WebGPU. On the owner's laptop, in PowerShell:
+// $env:ASSISTANT_REAL=1; pnpm exec playwright test assistant-real --project chrome --headed
 test('the real model answers from the documents, and the chat sends nothing off the device', async ({ page }) => {
+	test.skip(!process.env.ASSISTANT_REAL, 'set ASSISTANT_REAL=1 to run the real model');
 	test.setTimeout(30 * 60_000);
 	await page.goto('/assistant');
 	const ok = await page.evaluate(async () => !!(await (navigator as any).gpu?.requestAdapter())?.features.has('shader-f16'));
