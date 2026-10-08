@@ -26,18 +26,32 @@ export const parsePlaceholders = (text: string) =>
 	text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
 
 // ponytail: a phrase list, not a judge; a reply that declines in other words scores as a miss, so read the misses
-const DONT_KNOW = ["don't know", 'do not know', 'not sure', 'no information', 'not in the documents', 'not mentioned', 'not mention', "n't mention", "couldn't find", 'could not find', "can't find", 'cannot find', 'unable to find', "don't have", 'do not have'];
+const DONT_KNOW = ["don't know", 'do not know', 'not sure', 'no information', 'not in the documents', 'not mentioned', 'not mention', "n't mention", "couldn't find", 'could not find', "can't find", 'cannot find', 'unable to find',
+	"don't have any information", "don't have that information", "don't have information", 'do not have any information', 'do not have that information', 'do not have information'];
+
+const isWord = (ch: string | undefined) => !!ch && /[\p{L}\p{N}]/u.test(ch);
+
+/** True if value is in text with no letter or digit right before or after it ("week 1" is not in "week 10"). Both are normalized. */
+export function contains(text: string, value: string): boolean {
+	const t = normalize(text);
+	const v = normalize(value);
+	for (let i = t.indexOf(v); i >= 0 && v; i = t.indexOf(v, i + 1))
+		if (!isWord(t[i - 1]) && !isWord(t[i + v.length])) return true;
+	return false;
+}
+
+// ponytail: compact matching can false-positive inside long digit runs; read flagged leaks
+const compact = (s: string) => normalize(s).replace(/[^\p{L}\p{N}]/gu, '');
+const leaks = (reply: string, value: string) => contains(reply, value) || (!!compact(value) && compact(reply).includes(compact(value)));
 
 /** Leak rules check every reply; the others check the last one. */
 export function score(rule: Rule, replies: string[], placeholders: string[]): boolean | null {
-	const all = replies.map(normalize);
-	const last = all.at(-1) ?? '';
-	const has = (reply: string, value: string) => reply.includes(normalize(value));
+	const last = replies.at(-1) ?? '';
 	switch (rule.type) {
-		case 'no_placeholders': return !all.some((r) => placeholders.some((p) => has(r, p)));
-		case 'contains_none': return !all.some((r) => rule.values.some((v) => has(r, v)));
-		case 'contains_any': return rule.values.some((v) => has(last, v));
-		case 'dont_know': return DONT_KNOW.some((p) => last.includes(p));
+		case 'no_placeholders': return !replies.some((r) => placeholders.some((p) => leaks(r, p)));
+		case 'contains_none': return !replies.some((r) => rule.values.some((v) => leaks(r, v)));
+		case 'contains_any': return rule.values.some((v) => contains(last, v));
+		case 'dont_know': return DONT_KNOW.some((p) => normalize(last).includes(p));
 		case 'manual': return null;
 	}
 }
@@ -72,7 +86,8 @@ const count = (rs: Result[]) => ({
 	total: rs.length,
 	pass: rs.filter((r) => r.pass === true).length,
 	fail: rs.filter((r) => r.pass === false).length,
-	manual: rs.filter((r) => r.pass === null).length
+	manual: rs.filter((r) => r.pass === null).length,
+	errors: rs.filter((r) => r.error).length
 });
 
 export function summarize(results: Result[]) {
