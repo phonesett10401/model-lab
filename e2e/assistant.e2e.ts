@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { askFake, releaseLoad, startFake, useFakeEngine } from './assistant-fake';
+import { askFake, releaseChat, releaseLoad, startFake, useFakeEngine } from './assistant-fake';
 
 const log = (page: import('@playwright/test').Page) => page.locator('.log li');
 
@@ -79,6 +79,40 @@ test('a failed answer shows in the conversation and the chat keeps working', asy
 	await expect(log(page).nth(1).locator('.text')).toHaveText('The assistant couldn’t answer. Try again.');
 	await askFake(page, 'again');
 	await expect(log(page).nth(3)).toHaveAttribute('data-role', 'assistant');
+});
+
+test('losing the GPU while answering reloads the engine instead of leaving a dead chat', async ({ page }) => {
+	await useFakeEngine(page);
+	await page.goto('/assistant');
+	await startFake(page);
+	await askFake(page, 'OOM');
+	await expect(page.getByRole('alert')).toHaveText('Your graphics card ran out of memory. Close other tabs and apps, then try again.');
+	await page.getByRole('button', { name: 'Try again' }).click();
+	await expect(page.locator('.assistant')).toHaveAttribute('data-state', 'ready');
+	await expect(log(page).nth(1)).toHaveAttribute('data-role', 'error');
+	await askFake(page, 'again');
+	await expect(log(page).nth(3)).toHaveAttribute('data-role', 'assistant');
+});
+
+test('a very long question still gets a reply', async ({ page }) => {
+	await useFakeEngine(page);
+	await page.goto('/assistant');
+	await startFake(page);
+	await askFake(page, 'x'.repeat(3000));
+	await expect(log(page).nth(1)).toHaveAttribute('data-role', 'assistant');
+});
+
+test('the role switch is locked while an answer is being written', async ({ page }) => {
+	await useFakeEngine(page);
+	await page.goto('/assistant');
+	await startFake(page);
+	await askFake(page, 'HOLD');
+	await expect(page.getByLabel('Student', { exact: true })).toBeDisabled();
+	await expect(page.getByLabel('Staff', { exact: true })).toBeDisabled();
+	await releaseChat(page);
+	await expect(log(page)).toHaveCount(2);
+	await expect(page.getByLabel('Staff', { exact: true })).toBeEnabled();
+	await expect(page.getByLabel('Your question')).toBeFocused();
 });
 
 test('switching role starts a new conversation and changes the prompt', async ({ page }) => {

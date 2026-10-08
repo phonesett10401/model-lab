@@ -3,7 +3,8 @@ import type { Page } from '@playwright/test';
 /**
  * Drives /assistant without a GPU. load() reports 40%, then (if hold) waits for releaseLoad().
  * failLoads: one error message per failing load, in order. replies: scripted answers by question.
- * Otherwise chat answers 'Reply to "<question>" as <role>', and the question FAIL throws.
+ * Otherwise chat answers 'Reply to "<question>" as <role>'; the question FAIL throws, OOM throws an out-of-memory error,
+ * and HOLD waits for releaseChat().
  * embed() scores "library" texts apart from the rest, so retrieval is predictable.
  */
 export async function useFakeEngine(page: Page, opts: { hold?: boolean; failLoads?: string[]; replies?: Record<string, string> } = {}) {
@@ -11,6 +12,7 @@ export async function useFakeEngine(page: Page, opts: { hold?: boolean; failLoad
 		const w = window as any;
 		let loads = 0;
 		const released = new Promise((r) => (w.__releaseLoad = r));
+		const chatHeld = new Promise((r) => (w.__releaseChat = r));
 		w.__assistantEngine = {
 			async load(onProgress: (p: number, t: string) => void) {
 				onProgress(0.4, 'Fetching param cache[1/2]');
@@ -24,12 +26,15 @@ export async function useFakeEngine(page: Page, opts: { hold?: boolean; failLoad
 				const q = messages.at(-1)!.content;
 				if (q in replies) return replies[q];
 				if (q === 'FAIL') throw new Error('boom');
+				if (q === 'OOM') throw new Error('GPUOutOfMemoryError: out of memory');
+				if (q === 'HOLD') await chatHeld;
 				return `Reply to "${q}" as ${messages[0].content.includes('signed in as a staff member') ? 'staff' : 'student'}`;
 			}
 		};
 	}, { hold: opts.hold ?? false, failLoads: opts.failLoads ?? [], replies: opts.replies ?? {} });
 }
 
+export const releaseChat = (page: Page) => page.evaluate(() => (window as any).__releaseChat());
 export const releaseLoad = (page: Page) => page.evaluate(() => (window as any).__releaseLoad());
 
 /** Starts the (fake) assistant and waits until it's ready. */

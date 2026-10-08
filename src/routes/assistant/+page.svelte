@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { CHAT_MODEL, QUERY_PREFIX, TOP_K, VERSIONS, versionFrom, type Role, type Version } from '$lib/assistant/config';
-	import { ANSWER_FAILED, checkGpu, explainError, webllmEngine, type AssistantEngine, type GpuLike } from '$lib/assistant/engine';
+	import { onMount, tick } from 'svelte';
+	import { CHAT_MODEL, QUERY_CHARS, QUERY_PREFIX, TOP_K, VERSIONS, versionFrom, type Role, type Version } from '$lib/assistant/config';
+	import { ANSWER_FAILED, OUT_OF_MEMORY, checkGpu, explainError, webllmEngine, type AssistantEngine, type GpuLike } from '$lib/assistant/engine';
 	import { buildMessages, toMarkdown, topK, type Item, type Turn } from '$lib/assistant/rag';
 
 	let { data } = $props();
@@ -17,6 +17,7 @@
 	let message = $state('');
 	let canRetry = $state(false);
 
+	let box = $state<HTMLTextAreaElement>();
 	let engine: AssistantEngine | undefined;
 	let vectors: number[][] = [];
 
@@ -37,6 +38,8 @@
 			progressText = 'Preparing the documents…';
 			vectors = await engine.embed(data.passages.map((p) => `${p.title}\n${p.text}`));
 			phase = 'ready';
+			await tick();
+			box?.focus();
 		} catch (e) {
 			fail(explainError(e), true);
 		}
@@ -56,15 +59,22 @@
 		items.push({ role: 'user', text: q });
 		question = '';
 		phase = 'busy';
+		box?.focus(); // Send disables itself, which would drop focus
 		try {
-			const [qv] = await engine.embed([QUERY_PREFIX + q]);
+			const [qv] = await engine.embed([QUERY_PREFIX + q.slice(0, QUERY_CHARS)]);
 			const hits = topK(qv, vectors, TOP_K).map((i) => data.passages[i]);
 			const reply = await engine.chat(buildMessages(role, hits, history, q));
 			items.push({ role: 'assistant', text: reply, sources: [...new Set(hits.map((h) => h.docId))] });
 		} catch (err) {
-			items.push({ role: 'error', text: explainError(err, ANSWER_FAILED) });
+			const text = explainError(err, ANSWER_FAILED);
+			items.push({ role: 'error', text });
+			if (text === OUT_OF_MEMORY) { // the GPU device is gone; only a fresh load recovers (files stay cached)
+				engine = undefined;
+				return fail(text, true);
+			}
 		}
 		phase = 'ready';
+		box?.focus();
 	}
 
 	function enterSends(e: KeyboardEvent & { currentTarget: HTMLTextAreaElement }) {
@@ -108,7 +118,7 @@
 			<p class="mono faint">Downloads about 1 GB the first time, then it’s kept on this device.</p>
 		</div>
 	{:else if phase === 'loading'}
-		<div class="start" aria-live="polite">
+		<div class="start">
 			<p class="mono">Loading the assistant · only the first time is slow</p>
 			<progress max="1" value={progress} aria-label="Download progress"></progress>
 			<p class="mono faint">{progressText}</p>
@@ -130,7 +140,7 @@
 		{#if phase === 'busy'}<p class="mono" role="status">Thinking…</p>{/if}
 		<form class="ask" onsubmit={send}>
 			<label class="mono" for="question">Your question</label>
-			<textarea id="question" rows="2" bind:value={question} onkeydown={enterSends}></textarea>
+			<textarea id="question" rows="2" bind:this={box} bind:value={question} onkeydown={enterSends}></textarea>
 			<button class="btn" type="submit" disabled={phase === 'busy' || !question.trim()}>Send</button>
 		</form>
 		<div class="actions">
