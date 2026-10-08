@@ -32,6 +32,7 @@
 		"@fontsource-variable/geist": "^5.3.0",
 		"@fontsource-variable/jetbrains-mono": "^5.3.0",
 		"@fontsource/instrument-serif": "^5.3.0",
+		"@mlc-ai/web-llm": "0.2.85",
 		"onnxruntime-web": "^1.30.0"
 	}
 }
