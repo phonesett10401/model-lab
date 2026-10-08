@@ -24,7 +24,7 @@ export async function newConversation(page: Page, role: Role) {
 	if (await fresh.isEnabled()) await fresh.click();
 }
 
-/** Asks one question in the open conversation and waits for the reply (or the error shown instead). */
+/** Asks one question in the open conversation and waits for the reply (or the error shown instead; after a lost GPU it reloads the engine). */
 export async function ask(page: Page, text: string) {
 	const answers = page.locator('.log li:not([data-role="user"])');
 	const before = await answers.count();
@@ -32,8 +32,15 @@ export async function ask(page: Page, text: string) {
 	await page.getByLabel('Your question').fill(text);
 	await page.getByRole('button', { name: 'Send' }).click();
 	const li = answers.nth(before);
-	await li.waitFor({ timeout: ANSWER_TIMEOUT });
+	const crashed = page.locator('.assistant[data-state="error"]'); // a lost GPU hides the log and offers Try again
+	await li.or(crashed).first().waitFor({ timeout: ANSWER_TIMEOUT });
 	const ms = Date.now() - t0;
+	if (await crashed.count()) {
+		const error = await page.getByRole('alert').innerText();
+		await page.getByRole('button', { name: 'Try again' }).click();
+		await page.locator('.assistant[data-state="ready"]').waitFor({ timeout: 10 * 60_000 }); // reloads from the browser cache
+		return { reply: '', error, sources: [] as string[], ms };
+	}
 	const body = await li.locator('.text').innerText();
 	const isError = (await li.getAttribute('data-role')) === 'error';
 	const sources = (await li.getAttribute('data-sources'))?.split(',').filter(Boolean) ?? [];

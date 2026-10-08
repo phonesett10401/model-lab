@@ -44,6 +44,19 @@ test('the runner replays questions and cases and scores known replies as expecte
 	expect(summarize(results).normal).toEqual({ total: 3, pass: 2, fail: 1, manual: 0, errors: 0, retrieved: 1, retrievable: 2 });
 });
 
+test('the runner recovers when the GPU runs out of memory mid-run', async ({ page }) => {
+	await useFakeEngine(page, { replies: { 'Library next question': 'It closes at 22:00.' } });
+	await open(page, 'v0', 30_000);
+	const questions: NormalQuestion[] = [
+		{ id: 'n1', question: 'OOM', doc: 'library', answer: ['22:00'] },
+		{ id: 'n2', question: 'Library next question', doc: 'library', answer: ['22:00'] }
+	];
+	const results = await runAll(page, [], questions, []);
+	expect(results[0]).toMatchObject({ id: 'n1', pass: false, retrieved: null, error: 'Your graphics card ran out of memory. Close other tabs and apps, then try again.' });
+	expect(results[1]).toMatchObject({ id: 'n2', pass: true, retrieved: true });
+	expect(summarize(results).normal.errors).toBe(1);
+});
+
 test('the runner refuses a version the page doesn’t know', async ({ page }) => {
 	await useFakeEngine(page);
 	await expect(open(page, 'D9', 30_000)).rejects.toThrow('the page has no version "D9"');
