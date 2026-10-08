@@ -36,3 +36,4 @@ training/vendor/
 *.pt
 training/*.log
 __pycache__/
+.chrome-profile/

@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { test } from '@playwright/test';
+import { test } from './chrome';
 import { CHAT_MODEL, EMBED_MODEL } from '../src/lib/assistant/config';
 import { checkCases, parsePlaceholders, summarize, type Case, type NormalQuestion } from '../src/lib/assistant/score';
 import { open, runAll } from './run';
