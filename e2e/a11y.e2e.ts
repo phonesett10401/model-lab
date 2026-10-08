@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
-const paths = ['/', '/?entry=draft-review-mood', '/models/sea-creature-detector', '/models/sound-detective', '/models/draft-dive-sounds', '/audits/draft-document-assistant-audit', '/no-such-page', '/intro'];
+const paths = ['/', '/?entry=draft-review-mood', '/models/sea-creature-detector', '/models/sound-detective', '/models/draft-dive-sounds', '/audits/draft-document-assistant-audit', '/no-such-page', '/intro', '/assistant'];
 
 for (const scheme of ['light', 'dark'] as const)
 	for (const p of paths)
