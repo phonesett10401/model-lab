@@ -33,7 +33,7 @@ Last updated: 2026-10-09. Owner: Phone Sett (GitHub `phonesett10401`, private re
 - `/assistant` (dev and preview only, like the audits): in-browser RAG chat, WebLLM 0.2.85, Qwen2.5-1.5B-Instruct q4f16_1 + snowflake-arctic-embed-s. Student/Staff switch (not a real login), v0 = access rule in the prompt only. Spec `docs/superpowers/specs/2026-10-09-uofl-rag-assistant-design.md`, plan `docs/superpowers/plans/2026-10-09-uofl-assistant.md`.
 - Content in `assistant/` (see its README): `docs/*.md` (header `title:` / `access: public|staff`), `placeholders.txt`, `tests/cases.json` (owner's cases, OWASP LLM01–10, dev/held-out), `tests/normal.json` (53 questions), `results/<version>/*.json`.
 - Versions: `VERSIONS` in `src/lib/assistant/config.ts`; page `?version=`, runner `$env:ASSISTANT_VERSION`. Add D1, D2… there.
-- Runner: `pnpm eval:assistant` (installed Chrome, visible, Chrome set to High performance GPU in Windows). Real-model test: `pnpm exec playwright test assistant-real --project chrome --headed`. Page tests use a fake engine (`e2e/assistant-fake.ts`, `window.__assistantEngine`).
+- Runner: `pnpm eval:assistant` (installed Chrome, visible, Chrome set to High performance GPU in Windows). Real-model test (opt-in): `$env:ASSISTANT_REAL=1; pnpm exec playwright test assistant-real --project chrome --headed`. Page tests use a fake engine (`e2e/assistant-fake.ts`, `window.__assistantEngine`).
 
 ## Models and training (local, on the owner's RTX 5060)
 
