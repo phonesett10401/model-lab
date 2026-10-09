@@ -7,7 +7,8 @@ import { test as base, chromium } from '@playwright/test';
  */
 export const test = base.extend({
 	context: async ({ baseURL, headless }, use) => {
-		const context = await chromium.launchPersistentContext('.chrome-profile', { channel: 'chrome', headless, baseURL });
+		// Chrome on Windows ignores the Graphics "High performance" setting for WebGPU unless told; without this it picks the integrated GPU.
+		const context = await chromium.launchPersistentContext('.chrome-profile', { channel: 'chrome', headless, baseURL, args: ['--force_high_performance_gpu'] });
 		await use(context);
 		await context.close();
 	}
