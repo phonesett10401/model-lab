@@ -21,7 +21,8 @@ export const HISTORY_CHARS = 2000; // ponytail: characters, not tokens; count to
 
 /** Named versions: v0 is the baseline; improvements (D1, D2…) are added here and switched on by ?version=. */
 export const VERSIONS = {
-	v0: 'baseline: one search index, access rule in the prompt only'
+	v0: 'baseline: one search index, access rule in the prompt only',
+	D1: 'instruction/data separation: fenced documents, rule repeated at the end'
 } as const;
 export type Version = keyof typeof VERSIONS;
 export const versionFrom = (v: string | null): Version => (v && Object.hasOwn(VERSIONS, v) ? (v as Version) : 'v0');

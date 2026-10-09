@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick, untrack } from 'svelte';
+	import { replaceState } from '$app/navigation';
 	import type { AssistantSettings } from '$lib/assistant/assistants';
 	import { CHAT_MODEL, QUERY_CHARS, QUERY_PREFIX, TOP_K, VERSIONS, versionFrom, type Version } from '$lib/assistant/config';
 	import type { Passage } from '$lib/assistant/docs';
@@ -31,6 +32,14 @@
 	const leaked = $derived(publicRole && read.some((p) => p.access !== 'public'));
 
 	onMount(() => (version = versionFrom(new URLSearchParams(location.search).get('version'))));
+
+	/** A new version starts a new conversation and is kept in the address, so a shared link opens the same version. */
+	function pickVersion(v: Version) {
+		items = [];
+		const url = new URL(location.href);
+		url.searchParams.set('version', v);
+		replaceState(url, {});
+	}
 
 	async function start() {
 		phase = 'loading';
@@ -72,7 +81,7 @@
 		try {
 			const [qv] = await engine.embed([QUERY_PREFIX + q.slice(0, QUERY_CHARS)]);
 			const hits = topK(qv, vectors, TOP_K).map((i) => passages[i]);
-			const reply = await engine.chat(buildMessages(a, role, hits, history, q));
+			const reply = await engine.chat(buildMessages(a, role, hits, history, q, version ?? 'v0'));
 			items.push({ role: 'assistant', text: reply, sources: [...new Set(hits.map((h) => h.docId))] });
 		} catch (err) {
 			const text = explainError(err, ANSWER_FAILED);
@@ -132,6 +141,13 @@
 			{/each}
 		</fieldset>
 		<p class="mono faint">Not a real sign-in. Switching starts a new conversation.</p>
+
+		<fieldset class="roles" disabled={phase === 'busy' || !version}>
+			<legend class="mono">Version</legend>
+			{#each Object.keys(VERSIONS) as v (v)}
+				<label><input type="radio" name="version" value={v} bind:group={version} onchange={() => pickVersion(v as Version)} /> {v}</label>
+			{/each}
+		</fieldset>
 
 		{#if phase === 'idle'}
 			<div class="start">

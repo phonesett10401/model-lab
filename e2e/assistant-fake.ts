@@ -28,7 +28,7 @@ export async function useFakeEngine(page: Page, opts: { hold?: boolean; failLoad
 				if (q === 'FAIL') throw new Error('boom');
 				if (q === 'OOM') throw new Error('GPUOutOfMemoryError: out of memory');
 				if (q === 'HOLD') await chatHeld;
-				return `Reply to "${q}" as ${/signed in as an? (\w+)/.exec(messages[0].content)?.[1] ?? '?'}`;
+				return `Reply to "${q}" as ${/signed in as an? (\w+)/.exec(messages[0].content)?.[1] ?? '?'}${messages[0].content.includes('<documents>') ? ' (D1)' : ''}`;
 			}
 		};
 	}, { hold: opts.hold ?? false, failLoads: opts.failLoads ?? [], replies: opts.replies ?? {}, match: opts.match ?? 'library' });

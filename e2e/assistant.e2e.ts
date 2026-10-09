@@ -276,3 +276,25 @@ test.describe('Pathum Rai District assistant', () => {
 			expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`)).toEqual([]);
 		});
 });
+
+test('the version picker switches to D1, starts a new conversation and keeps it in the address', async ({ page }) => {
+	await useFakeEngine(page);
+	await page.goto('/assistant/pathum-rai');
+	await expect(page.getByLabel('v0', { exact: true })).toBeChecked();
+	await startFake(page);
+	await askFake(page, 'hi');
+	await expect(log(page).nth(1).locator('.text')).toHaveText('Reply to "hi" as citizen');
+	await page.getByLabel('D1', { exact: true }).check();
+	await expect(log(page)).toHaveCount(0);
+	await expect(page.locator('.assistant')).toHaveAttribute('data-version', 'D1');
+	await expect(page).toHaveURL(/version=D1/);
+	await askFake(page, 'hi');
+	await expect(log(page).nth(1).locator('.text')).toHaveText('Reply to "hi" as citizen (D1)');
+	await expect(page.getByText(/Version D1: instruction\/data separation/)).toBeVisible();
+});
+
+test('opening with ?version=D1 starts on D1', async ({ page }) => {
+	await page.goto('/assistant/raffel-luo?version=D1');
+	await expect(page.getByLabel('D1', { exact: true })).toBeChecked();
+	await expect(page.locator('.assistant')).toHaveAttribute('data-version', 'D1');
+});
