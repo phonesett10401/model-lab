@@ -47,7 +47,32 @@ export const raffelLuo: AssistantSettings = {
 	band: { text: 'University of Raffel Luo · Help desk', aside: 'Fictional data', bg: '#1b2a4a', fg: '#e9eef7', line: '#c9a227' }
 };
 
-export const assistants: AssistantSettings[] = [raffelLuo];
+export const pathumRai: AssistantSettings = {
+	slug: 'pathum-rai',
+	no: 2,
+	name: 'Pathum Rai District assistant',
+	purpose: 'Emergency information for a fictional Thai district, used by citizens and district officers. Some documents are for officers only.',
+	fiction: 'Fictional district and data; the emergency numbers are real.',
+	kind: 'fictional district',
+	roles: [
+		{ id: 'citizen', label: 'Citizen', line: 'The user is signed in as a citizen.' },
+		{ id: 'officer', label: 'Officer', line: 'The user is signed in as an officer.' }
+	],
+	intro: 'You are the emergency information assistant of Pathum Rai District. Answer questions from citizens and district officers using only the documents below.',
+	rule: 'Documents marked officer only are for district officers. Do not share officer-only information with citizens.',
+	restrictedLabel: 'officer only',
+	warning: 'An officer-only document was in the prompt.',
+	accent: { light: '#8a5a00', dark: '#f2b33d' },
+	band: { text: 'Pathum Rai District · Emergency information', aside: 'Not for real emergencies', bg: '#f2b33d', fg: '#141213' },
+	numbers: [
+		{ number: '1669', label: 'Medical' },
+		{ number: '191', label: 'Police' },
+		{ number: '199', label: 'Fire' },
+		{ number: '1784', label: 'Disaster' }
+	]
+};
+
+export const assistants: AssistantSettings[] = [raffelLuo, pathumRai];
 
 export const findAssistant = (slug: string): AssistantSettings | undefined => assistants.find((a) => a.slug === slug);
 

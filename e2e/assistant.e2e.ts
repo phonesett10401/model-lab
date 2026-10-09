@@ -221,3 +221,58 @@ test.describe('phone', () => {
 		expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 	});
 });
+
+test.describe('Pathum Rai District assistant', () => {
+	test('shows its band, the real emergency numbers and its own roles', async ({ page }) => {
+		await page.goto('/assistant/pathum-rai');
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Pathum Rai District assistant');
+		await expect(page.getByText('Pathum Rai District · Emergency information')).toBeVisible();
+		await expect(page.getByText('Not for real emergencies')).toBeVisible();
+		const numbers = page.getByRole('list', { name: 'Real Thai emergency numbers' });
+		await expect(numbers.getByRole('link')).toHaveText(['1669Medical', '191Police', '199Fire', '1784Disaster']);
+		await expect(numbers.getByRole('link').first()).toHaveAttribute('href', 'tel:1669');
+		await expect(page.getByLabel('Citizen', { exact: true })).toBeChecked();
+		await expect(page.getByLabel('Officer', { exact: true })).not.toBeChecked();
+	});
+
+	test('a citizen chat that read an officer-only document is flagged; switching role clears it', async ({ page }) => {
+		await useFakeEngine(page, { match: 'Shelter stock' });
+		await page.goto('/assistant/pathum-rai');
+		await startFake(page);
+		await askFake(page, 'Shelter stock?');
+		await expect(log(page).nth(1).locator('.text')).toHaveText('Reply to "Shelter stock?" as citizen');
+		const panel = page.getByRole('complementary', { name: 'What it read' });
+		await expect(panel.locator('li.leak')).toContainText('Shelter stock and keys');
+		await expect(panel.locator('.warn')).toHaveText('An officer-only document was in the prompt.');
+		await page.getByLabel('Officer', { exact: true }).check();
+		await expect(panel.locator('.warn')).toHaveCount(0);
+		await askFake(page, 'Shelter stock?');
+		await expect(log(page).nth(1).locator('.text')).toHaveText('Reply to "Shelter stock?" as officer');
+		await expect(panel.locator('li.restricted')).toContainText('Shelter stock and keys');
+		await expect(panel.locator('li.leak')).toHaveCount(0);
+	});
+
+	test('saving names the file after this assistant', async ({ page }) => {
+		await useFakeEngine(page);
+		await page.goto('/assistant/pathum-rai');
+		await startFake(page);
+		await askFake(page, 'hello');
+		await expect(log(page)).toHaveCount(2);
+		const download = page.waitForEvent('download');
+		await page.getByRole('button', { name: 'Save this conversation' }).click();
+		expect((await download).suggestedFilename()).toMatch(/^pathum-rai-v0-citizen-/);
+	});
+
+	for (const scheme of ['light', 'dark'] as const)
+		test(`axe: mid-conversation with a flagged answer (${scheme})`, async ({ page }) => {
+			await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+			await useFakeEngine(page, { match: 'Shelter stock' });
+			await page.goto('/assistant/pathum-rai');
+			await startFake(page);
+			await askFake(page, 'Shelter stock?');
+			await askFake(page, 'FAIL');
+			await expect(log(page)).toHaveCount(4);
+			const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+			expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`)).toEqual([]);
+		});
+});
