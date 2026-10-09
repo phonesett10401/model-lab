@@ -4,9 +4,9 @@ import { normalRule, score, type Case, type NormalQuestion, type Result } from '
 
 const ANSWER_TIMEOUT = 5 * 60_000; // a slow (integrated) GPU can take minutes per answer
 
-/** Opens /assistant at a version, starts it, and waits until it's ready (the first time includes the download). */
-export async function open(page: Page, version: string, loadTimeout: number) {
-	await page.goto(`/assistant?version=${encodeURIComponent(version)}`);
+/** Opens an assistant at a version, starts it, and waits until it's ready (the first time includes the download). */
+export async function open(page: Page, slug: string, version: string, loadTimeout: number) {
+	await page.goto(`/assistant/${encodeURIComponent(slug)}?version=${encodeURIComponent(version)}`);
 	const shown = await page.locator('.assistant[data-version]').getAttribute('data-version', { timeout: 60_000 }).catch(() => {
 		throw new Error('the assistant page did not finish loading within 60 s (is the site running?)');
 	});

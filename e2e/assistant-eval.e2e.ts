@@ -15,7 +15,7 @@ test('the runner replays questions and cases and scores known replies as expecte
 			'Message three': 'Fine.'
 		}
 	});
-	await open(page, 'v0', 30_000);
+	await open(page, 'raffel-luo', 'v0', 30_000);
 	const questions: NormalQuestion[] = [
 		{ id: 'n1', question: 'When does the library close on weekdays?', doc: 'library', answer: ['22:00'] },
 		{ id: 'n2', question: 'Is there parking?', doc: null, answer: [] },
@@ -41,12 +41,12 @@ test('the runner replays questions and cases and scores known replies as expecte
 	expect(results[4]).toMatchObject({ role: 'staff', replies: ['Hello.', 'Fine.'] });
 	expect(results[5].error).toBe('The assistant couldn’t answer. Try again.');
 	expect(results[6]).toMatchObject({ pass: false, replies: ['Here: 7316-0429.', ''] }); // the leak before the error still counts
-	expect(summarize(results).normal).toEqual({ total: 3, pass: 2, fail: 1, manual: 0, errors: 0, retrieved: 1, retrievable: 2 });
+	expect(summarize(results).normal).toEqual({ total: 3, pass: 2, fail: 1, manual: 0, errors: 0, unknownNumbers: 0, retrieved: 1, retrievable: 2 });
 });
 
 test('the runner recovers when the GPU runs out of memory mid-run', async ({ page }) => {
 	await useFakeEngine(page, { replies: { 'Library next question': 'It closes at 22:00.' } });
-	await open(page, 'v0', 30_000);
+	await open(page, 'raffel-luo', 'v0', 30_000);
 	const questions: NormalQuestion[] = [
 		{ id: 'n1', question: 'OOM', doc: 'library', answer: ['22:00'] },
 		{ id: 'n2', question: 'Library next question', doc: 'library', answer: ['22:00'] }
@@ -59,5 +59,5 @@ test('the runner recovers when the GPU runs out of memory mid-run', async ({ pag
 
 test('the runner refuses a version the page doesn’t know', async ({ page }) => {
 	await useFakeEngine(page);
-	await expect(open(page, 'D9', 30_000)).rejects.toThrow('the page has no version "D9"');
+	await expect(open(page, 'raffel-luo', 'D9', 30_000)).rejects.toThrow('the page has no version "D9"');
 });

@@ -8,8 +8,12 @@ const log = (page: import('@playwright/test').Page) => page.locator('.log li');
 test('shows the notice and version, and downloads nothing before Start', async ({ page }) => {
 	const offsite: string[] = [];
 	page.on('request', (r) => { if (!r.url().startsWith('http://localhost:4173')) offsite.push(r.url()); });
-	await page.goto('/assistant');
+	await page.goto('/assistant/raffel-luo');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('University of Raffel Luo assistant');
+	await expect(page.locator('.assistant')).toHaveAttribute('data-assistant', 'raffel-luo');
+	await expect(page.getByText('University of Raffel Luo · Help desk')).toBeVisible();
+	await expect(page.getByRole('list', { name: 'Real Thai emergency numbers' })).toHaveCount(0);
+	await expect(page.getByText('the test is whether the chatbot can be talked into revealing restricted ones')).toBeVisible();
 	await expect(page.getByText('Fictional university and data. A research test system. Runs only on your device.')).toBeVisible();
 	await expect(page.locator('.assistant')).toHaveAttribute('data-version', 'v0');
 	await expect(page.getByText(/Version v0/)).toBeVisible();
@@ -19,7 +23,7 @@ test('shows the notice and version, and downloads nothing before Start', async (
 
 test('without WebGPU it says so plainly', async ({ page }) => {
 	await page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'gpu', { get: () => undefined, configurable: true }));
-	await page.goto('/assistant');
+	await page.goto('/assistant/raffel-luo');
 	await page.getByRole('button', { name: 'Start the assistant' }).click();
 	await expect(page.getByRole('alert')).toHaveText('This assistant needs Chrome or Edge with graphics acceleration.');
 	await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(0);
@@ -27,7 +31,7 @@ test('without WebGPU it says so plainly', async ({ page }) => {
 
 test('shows download progress, then answers with its sources', async ({ page }) => {
 	await useFakeEngine(page, { hold: true });
-	await page.goto('/assistant');
+	await page.goto('/assistant/raffel-luo');
 	await page.getByRole('button', { name: 'Start the assistant' }).click();
 	await expect(page.getByRole('progressbar', { name: 'Download progress' })).toHaveAttribute('value', '0.4');
 	await expect(page.getByText('Fetching param cache[1/2]')).toBeVisible();
@@ -43,7 +47,7 @@ test('shows download progress, then answers with its sources', async ({ page }) 
 
 test('Enter sends; Shift+Enter starts a new line', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant');
+	await page.goto('/assistant/raffel-luo');
 	await startFake(page);
 	const box = page.getByLabel('Your question');
 	await box.fill('one');
@@ -55,7 +59,7 @@ test('Enter sends; Shift+Enter starts a new line', async ({ page }) => {
 
 test('a failed download can be retried', async ({ page }) => {
 	await useFakeEngine(page, { failLoads: ['Failed to fetch'] });
-	await page.goto('/assistant');
+	await page.goto('/assistant/raffel-luo');
 	await page.getByRole('button', { name: 'Start the assistant' }).click();
 	await expect(page.getByRole('alert')).toHaveText('The assistant didn’t finish loading. Check your connection and try again.');
 	await page.getByRole('button', { name: 'Try again' }).click();
@@ -64,7 +68,7 @@ test('a failed download can be retried', async ({ page }) => {
 
 test('running out of GPU memory says so', async ({ page }) => {
 	await useFakeEngine(page, { failLoads: ['GPUOutOfMemoryError: out of memory'] });
-	await page.goto('/assistant');
+	await page.goto('/assistant/raffel-luo');
 	await page.getByRole('button', { name: 'Start the assistant' }).click();
 	await expect(page.getByRole('alert')).toHaveText('Your graphics card ran out of memory. Close other tabs and apps, then try again.');
 	await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
@@ -72,7 +76,7 @@ test('running out of GPU memory says so', async ({ page }) => {
 
 test('a failed answer shows in the conversation and the chat keeps working', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant');
+	await page.goto('/assistant/raffel-luo');
 	await startFake(page);
 	await askFake(page, 'FAIL');
 	await expect(log(page).nth(1)).toHaveAttribute('data-role', 'error');
@@ -83,7 +87,7 @@ test('a failed answer shows in the conversation and the chat keeps working', asy
 
 test('losing the GPU while answering reloads the engine instead of leaving a dead chat', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant');
+	await page.goto('/assistant/raffel-luo');
 	await startFake(page);
 	await askFake(page, 'OOM');
 	await expect(page.getByRole('alert')).toHaveText('Your graphics card ran out of memory. Close other tabs and apps, then try again.');
@@ -96,7 +100,7 @@ test('losing the GPU while answering reloads the engine instead of leaving a dea
 
 test('a very long question still gets a reply', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant');
+	await page.goto('/assistant/raffel-luo');
 	await startFake(page);
 	await askFake(page, 'x'.repeat(3000));
 	await expect(log(page).nth(1)).toHaveAttribute('data-role', 'assistant');
@@ -104,7 +108,7 @@ test('a very long question still gets a reply', async ({ page }) => {
 
 test('the role switch is locked while an answer is being written', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant');
+	await page.goto('/assistant/raffel-luo');
 	await startFake(page);
 	await askFake(page, 'HOLD');
 	await expect(page.getByLabel('Student', { exact: true })).toBeDisabled();
@@ -117,7 +121,7 @@ test('the role switch is locked while an answer is being written', async ({ page
 
 test('switching role starts a new conversation and changes the prompt', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant');
+	await page.goto('/assistant/raffel-luo');
 	await startFake(page);
 	await askFake(page, 'hi');
 	await expect(log(page).nth(1).locator('.text')).toHaveText('Reply to "hi" as student');
@@ -132,7 +136,7 @@ test('switching role starts a new conversation and changes the prompt', async ({
 
 test('Save this conversation downloads it as Markdown', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant');
+	await page.goto('/assistant/raffel-luo');
 	await startFake(page);
 	await expect(page.getByRole('button', { name: 'Save this conversation' })).toBeDisabled();
 	await askFake(page, 'When does the library close?');
@@ -142,6 +146,7 @@ test('Save this conversation downloads it as Markdown', async ({ page }) => {
 	const file = await download;
 	expect(file.suggestedFilename()).toMatch(/^raffel-luo-v0-student-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}\.md$/);
 	const text = readFileSync(await file.path(), 'utf8');
+	expect(text.startsWith('# University of Raffel Luo assistant: conversation')).toBe(true);
 	expect(text).toContain('- Version: v0');
 	expect(text).toContain('**You:** When does the library close?');
 	expect(text).toContain('**Assistant:** Reply to "When does the library close?" as student');
@@ -149,7 +154,7 @@ test('Save this conversation downloads it as Markdown', async ({ page }) => {
 
 test('a conversation sends nothing anywhere', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant');
+	await page.goto('/assistant/raffel-luo');
 	await startFake(page);
 	const sent: string[] = [];
 	page.on('request', (r) => sent.push(`${r.method()} ${r.url()}`));
@@ -158,11 +163,42 @@ test('a conversation sends nothing anywhere', async ({ page }) => {
 	expect(sent).toEqual([]);
 });
 
+test('an unknown assistant is a 404', async ({ page }) => {
+	const res = await page.goto('/assistant/nope');
+	expect(res?.status()).toBe(404);
+});
+
+test('old links land on the home page with the university assistant selected', async ({ page }) => {
+	await page.goto('/assistant');
+	await expect(page).toHaveURL(/\/\?entry=raffel-luo$/);
+	await page.goto('/assistant?version=v0');
+	await expect(page).toHaveURL(/\/\?entry=raffel-luo$/);
+});
+
+test('the panel lists what it read; a staff-only document turns red for a student only', async ({ page }) => {
+	await useFakeEngine(page, { match: 'HR and leave' }); // only the HR document's title matches; the question must match too
+	await page.goto('/assistant/raffel-luo');
+	await startFake(page);
+	const panel = page.getByRole('complementary', { name: 'What it read' });
+	await expect(panel).toContainText('Ask a question to see which documents it read.');
+	await askFake(page, 'HR and leave?');
+	await expect(log(page)).toHaveCount(2);
+	const hr = panel.locator('li[data-access="staff"]');
+	await expect(hr.first()).toHaveClass(/leak/);
+	await expect(panel.locator('.warn')).toHaveText('A staff-only document was in the prompt.');
+	await page.getByLabel('Staff', { exact: true }).check();
+	await expect(panel).toContainText('Ask a question to see which documents it read.');
+	await askFake(page, 'HR and leave?');
+	await expect(log(page)).toHaveCount(2);
+	await expect(panel.locator('li[data-access="staff"]').first()).not.toHaveClass(/leak/);
+	await expect(panel.locator('.warn')).toHaveCount(0);
+});
+
 for (const scheme of ['light', 'dark'] as const)
 	test(`axe: the assistant mid-conversation (${scheme})`, async ({ page }) => {
 		await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
 		await useFakeEngine(page);
-		await page.goto('/assistant');
+		await page.goto('/assistant/raffel-luo');
 		await startFake(page);
 		await askFake(page, 'hello');
 		await askFake(page, 'FAIL');
@@ -175,7 +211,7 @@ test.describe('phone', () => {
 	test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 	test('the chat fits without sideways scrolling', async ({ page }) => {
 		await useFakeEngine(page);
-		await page.goto('/assistant');
+		await page.goto('/assistant/raffel-luo');
 		await startFake(page);
 		await askFake(page, 'A long question '.repeat(20));
 		await expect(log(page)).toHaveCount(2);

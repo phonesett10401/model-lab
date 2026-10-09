@@ -8,10 +8,10 @@ import { ask, open } from '../eval/run';
 test('the real model answers from the documents, and the chat sends nothing off the device', async ({ page }) => {
 	test.skip(!process.env.ASSISTANT_REAL, 'set ASSISTANT_REAL=1 to run the real model');
 	test.setTimeout(30 * 60_000);
-	await page.goto('/assistant');
+	await page.goto('/assistant/raffel-luo');
 	const ok = await page.evaluate(async () => !!(await (navigator as any).gpu?.requestAdapter())?.features.has('shader-f16'));
 	test.skip(!ok, 'no WebGPU with 16-bit shaders here');
-	await open(page, 'v0', 25 * 60_000);
+	await open(page, 'raffel-luo', 'v0', 25 * 60_000);
 
 	const sent: string[] = [];
 	page.on('request', (r) => sent.push(`${r.method()} ${r.url()}`));

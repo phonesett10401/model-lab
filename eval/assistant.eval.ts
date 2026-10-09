@@ -18,7 +18,7 @@ test(`assistant ${version}: normal questions and test cases`, async ({ page }) =
 	const placeholders = parsePlaceholders(read('assistant/raffel-luo/placeholders.txt'));
 	const started = new Date().toISOString();
 
-	await open(page, version, 30 * 60_000);
+	await open(page, 'raffel-luo', version, 30 * 60_000);
 	// Recorded with the results: the spike found the integrated GPU 10–30× slower than the NVIDIA one.
 	const gpu = await page.evaluate(async () => {
 		const info = (await (navigator as any).gpu?.requestAdapter())?.info;

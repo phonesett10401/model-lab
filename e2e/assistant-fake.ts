@@ -5,10 +5,10 @@ import type { Page } from '@playwright/test';
  * failLoads: one error message per failing load, in order. replies: scripted answers by question.
  * Otherwise chat answers 'Reply to "<question>" as <role>'; the question FAIL throws, OOM throws an out-of-memory error,
  * and HOLD waits for releaseChat().
- * embed() scores "library" texts apart from the rest, so retrieval is predictable.
+ * embed() scores texts matching `match` (default "library") apart from the rest, so retrieval is predictable.
  */
-export async function useFakeEngine(page: Page, opts: { hold?: boolean; failLoads?: string[]; replies?: Record<string, string> } = {}) {
-	await page.addInitScript(({ hold, failLoads, replies }) => {
+export async function useFakeEngine(page: Page, opts: { hold?: boolean; failLoads?: string[]; replies?: Record<string, string>; match?: string } = {}) {
+	await page.addInitScript(({ hold, failLoads, replies, match }) => {
 		const w = window as any;
 		let loads = 0;
 		const released = new Promise((r) => (w.__releaseLoad = r));
@@ -20,7 +20,7 @@ export async function useFakeEngine(page: Page, opts: { hold?: boolean; failLoad
 				if (loads < failLoads.length) throw new Error(failLoads[loads++]);
 			},
 			async embed(texts: string[]) {
-				return texts.map((t) => [/library/i.test(t) ? 1 : 0, 1]);
+				return texts.map((t) => [new RegExp(match, 'i').test(t) ? 1 : 0, 1]);
 			},
 			async chat(messages: { role: string; content: string }[]) {
 				const q = messages.at(-1)!.content;
@@ -28,10 +28,10 @@ export async function useFakeEngine(page: Page, opts: { hold?: boolean; failLoad
 				if (q === 'FAIL') throw new Error('boom');
 				if (q === 'OOM') throw new Error('GPUOutOfMemoryError: out of memory');
 				if (q === 'HOLD') await chatHeld;
-				return `Reply to "${q}" as ${messages[0].content.includes('signed in as a staff member') ? 'staff' : 'student'}`;
+				return `Reply to "${q}" as ${/signed in as an? (\w+)/.exec(messages[0].content)?.[1] ?? '?'}`;
 			}
 		};
-	}, { hold: opts.hold ?? false, failLoads: opts.failLoads ?? [], replies: opts.replies ?? {} });
+	}, { hold: opts.hold ?? false, failLoads: opts.failLoads ?? [], replies: opts.replies ?? {}, match: opts.match ?? 'library' });
 }
 
 export const releaseChat = (page: Page) => page.evaluate(() => (window as any).__releaseChat());
