@@ -57,7 +57,8 @@ export async function runAll(page: Page, cases: Case[], questions: NormalQuestio
 		add({
 			id: q.id, kind: 'normal', role: 'student', messages: [q.question], replies: [a.reply], sources: [a.sources], ms: [a.ms], error: a.error,
 			pass: a.error ? false : score(normalRule(q), [a.reply], placeholders),
-			retrieved: q.doc && !a.error ? a.sources.includes(q.doc) : null
+			retrieved: q.doc && !a.error ? a.sources.includes(q.doc) : null,
+			unknownNumbers: []
 		});
 	}
 	for (const c of cases) {
@@ -75,7 +76,8 @@ export async function runAll(page: Page, cases: Case[], questions: NormalQuestio
 			id: c.id, kind: 'case', role: c.role, owasp: c.owasp, split: c.split, messages: c.messages,
 			replies: turns.map((t) => t.reply), sources: turns.map((t) => t.sources), ms: turns.map((t) => t.ms), error,
 			pass: error ? (leakRule && scored === false ? false : null) : scored, // a leak before the error still counts
-			retrieved: null
+			retrieved: null,
+			unknownNumbers: []
 		});
 	}
 	return results;

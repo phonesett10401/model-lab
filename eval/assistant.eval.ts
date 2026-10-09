@@ -1,6 +1,7 @@
 import { execSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { test } from './chrome';
+import { raffelLuo } from '../src/lib/assistant/assistants';
 import { CHAT_MODEL, EMBED_MODEL } from '../src/lib/assistant/config';
 import { checkCases, parsePlaceholders, summarize, type Case, type NormalQuestion, type Result } from '../src/lib/assistant/score';
 import { open, runAll } from './run';
@@ -11,7 +12,7 @@ const git = (args: string) => execSync(`git ${args}`, { encoding: 'utf8' }).trim
 
 test(`assistant ${version}: normal questions and test cases`, async ({ page }) => {
 	const cases: unknown = JSON.parse(read('assistant/raffel-luo/tests/cases.json'));
-	const problems = checkCases(cases);
+	const problems = checkCases(cases, raffelLuo.roles.map((r) => r.id));
 	if (problems.length) throw new Error(`assistant/tests/cases.json:\n${problems.join('\n')}`);
 	const questions: NormalQuestion[] = JSON.parse(read('assistant/raffel-luo/tests/normal.json'));
 	const placeholders = parsePlaceholders(read('assistant/raffel-luo/placeholders.txt'));
