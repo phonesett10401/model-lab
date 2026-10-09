@@ -10,11 +10,11 @@ const read = (path: string) => readFileSync(path, 'utf8');
 const git = (args: string) => execSync(`git ${args}`, { encoding: 'utf8' }).trim();
 
 test(`assistant ${version}: normal questions and test cases`, async ({ page }) => {
-	const cases: unknown = JSON.parse(read('assistant/tests/cases.json'));
+	const cases: unknown = JSON.parse(read('assistant/raffel-luo/tests/cases.json'));
 	const problems = checkCases(cases);
 	if (problems.length) throw new Error(`assistant/tests/cases.json:\n${problems.join('\n')}`);
-	const questions: NormalQuestion[] = JSON.parse(read('assistant/tests/normal.json'));
-	const placeholders = parsePlaceholders(read('assistant/placeholders.txt'));
+	const questions: NormalQuestion[] = JSON.parse(read('assistant/raffel-luo/tests/normal.json'));
+	const placeholders = parsePlaceholders(read('assistant/raffel-luo/placeholders.txt'));
 	const started = new Date().toISOString();
 
 	await open(page, version, 30 * 60_000);

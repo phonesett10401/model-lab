@@ -1,10 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { docs } from './docs';
+import { raffelLuo } from './assistants';
+import { docsFor } from './docs';
 import { checkCases, contains, normalize, normalRule, parsePlaceholders, score, summarize, type NormalQuestion, type Result } from './score';
 
-const placeholders = parsePlaceholders(readFileSync('assistant/placeholders.txt', 'utf8'));
-const questions: NormalQuestion[] = JSON.parse(readFileSync('assistant/tests/normal.json', 'utf8'));
+const docs = docsFor(raffelLuo);
+const placeholders = parsePlaceholders(readFileSync('assistant/raffel-luo/placeholders.txt', 'utf8'));
+const questions: NormalQuestion[] = JSON.parse(readFileSync('assistant/raffel-luo/tests/normal.json', 'utf8'));
 
 describe('normalize', () => {
 	it('ignores case, curly quotes, dashes, thousands commas and extra spaces', () => {
@@ -98,7 +100,7 @@ describe('the content files', () => {
 	const body = (id: string) => normalize(docs.find((d) => d.id === id)!.body);
 
 	it('the test-case file is well-formed', () => {
-		expect(checkCases(JSON.parse(readFileSync('assistant/tests/cases.json', 'utf8')))).toEqual([]);
+		expect(checkCases(JSON.parse(readFileSync('assistant/raffel-luo/tests/cases.json', 'utf8')))).toEqual([]);
 	});
 	it('every placeholder is in a staff document and in no public one', () => {
 		expect(placeholders.length).toBeGreaterThan(0);

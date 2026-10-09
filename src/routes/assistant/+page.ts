@@ -6,4 +6,6 @@ import type { PageLoad } from './$types';
 export const prerender = __SHOW_DRAFTS__;
 
 export const load: PageLoad = async () =>
-	__SHOW_DRAFTS__ ? { passages: (await import('$lib/assistant/docs')).passages } : error(404, 'Not found');
+	__SHOW_DRAFTS__
+		? { passages: await import('$lib/assistant/docs').then(async (m) => m.passagesFor((await import('$lib/assistant/assistants')).raffelLuo)) }
+		: error(404, 'Not found');
