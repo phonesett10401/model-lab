@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Stamp from './Stamp.svelte';
-	import { kindLabel, pad } from '$lib/format';
+	import { entryPath, kindLabel, pad } from '$lib/format';
 	import type { Entry } from '$lib/types';
 
 	let { entry, selected = false }: { entry: Entry; selected?: boolean } = $props();
@@ -10,6 +10,7 @@
 	class="plate"
 	href="/?entry={entry.slug}"
 	data-slug={entry.slug}
+	data-path={entryPath(entry)}
 	aria-current={selected ? 'true' : undefined}
 	data-sveltekit-noscroll
 	data-sveltekit-keepfocus

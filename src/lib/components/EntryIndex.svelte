@@ -1,17 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import Plate from './Plate.svelte';
-	import { entryPath } from '$lib/format';
+	import AssistantPlate from './AssistantPlate.svelte';
+	import type { AssistantSettings } from '$lib/assistant/assistants';
 	import type { Entry } from '$lib/types';
 
-	let { entries, selected }: { entries: Entry[]; selected: string | null } = $props();
+	let { entries, assistants, selected }: { entries: Entry[]; assistants: AssistantSettings[]; selected: string | null } = $props();
 
-	const groups = $derived(
-		[
-			{ title: 'Models', items: entries.filter((e) => e.kind === 'model') },
-			{ title: 'Audits', items: entries.filter((e) => e.kind === 'audit') }
-		].filter((g) => g.items.length)
-	);
+	const models = $derived(entries.filter((e) => e.kind === 'model'));
+	const audits = $derived(entries.filter((e) => e.kind === 'audit'));
 
 	function onkeydown(ev: KeyboardEvent) {
 		const links = [...(ev.currentTarget as HTMLElement).querySelectorAll<HTMLAnchorElement>('a.plate')];
@@ -25,22 +22,25 @@
 			goto(`/?entry=${next.dataset.slug}`, { replaceState: true, noScroll: true, keepFocus: true });
 		} else if (ev.key === 'Enter' && links[i].getAttribute('aria-current') === 'true') {
 			ev.preventDefault();
-			const e = entries.find((x) => x.slug === links[i].dataset.slug);
-			if (e) goto(entryPath(e));
+			goto(links[i].dataset.path!);
 		}
 	}
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <nav id="archive" class="index" aria-label="Archive index" {onkeydown}>
-	{#each groups as g (g.title)}
-		<h2 class="group mono">{g.title}</h2>
-		<ul>
-			{#each g.items as e (e.slug)}
-				<li><Plate entry={e} selected={e.slug === selected} /></li>
-			{/each}
-		</ul>
-	{/each}
+	{#if models.length}
+		<h2 class="group mono">Models</h2>
+		<ul>{#each models as e (e.slug)}<li><Plate entry={e} selected={e.slug === selected} /></li>{/each}</ul>
+	{/if}
+	{#if assistants.length}
+		<h2 class="group mono">RAG assistants</h2>
+		<ul>{#each assistants as a (a.slug)}<li><AssistantPlate assistant={a} selected={a.slug === selected} /></li>{/each}</ul>
+	{/if}
+	{#if audits.length}
+		<h2 class="group mono">Audits</h2>
+		<ul>{#each audits as e (e.slug)}<li><Plate entry={e} selected={e.slug === selected} /></li>{/each}</ul>
+	{/if}
 	<p class="hint mono faint">↑ ↓ to browse · Enter opens the page</p>
 </nav>
 

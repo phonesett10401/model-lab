@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 const widths = [320, 375, 390, 768, 1024, 1280, 1440, 1920, 2560];
-const paths = ['/', '/?entry=draft-plant-watering', '/models/draft-shape-sorter', '/audits/draft-document-assistant-audit', '/no-such-page', '/intro', '/assistant/raffel-luo', '/assistant/pathum-rai'];
+const paths = ['/', '/?entry=draft-plant-watering', '/models/draft-shape-sorter', '/audits/draft-document-assistant-audit', '/no-such-page', '/intro', '/assistant/raffel-luo', '/assistant/pathum-rai', '/?entry=pathum-rai'];
 const name = (p: string) => p.replace(/[^a-z0-9]+/gi, '_') || 'home';
 
 for (const w of widths)

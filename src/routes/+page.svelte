@@ -8,12 +8,14 @@
 	import EntryBench from '$lib/components/EntryBench.svelte';
 	import Sheet from '$lib/components/Sheet.svelte';
 	import Hero from '$lib/components/Hero.svelte';
+	import AssistantCard from '$lib/components/AssistantCard.svelte';
+	import { assistants, findAssistant, isAssistant } from '$lib/assistant/assistants';
 
 	const phone = new MediaQuery('max-width: 639px', false);
 
 	// Query params can't be read while prerendering, so selection is client-side.
 	const requested = $derived(browser ? page.url.searchParams.get('entry') : null);
-	const selected = $derived((requested && findEntry(requested)) || null);
+	const selected = $derived((requested && (findEntry(requested) ?? findAssistant(requested))) || null);
 	const shown = $derived(selected ?? catalogue[0]);
 
 	function close() {
@@ -33,16 +35,20 @@
 
 <Hero />
 
+{#snippet bench(x: typeof shown)}
+	{#if isAssistant(x)}<AssistantCard assistant={x} />{:else}<EntryBench entry={x} />{/if}
+{/snippet}
+
 <section class="lab" aria-label="Archive">
-	<EntryIndex entries={catalogue} selected={phone.current ? (selected?.slug ?? null) : shown.slug} />
+	<EntryIndex entries={catalogue} {assistants} selected={phone.current ? (selected?.slug ?? null) : shown.slug} />
 	{#if !phone.current}
-		<div class="bench-wrap"><EntryBench entry={shown} /></div>
+		<div class="bench-wrap">{@render bench(shown)}</div>
 	{/if}
 </section>
 
 {#if phone.current}
 	<Sheet open={!!selected} label={selected?.name ?? 'Entry'} onclose={close}>
-		{#if selected}<EntryBench entry={selected} />{/if}
+		{#if selected}{@render bench(selected)}{/if}
 	</Sheet>
 {/if}
 
