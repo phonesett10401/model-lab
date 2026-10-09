@@ -1,4 +1,4 @@
-import { CHAT_MODEL, EMBED_MODEL, MAX_REPLY_TOKENS, TEMPERATURE } from './config';
+import { CHAT_MODEL, EMBED_MODEL, CONTEXT_WINDOW, MAX_REPLY_TOKENS, TEMPERATURE } from './config';
 import type { ChatMessage } from './rag';
 
 /** What the page needs from a model engine. e2e tests swap in a fake (window.__assistantEngine). */
@@ -43,7 +43,7 @@ export function webllmEngine(): AssistantEngine {
 			const { CreateMLCEngine } = await import('@mlc-ai/web-llm'); // only on /assistant, only after Start
 			// A failed try leaves the engine unset, so Try again resumes (finished files stay in the browser cache).
 			embedder ??= await CreateMLCEngine(EMBED_MODEL, { initProgressCallback: (r) => onProgress(r.progress * EMBED_SHARE, r.text) });
-			chatter ??= await CreateMLCEngine(CHAT_MODEL, { initProgressCallback: (r) => onProgress(EMBED_SHARE + r.progress * (1 - EMBED_SHARE), r.text) });
+			chatter ??= await CreateMLCEngine(CHAT_MODEL, { initProgressCallback: (r) => onProgress(EMBED_SHARE + r.progress * (1 - EMBED_SHARE), r.text) }, { context_window_size: CONTEXT_WINDOW });
 		},
 		async embed(texts) {
 			const res = await embedder!.embeddings.create({ input: texts, model: EMBED_MODEL });

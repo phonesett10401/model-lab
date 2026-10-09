@@ -10,8 +10,14 @@ export const QUERY_CHARS = 1500;
 export const TOP_K = 3;
 export const TEMPERATURE = 0; // greedy, so re-running a case gives the same answer
 export const MAX_REPLY_TOKENS = 400;
-/** Older turns are dropped past this, so the prompt fits the model's 4,096-token window. */
-export const HISTORY_CHARS = 4000; // ponytail: characters, not tokens; count tokens if long chats get cut off
+/**
+ * The chat model's context window (WebLLM's default for this model is 4,096). Half the memory for the conversation:
+ * at 4,096 a long message made iOS Safari reload the page on an iPhone 17 Pro; at 2,048 it answered (spike, 2026-10-10).
+ * Budget: instructions + 3 passages ~550 tokens, history ~500, question up to ~400, reply up to MAX_REPLY_TOKENS.
+ */
+export const CONTEXT_WINDOW = 2048;
+/** Older turns are dropped past this, so the prompt fits CONTEXT_WINDOW. */
+export const HISTORY_CHARS = 2000; // ponytail: characters, not tokens; count tokens if long chats get cut off
 
 /** Named versions: v0 is the baseline; improvements (D1, D2…) are added here and switched on by ?version=. */
 export const VERSIONS = {
