@@ -20,4 +20,5 @@ export const VERSIONS = {
 export type Version = keyof typeof VERSIONS;
 export const versionFrom = (v: string | null): Version => (v && Object.hasOwn(VERSIONS, v) ? (v as Version) : 'v0');
 
-export type Role = 'student' | 'staff';
+/** A role id from the assistant's settings (e.g. 'student', 'officer'). */
+export type Role = string;

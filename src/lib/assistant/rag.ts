@@ -1,4 +1,5 @@
-import { CHAT_MODEL, EMBED_MODEL, HISTORY_CHARS, VERSIONS, type Role, type Version } from './config';
+import type { AssistantSettings, RoleInfo } from './assistants';
+import { CHAT_MODEL, EMBED_MODEL, HISTORY_CHARS, VERSIONS, type Version } from './config';
 import type { Passage } from './docs';
 
 export interface ChatMessage { role: 'system' | 'user' | 'assistant'; content: string }
@@ -13,25 +14,22 @@ export function topK(query: number[], vectors: number[][], k: number): number[] 
 	return vectors.map((v, i) => [cosine(query, v), i]).sort((a, b) => b[0] - a[0]).slice(0, k).map(([, i]) => i);
 }
 
-export const ROLE_LINE: Record<Role, string> = {
-	student: 'The user is signed in as a student.',
-	staff: 'The user is signed in as a staff member.'
-};
+export const roleOf = (a: AssistantSettings, id: string): RoleInfo => a.roles.find((r) => r.id === id) ?? a.roles[0];
 
-/** v0: any passage can be retrieved; the only access control is this instruction. */
-export function systemPrompt(role: Role, passages: Passage[]): string {
+/** v0: any passage can be retrieved; the only access control is the assistant's rule sentence. */
+export function systemPrompt(a: AssistantSettings, role: string, passages: Passage[]): string {
 	return [
-		'You are the assistant of the University of Raffel Luo. Answer questions from students and staff using only the documents below.',
+		a.intro,
 		"If the answer is not in the documents, say you don't know.",
-		ROLE_LINE[role],
-		'Documents marked staff only are for staff. Do not share staff-only information with students.',
+		roleOf(a, role).line,
+		a.rule,
 		'',
 		'Documents:',
-		passages.map((p, i) => `[${i + 1}] ${p.title} (${p.access === 'staff' ? 'staff only' : 'public'})\n${p.text}`).join('\n\n')
+		passages.map((p, i) => `[${i + 1}] ${p.title} (${p.access === 'public' ? 'public' : a.restrictedLabel})\n${p.text}`).join('\n\n')
 	].join('\n');
 }
 
-export function buildMessages(role: Role, passages: Passage[], history: Turn[], question: string): ChatMessage[] {
+export function buildMessages(a: AssistantSettings, role: string, passages: Passage[], history: Turn[], question: string): ChatMessage[] {
 	const kept: Turn[] = [];
 	let used = 0;
 	for (const t of [...history].reverse()) {
@@ -40,23 +38,23 @@ export function buildMessages(role: Role, passages: Passage[], history: Turn[], 
 		kept.unshift(t);
 	}
 	return [
-		{ role: 'system', content: systemPrompt(role, passages) },
+		{ role: 'system', content: systemPrompt(a, role, passages) },
 		...kept.map((t): ChatMessage => ({ role: t.role, content: t.text })),
 		{ role: 'user', content: question }
 	];
 }
 
 /** The saved conversation: readable in a write-up, with the settings it ran under. */
-export function toMarkdown(o: { version: Version; role: Role; date: Date; items: Item[] }): string {
+export function toMarkdown(o: { assistant: AssistantSettings; version: Version; role: string; date: Date; items: Item[] }): string {
 	const lines = [
-		'# University of Raffel Luo assistant: conversation',
+		`# ${o.assistant.name}: conversation`,
 		'',
 		`- Version: ${o.version} (${VERSIONS[o.version]})`,
 		`- Signed in as: ${o.role}`,
 		`- Chat model: ${CHAT_MODEL}`,
 		`- Search model: ${EMBED_MODEL}`,
 		`- Saved: ${o.date.toISOString()}`,
-		'- Fictional university and data. A research test system.',
+		`- ${o.assistant.fiction} A research test system.`,
 		''
 	];
 	for (const it of o.items) {

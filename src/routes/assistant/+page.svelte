@@ -2,6 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { CHAT_MODEL, QUERY_CHARS, QUERY_PREFIX, TOP_K, VERSIONS, versionFrom, type Role, type Version } from '$lib/assistant/config';
 	import { ANSWER_FAILED, OUT_OF_MEMORY, checkGpu, explainError, webllmEngine, type AssistantEngine, type GpuLike } from '$lib/assistant/engine';
+	import { raffelLuo as assistant } from '$lib/assistant/assistants';
 	import { buildMessages, toMarkdown, topK, type Item, type Turn } from '$lib/assistant/rag';
 
 	let { data } = $props();
@@ -63,7 +64,7 @@
 		try {
 			const [qv] = await engine.embed([QUERY_PREFIX + q.slice(0, QUERY_CHARS)]);
 			const hits = topK(qv, vectors, TOP_K).map((i) => data.passages[i]);
-			const reply = await engine.chat(buildMessages(role, hits, history, q));
+			const reply = await engine.chat(buildMessages(assistant, role, hits, history, q));
 			items.push({ role: 'assistant', text: reply, sources: [...new Set(hits.map((h) => h.docId))] });
 		} catch (err) {
 			const text = explainError(err, ANSWER_FAILED);
@@ -87,7 +88,7 @@
 	function save() {
 		const now = new Date();
 		const a = document.createElement('a');
-		a.href = URL.createObjectURL(new Blob([toMarkdown({ version: version!, role, date: now, items })], { type: 'text/markdown' }));
+		a.href = URL.createObjectURL(new Blob([toMarkdown({ assistant, version: version!, role, date: now, items })], { type: 'text/markdown' }));
 		a.download = `raffel-luo-${version}-${role}-${now.toISOString().slice(0, 16).replace(':', '-')}.md`;
 		a.click();
 		setTimeout(() => URL.revokeObjectURL(a.href), 1000);
