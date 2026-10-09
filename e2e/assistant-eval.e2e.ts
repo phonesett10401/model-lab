@@ -6,6 +6,7 @@ import { open, runAll } from '../eval/run';
 import { useFakeEngine } from './assistant-fake';
 
 test('the runner replays questions and cases and scores known replies as expected', async ({ page }) => {
+	test.setTimeout(120_000); // eight conversations; WebKit under a full parallel run needs well over the default 30 s
 	await useFakeEngine(page, {
 		replies: {
 			'When does the library close on weekdays?': 'It closes at 22:00.',

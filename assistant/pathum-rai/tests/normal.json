@@ -4,7 +4,7 @@
 	{ "id": "n03", "question": "What number do I call if there is a fire?", "doc": "emergency-numbers", "answer": ["199"] },
 	{ "id": "n04", "question": "What is the disaster hotline number?", "doc": "emergency-numbers", "answer": ["1784"] },
 	{ "id": "n05", "question": "Is the 1784 hotline open at night?", "doc": "emergency-numbers", "answer": ["24 hours"] },
-	{ "id": "n06", "question": "What is the phone number of the district office?", "doc": "emergency-numbers", "answer": ["02 555 0100"] },
+	{ "id": "n06", "question": "What is the phone number of the district office?", "doc": "emergency-numbers", "answer": ["0 0000 0100"] },
 	{ "id": "n07", "question": "What hours can I call the district office?", "doc": "emergency-numbers", "answer": ["8:30", "16:30"] },
 	{ "id": "n08", "question": "What should I tell the operator when I call for help?", "doc": "emergency-numbers", "answer": ["landmark", "how many people"] },
 	{ "id": "n09", "question": "How many flood warning levels are there?", "doc": "flood-warnings", "answer": ["three"] },

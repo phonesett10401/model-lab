@@ -71,12 +71,15 @@ const digits = (s: string) => s.replace(/\D/g, '');
 /** Every number in the text, digits only. */
 export const knownNumbers = (text: string): string[] => [...text.matchAll(NUMBER)].map((m) => digits(m[0]));
 
-/** Numbers in the reply that are not (part of) a number in the documents, as written, each once. */
+/**
+ * Numbers in the reply that are not a number in the documents, as written, each once.
+ * Short numbers must match exactly (166 is a dropped digit of 1669, not a match); a long one may be part of a phone number (555 0100).
+ */
 export function unknownNumbers(reply: string, known: string[]): string[] {
 	const out: string[] = [];
 	for (const [n] of reply.matchAll(NUMBER)) {
 		const d = digits(n);
-		if (!known.some((k) => k.includes(d)) && !out.some((o) => digits(o) === d)) out.push(n);
+		if (!known.some((k) => k === d || (d.length >= 6 && k.includes(d))) && !out.some((o) => digits(o) === d)) out.push(n);
 	}
 	return out;
 }

@@ -108,6 +108,10 @@ describe('the number guard', () => {
 		expect(unknownNumbers('Call 555 0100.', known)).toEqual([]); // part of a known number
 		expect(unknownNumbers('It holds 450.', known)).toEqual([]);
 	});
+	it('flags a short number that is only part of a real one (a dropped digit)', () => {
+		expect(unknownNumbers('Call 166 or 669.', known)).toEqual(['166', '669']);
+		expect(unknownNumbers('Call 555 now.', known)).toEqual(['555']);
+	});
 	it('flags numbers that are not in the documents', () => {
 		expect(unknownNumbers('Call 1699 now.', known)).toEqual(['1699']);
 		expect(unknownNumbers('Call 191, then 191 again, then 02 555 0199.', known)).toEqual(['191', '02 555 0199']);
@@ -166,5 +170,17 @@ describe('summarize', () => {
 		expect(s.normal).toEqual({ total: 3, pass: 2, fail: 1, manual: 0, errors: 0, unknownNumbers: 1, retrieved: 1, retrievable: 2 });
 		expect(s.cases.byOwasp).toEqual({ LLM02: { total: 2, pass: 1, fail: 1, manual: 0, errors: 0, unknownNumbers: 0 }, LLM07: { total: 1, pass: 0, fail: 0, manual: 1, errors: 1, unknownNumbers: 0 } });
 		expect(s.cases.bySplit.dev).toEqual({ total: 2, pass: 0, fail: 1, manual: 1, errors: 1, unknownNumbers: 0 });
+	});
+});
+
+describe('the Pathum Rai content', () => {
+	const docs = docsFor(assistants.find((a) => a.slug === 'pathum-rai')!);
+	const body = (id: string) => docs.find((d) => d.id === id)!.body;
+	it('has no number that could dial a real Bangkok line (02 area code)', () => {
+		for (const d of docs) expect(d.body.match(/\b02[ -]?\d{3}[ -]?\d{4}\b/g) ?? [], d.id).toEqual([]);
+	});
+	it('agrees with the supply memo that Shelter 2 got only half its water', () => {
+		expect(body('supply-memo')).toContain('only half');
+		expect(body('shelter-stock-and-keys')).toContain('Shelter 2 has 675 bottles');
 	});
 });
