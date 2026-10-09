@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
-import type { Role } from '../src/lib/assistant/config';
-import { normalRule, score, type Case, type NormalQuestion, type Result } from '../src/lib/assistant/score';
+import type { AssistantSettings } from '../src/lib/assistant/assistants';
+import { normalRule, score, unknownNumbers, type Case, type NormalQuestion, type Result } from '../src/lib/assistant/score';
 
 const ANSWER_TIMEOUT = 5 * 60_000; // a slow (integrated) GPU can take minutes per answer
 
@@ -18,8 +18,9 @@ export async function open(page: Page, slug: string, version: string, loadTimeou
 }
 
 /** A fresh conversation as this role. */
-export async function newConversation(page: Page, role: Role) {
-	await page.getByLabel(role === 'staff' ? 'Staff' : 'Student', { exact: true }).check(); // switching clears the chat
+export async function newConversation(page: Page, a: AssistantSettings, role: string) {
+	const label = a.roles.find((r) => r.id === role)?.label ?? a.roles[0].label;
+	await page.getByLabel(label, { exact: true }).check(); // switching clears the chat
 	const fresh = page.getByRole('button', { name: 'New conversation' });
 	if (await fresh.isEnabled()) await fresh.click();
 }
@@ -47,37 +48,40 @@ export async function ask(page: Page, text: string) {
 	return { reply: isError ? '' : body, error: isError ? body : undefined, sources, ms };
 }
 
-/** Every normal question (as a student), then every case (as its role), each in a new conversation. */
-export async function runAll(page: Page, cases: Case[], questions: NormalQuestion[], placeholders: string[], onResult?: (r: Result) => void): Promise<Result[]> {
+/** Every normal question (as the public role), then every case (as its role), each in a new conversation. */
+export async function runAll(page: Page, a: AssistantSettings, cases: Case[], questions: NormalQuestion[], placeholders: string[], known: string[], onResult?: (r: Result) => void): Promise<Result[]> {
 	const results: Result[] = [];
 	const add = (r: Result) => { results.push(r); onResult?.(r); };
+	const numbers = (replies: string[]) => [...new Set(replies.flatMap((r) => unknownNumbers(r, known)))];
+	const asPublic = a.roles[0].id;
 	for (const q of questions) {
-		await newConversation(page, 'student');
-		const a = await ask(page, q.question);
+		await newConversation(page, a, asPublic);
+		const t = await ask(page, q.question);
 		add({
-			id: q.id, kind: 'normal', role: 'student', messages: [q.question], replies: [a.reply], sources: [a.sources], ms: [a.ms], error: a.error,
-			pass: a.error ? false : score(normalRule(q), [a.reply], placeholders),
-			retrieved: q.doc && !a.error ? a.sources.includes(q.doc) : null,
-			unknownNumbers: []
+			id: q.id, kind: 'normal', role: asPublic, messages: [q.question], replies: [t.reply], sources: [t.sources], ms: [t.ms], error: t.error,
+			pass: t.error ? false : score(normalRule(q), [t.reply], placeholders),
+			retrieved: q.doc && !t.error ? t.sources.includes(q.doc) : null,
+			unknownNumbers: numbers([t.reply])
 		});
 	}
 	for (const c of cases) {
-		await newConversation(page, c.role);
+		await newConversation(page, a, c.role);
 		const turns: Awaited<ReturnType<typeof ask>>[] = [];
 		for (const m of c.messages) {
-			const a = await ask(page, m);
-			turns.push(a);
-			if (a.error) break;
+			const t = await ask(page, m);
+			turns.push(t);
+			if (t.error) break;
 		}
 		const error = turns.find((t) => t.error)?.error;
-		const scored = score(c.rule, turns.map((t) => t.reply), placeholders);
+		const replies = turns.map((t) => t.reply);
+		const scored = score(c.rule, replies, placeholders);
 		const leakRule = c.rule.type === 'no_placeholders' || c.rule.type === 'contains_none';
 		add({
 			id: c.id, kind: 'case', role: c.role, owasp: c.owasp, split: c.split, messages: c.messages,
-			replies: turns.map((t) => t.reply), sources: turns.map((t) => t.sources), ms: turns.map((t) => t.ms), error,
+			replies, sources: turns.map((t) => t.sources), ms: turns.map((t) => t.ms), error,
 			pass: error ? (leakRule && scored === false ? false : null) : scored, // a leak before the error still counts
 			retrieved: null,
-			unknownNumbers: []
+			unknownNumbers: numbers(replies)
 		});
 	}
 	return results;
