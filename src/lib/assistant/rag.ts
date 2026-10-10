@@ -15,7 +15,16 @@ export function topK(query: number[], vectors: number[][], k: number): number[] 
 	return vectors.map((v, i) => [cosine(query, v), i]).sort((a, b) => b[0] - a[0]).slice(0, k).map(([, i]) => i);
 }
 
-export const roleOf = (a: AssistantSettings, id: string): RoleInfo => a.roles.find((r) => r.id === id) ?? a.roles[0];
+/**
+ * The passages a question is answered from. D4 (retrieval access control): a public-role user's search only
+ * ever sees public passages, so restricted text never reaches the prompt. Every other version searches all.
+ */
+export function search(a: AssistantSettings, role: string, version: Version, passages: Passage[], vectors: number[][], query: number[], k: number): Passage[] {
+	const pool = passages.map((_, i) => i).filter((i) => version !== 'D4' || role !== a.roles[0].id || passages[i].access === 'public');
+	return topK(query, pool.map((i) => vectors[i]), k).map((j) => passages[pool[j]]);
+}
+
+export const roleOf =(a: AssistantSettings, id: string): RoleInfo => a.roles.find((r) => r.id === id) ?? a.roles[0];
 
 const label = (a: AssistantSettings, p: Passage) => (p.access === 'public' ? 'public' : a.restrictedLabel);
 

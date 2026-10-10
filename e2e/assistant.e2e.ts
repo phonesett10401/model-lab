@@ -326,3 +326,21 @@ test.describe('D3 output check', () => {
 		await expect(log(page).nth(1)).not.toHaveAttribute('data-blocked', 'true');
 	});
 });
+
+test('D4: a citizen’s search never reaches officer-only documents; an officer’s does', async ({ page }) => {
+	await useFakeEngine(page, { match: 'Shelter stock' });
+	await page.goto('/assistant/pathum-rai?version=v0');
+	await startFake(page);
+	const panel = page.getByRole('complementary', { name: 'What it read' });
+	await askFake(page, 'Shelter stock?');
+	await expect(panel.locator('li.restricted')).toContainText('Shelter stock and keys'); // v0 for contrast
+	await page.getByLabel('D4', { exact: true }).check();
+	await askFake(page, 'Shelter stock?');
+	await expect(log(page)).toHaveCount(2);
+	await expect(panel.locator('li').first()).toBeVisible(); // public documents only (3 passages may come from fewer documents)
+	await expect(panel.locator('li.restricted')).toHaveCount(0);
+	await expect(panel.locator('.warn')).toHaveCount(0);
+	await page.getByLabel('Officer', { exact: true }).check();
+	await askFake(page, 'Shelter stock?');
+	await expect(panel.locator('li.restricted')).toContainText('Shelter stock and keys');
+});

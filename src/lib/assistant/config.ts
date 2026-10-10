@@ -23,7 +23,8 @@ export const HISTORY_CHARS = 2000; // ponytail: characters, not tokens; count to
 export const VERSIONS = {
 	v0: 'baseline: one search index, access rule in the prompt only',
 	D1: 'instruction/data separation: fenced documents, rule repeated at the end',
-	D3: 'output check: answers containing a restricted value are blocked (v0 prompt)'
+	D3: 'output check: answers containing a restricted value are blocked (v0 prompt)',
+	D4: 'retrieval access control: public roles only search public documents (v0 prompt)'
 } as const;
 export type Version = keyof typeof VERSIONS;
 export const versionFrom = (v: string | null): Version => (v && Object.hasOwn(VERSIONS, v) ? (v as Version) : 'v0');

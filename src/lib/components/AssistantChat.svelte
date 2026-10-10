@@ -5,7 +5,7 @@
 	import { CHAT_MODEL, QUERY_CHARS, QUERY_PREFIX, TOP_K, VERSIONS, versionFrom, type Version } from '$lib/assistant/config';
 	import type { Passage } from '$lib/assistant/docs';
 	import { ANSWER_FAILED, OUT_OF_MEMORY, checkGpu, explainError, webllmEngine, type AssistantEngine, type GpuLike } from '$lib/assistant/engine';
-	import { buildMessages, toMarkdown, topK, type Item, type Turn } from '$lib/assistant/rag';
+	import { buildMessages, search, toMarkdown, type Item, type Turn } from '$lib/assistant/rag';
 	import { blockedText, outputCheck } from '$lib/assistant/guard';
 
 	let { assistant: a, passages, secrets = [] }: { assistant: AssistantSettings; passages: Passage[]; secrets?: string[] } = $props();
@@ -81,7 +81,7 @@
 		box?.focus(); // Send disables itself, which would drop focus
 		try {
 			const [qv] = await engine.embed([QUERY_PREFIX + q.slice(0, QUERY_CHARS)]);
-			const hits = topK(qv, vectors, TOP_K).map((i) => passages[i]);
+			const hits = search(a, role, version ?? 'v0', passages, vectors, qv, TOP_K);
 			const reply = await engine.chat(buildMessages(a, role, hits, history, q, version ?? 'v0'));
 			const sources = [...new Set(hits.map((h) => h.docId))];
 			// D3: a reply holding a restricted value never reaches a public-role user.

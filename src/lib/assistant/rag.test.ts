@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { raffelLuo, type AssistantSettings } from './assistants';
 import { CHAT_MODEL, HISTORY_CHARS, versionFrom } from './config';
 import type { Passage } from './docs';
-import { buildMessages, roleOf, systemPrompt, toMarkdown, topK, type Turn } from './rag';
+import { buildMessages, roleOf, search, systemPrompt, toMarkdown, topK, type Turn } from './rag';
 
 const pub: Passage = { id: 'library#1', docId: 'library', title: 'Library guide', access: 'public', text: 'Open 8:00 to 22:00.' };
 const staff: Passage = { id: 'hr-leave#1', docId: 'hr-leave', title: 'HR and leave policy', access: 'staff', text: '25 days of leave.' };
@@ -10,6 +10,29 @@ const other: AssistantSettings = {
 	...raffelLuo, slug: 'x', name: 'X assistant', intro: 'You are X.', rule: 'Officer only stays with officers.', restrictedLabel: 'officer only',
 	roles: [{ id: 'citizen', label: 'Citizen', line: 'The user is signed in as a citizen.' }, { id: 'officer', label: 'Officer', line: 'The user is signed in as an officer.' }]
 };
+
+describe('search (D4: retrieval access control)', () => {
+	// The restricted passage is the closest match, so only the filter can keep it out.
+	const passages = [staff, pub, { ...pub, id: 'it#1', docId: 'it', title: 'IT help' }];
+	const vectors = [[1, 0], [0.6, 0.8], [0, 1]];
+	const q = [1, 0];
+	it('a student on D4 never gets a staff-only passage', () => {
+		expect(search(raffelLuo, 'student', 'D4', passages, vectors, q, 2).map((p) => p.docId)).toEqual(['library', 'it']);
+	});
+	it('staff on D4 search everything', () => {
+		expect(search(raffelLuo, 'staff', 'D4', passages, vectors, q, 2).map((p) => p.docId)).toEqual(['hr-leave', 'library']);
+	});
+	it('other versions search everything, whatever the role', () => {
+		for (const v of ['v0', 'D1', 'D3'] as const)
+			expect(search(raffelLuo, 'student', v, passages, vectors, q, 1).map((p) => p.docId), v).toEqual(['hr-leave']);
+	});
+	it('D4 uses the v0 prompt', () => {
+		expect(systemPrompt(raffelLuo, 'student', [pub], 'D4')).toBe(systemPrompt(raffelLuo, 'student', [pub], 'v0'));
+	});
+	it('knows the D4 version', () => {
+		expect(versionFrom('D4')).toBe('D4');
+	});
+});
 
 describe('topK', () => {
 	it('returns the most similar vectors first', () => {
