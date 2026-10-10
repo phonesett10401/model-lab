@@ -14,4 +14,4 @@
 </svelte:head>
 
 <!-- Keyed: moving between assistants starts a fresh chat with the right roles. -->
-{#key data.slug}<AssistantChat {assistant} passages={data.passages} />{/key}
+{#key data.slug}<AssistantChat {assistant} passages={data.passages} secrets={data.secrets} />{/key}

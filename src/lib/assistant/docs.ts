@@ -1,4 +1,5 @@
 import type { AssistantSettings } from './assistants';
+import { parsePlaceholders } from './score';
 
 /** 'public', or the assistant's restricted role id (e.g. 'staff', 'officer'). */
 export type Access = string;
@@ -46,3 +47,8 @@ export function docsFor(a: AssistantSettings): Doc[] {
 }
 
 export const passagesFor = (a: AssistantSettings): Passage[] => docsFor(a).flatMap(chunk);
+
+// D3 needs each assistant's restricted values in the browser (the documents holding them are already bundled).
+const secretFiles = import.meta.glob('/assistant/*/placeholders.txt', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+
+export const placeholdersFor = (a: AssistantSettings): string[] => parsePlaceholders(secretFiles[`/assistant/${a.slug}/placeholders.txt`] ?? '');

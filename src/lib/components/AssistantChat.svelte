@@ -6,8 +6,9 @@
 	import type { Passage } from '$lib/assistant/docs';
 	import { ANSWER_FAILED, OUT_OF_MEMORY, checkGpu, explainError, webllmEngine, type AssistantEngine, type GpuLike } from '$lib/assistant/engine';
 	import { buildMessages, toMarkdown, topK, type Item, type Turn } from '$lib/assistant/rag';
+	import { blockedText, outputCheck } from '$lib/assistant/guard';
 
-	let { assistant: a, passages }: { assistant: AssistantSettings; passages: Passage[] } = $props();
+	let { assistant: a, passages, secrets = [] }: { assistant: AssistantSettings; passages: Passage[]; secrets?: string[] } = $props();
 
 	// Not called `state`: that name would clash with the $state rune.
 	let phase = $state<'idle' | 'loading' | 'ready' | 'busy' | 'error'>('idle');
@@ -82,7 +83,10 @@
 			const [qv] = await engine.embed([QUERY_PREFIX + q.slice(0, QUERY_CHARS)]);
 			const hits = topK(qv, vectors, TOP_K).map((i) => passages[i]);
 			const reply = await engine.chat(buildMessages(a, role, hits, history, q, version ?? 'v0'));
-			items.push({ role: 'assistant', text: reply, sources: [...new Set(hits.map((h) => h.docId))] });
+			const sources = [...new Set(hits.map((h) => h.docId))];
+			// D3: a reply holding a restricted value never reaches a public-role user.
+			if (version === 'D3' && role === a.roles[0].id && outputCheck(reply, secrets)) items.push({ role: 'assistant', text: blockedText(a), sources, blocked: true, hidden: reply });
+			else items.push({ role: 'assistant', text: reply, sources });
 		} catch (err) {
 			const text = explainError(err, ANSWER_FAILED);
 			items.push({ role: 'error', text });
@@ -170,9 +174,10 @@
 				<div class="chat">
 					<ol class="log" aria-live="polite">
 						{#each items as item, i (i)}
-							<li data-role={item.role} data-sources={item.role === 'assistant' ? (item.sources ?? []).join(',') : undefined}>
+							<li data-role={item.role} data-sources={item.role === 'assistant' ? (item.sources ?? []).join(',') : undefined} data-blocked={item.role === 'assistant' && item.blocked ? 'true' : undefined} data-hidden={item.role === 'assistant' && item.blocked ? item.hidden : undefined}>
 								<span class="who mono">{item.role === 'user' ? 'You' : item.role === 'assistant' ? 'Assistant' : 'Error'}</span>
 								<p class="text">{item.text}</p>
+								{#if item.role === 'assistant' && item.blocked}<span class="mono blocked">Blocked by the output check (D3)</span>{/if}
 							</li>
 						{/each}
 					</ol>
@@ -233,6 +238,7 @@
 	.log li { display: grid; gap: 0.2rem; min-width: 0; }
 	.log li[data-role='user'] { justify-self: end; max-width: 85%; background: var(--plate); padding: var(--space-1) var(--space-2); }
 	.log li[data-role='error'] .text { color: var(--red); }
+	.blocked { color: var(--red); }
 	.text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 	.ask { display: grid; gap: var(--space-1); }
 	.ask textarea { width: 100%; min-width: 0; box-sizing: border-box; padding: var(--space-1); resize: vertical; }

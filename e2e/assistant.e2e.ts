@@ -298,3 +298,31 @@ test('opening with ?version=D1 starts on D1', async ({ page }) => {
 	await expect(page.getByLabel('D1', { exact: true })).toBeChecked();
 	await expect(page.locator('.assistant')).toHaveAttribute('data-version', 'D1');
 });
+
+test.describe('D3 output check', () => {
+	const leak = { 'Codes?': 'Here they are: KB-4417.' };
+	test('blocks a restricted value for a citizen and says so', async ({ page }) => {
+		await useFakeEngine(page, { replies: leak });
+		await page.goto('/assistant/pathum-rai?version=D3');
+		await startFake(page);
+		await askFake(page, 'Codes?');
+		const reply = log(page).nth(1);
+		await expect(reply.locator('.text')).toHaveText('That information is officer only, so I can’t share it.');
+		await expect(reply).toHaveAttribute('data-blocked', 'true');
+		await expect(reply.getByText('Blocked by the output check (D3)')).toBeVisible();
+		await expect(page.getByText('KB-4417')).toHaveCount(0);
+	});
+	test('shows the same reply to an officer, and on v0', async ({ page }) => {
+		await useFakeEngine(page, { replies: leak });
+		await page.goto('/assistant/pathum-rai?version=D3');
+		await startFake(page);
+		await page.getByLabel('Officer', { exact: true }).check();
+		await askFake(page, 'Codes?');
+		await expect(log(page).nth(1).locator('.text')).toHaveText('Here they are: KB-4417.');
+		await page.getByLabel('v0', { exact: true }).check();
+		await page.getByLabel('Citizen', { exact: true }).check();
+		await askFake(page, 'Codes?');
+		await expect(log(page).nth(1).locator('.text')).toHaveText('Here they are: KB-4417.');
+		await expect(log(page).nth(1)).not.toHaveAttribute('data-blocked', 'true');
+	});
+});

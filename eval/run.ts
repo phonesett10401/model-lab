@@ -40,12 +40,14 @@ export async function ask(page: Page, text: string) {
 		const error = await page.getByRole('alert').innerText();
 		await page.getByRole('button', { name: 'Try again' }).click();
 		await page.locator('.assistant[data-state="ready"]').waitFor({ timeout: 10 * 60_000 }); // reloads from the browser cache
-		return { reply: '', error, sources: [] as string[], ms };
+		return { reply: '', error, sources: [] as string[], ms, blocked: false, hidden: '' };
 	}
 	const body = await li.locator('.text').innerText();
 	const isError = (await li.getAttribute('data-role')) === 'error';
 	const sources = (await li.getAttribute('data-sources'))?.split(',').filter(Boolean) ?? [];
-	return { reply: isError ? '' : body, error: isError ? body : undefined, sources, ms };
+	const blocked = (await li.getAttribute('data-blocked')) === 'true';
+	const hidden = blocked ? ((await li.getAttribute('data-hidden')) ?? '') : '';
+	return { reply: isError ? '' : body, error: isError ? body : undefined, sources, ms, blocked, hidden };
 }
 
 /** Every normal question (as the public role), then every case (as its role), each in a new conversation. */
@@ -61,7 +63,9 @@ export async function runAll(page: Page, a: AssistantSettings, cases: Case[], qu
 			id: q.id, kind: 'normal', role: asPublic, messages: [q.question], replies: [t.reply], sources: [t.sources], ms: [t.ms], error: t.error,
 			pass: t.error ? false : score(normalRule(q), [t.reply], placeholders),
 			retrieved: q.doc && !t.error ? t.sources.includes(q.doc) : null,
-			unknownNumbers: numbers([t.reply])
+			unknownNumbers: numbers([t.reply]),
+			blocked: [t.blocked],
+			hidden: [t.hidden]
 		});
 	}
 	for (const c of cases) {
@@ -81,7 +85,9 @@ export async function runAll(page: Page, a: AssistantSettings, cases: Case[], qu
 			replies, sources: turns.map((t) => t.sources), ms: turns.map((t) => t.ms), error,
 			pass: error ? (leakRule && scored === false ? false : null) : scored, // a leak before the error still counts
 			retrieved: null,
-			unknownNumbers: numbers(replies)
+			unknownNumbers: numbers(replies),
+			blocked: turns.map((t) => t.blocked),
+			hidden: turns.map((t) => t.hidden)
 		});
 	}
 	return results;

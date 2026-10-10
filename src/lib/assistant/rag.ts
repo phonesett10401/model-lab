@@ -3,7 +3,8 @@ import { CHAT_MODEL, EMBED_MODEL, HISTORY_CHARS, VERSIONS, type Version } from '
 import type { Passage } from './docs';
 
 export interface ChatMessage { role: 'system' | 'user' | 'assistant'; content: string }
-export interface Turn { role: 'user' | 'assistant'; text: string; sources?: string[] }
+/** blocked: D3 replaced the reply; hidden keeps the original for the runner (never shown on the page). */
+export interface Turn { role: 'user' | 'assistant'; text: string; sources?: string[]; blocked?: boolean; hidden?: string }
 export type Item = Turn | { role: 'error'; text: string };
 
 const dot = (a: number[], b: number[]) => a.reduce((s, x, i) => s + x * b[i], 0);
@@ -84,7 +85,7 @@ export function toMarkdown(o: { assistant: AssistantSettings; version: Version; 
 	];
 	for (const it of o.items) {
 		if (it.role === 'error') lines.push(`_Error: ${it.text}_`, '');
-		else lines.push(`**${it.role === 'user' ? 'You' : 'Assistant'}:** ${it.text}` + (it.sources?.length ? `\n\n_Sources: ${it.sources.join(', ')}_` : ''), '');
+		else lines.push(`**${it.role === 'user' ? 'You' : 'Assistant'}:** ${it.text}` + (it.sources?.length ? `\n\n_Sources: ${it.sources.join(', ')}_` : '') + (it.role === 'assistant' && it.blocked ? '\n\n_Blocked by the output check (D3)._' : ''), '');
 	}
 	return lines.join('\n');
 }
