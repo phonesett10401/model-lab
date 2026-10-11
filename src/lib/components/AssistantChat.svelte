@@ -5,8 +5,8 @@
 	import { CHAT_MODEL, QUERY_CHARS, QUERY_PREFIX, TOP_K, VERSIONS, versionFrom, type Version } from '$lib/assistant/config';
 	import type { Passage } from '$lib/assistant/docs';
 	import { ANSWER_FAILED, OUT_OF_MEMORY, checkGpu, explainError, webllmEngine, type AssistantEngine, type GpuLike } from '$lib/assistant/engine';
-	import { buildMessages, search, toMarkdown, type Item, type Turn } from '$lib/assistant/rag';
-	import { blockedText, outputCheck } from '$lib/assistant/guard';
+	import { BLOCKED_LABEL, buildMessages, search, toMarkdown, type Item, type Turn } from '$lib/assistant/rag';
+	import { blockedText, filteredText, inputFilter, outputCheck } from '$lib/assistant/guard';
 
 	let { assistant: a, passages, secrets = [] }: { assistant: AssistantSettings; passages: Passage[]; secrets?: string[] } = $props();
 
@@ -80,12 +80,18 @@
 		phase = 'busy';
 		box?.focus(); // Send disables itself, which would drop focus
 		try {
+			// D2: injection wording from a public-role user is refused before search or the model.
+			if (version === 'D2' && role === a.roles[0].id && inputFilter(q)) {
+				items.push({ role: 'assistant', text: filteredText, sources: [], blocked: 'D2' });
+				phase = 'ready';
+				return void box?.focus();
+			}
 			const [qv] = await engine.embed([QUERY_PREFIX + q.slice(0, QUERY_CHARS)]);
 			const hits = search(a, role, version ?? 'v0', passages, vectors, qv, TOP_K);
 			const reply = await engine.chat(buildMessages(a, role, hits, history, q, version ?? 'v0'));
 			const sources = [...new Set(hits.map((h) => h.docId))];
 			// D3: a reply holding a restricted value never reaches a public-role user.
-			if (version === 'D3' && role === a.roles[0].id && outputCheck(reply, secrets)) items.push({ role: 'assistant', text: blockedText(a), sources, blocked: true, hidden: reply });
+			if (version === 'D3' && role === a.roles[0].id && outputCheck(reply, secrets)) items.push({ role: 'assistant', text: blockedText(a), sources, blocked: 'D3', hidden: reply });
 			else items.push({ role: 'assistant', text: reply, sources });
 		} catch (err) {
 			const text = explainError(err, ANSWER_FAILED);
@@ -174,10 +180,10 @@
 				<div class="chat">
 					<ol class="log" aria-live="polite">
 						{#each items as item, i (i)}
-							<li data-role={item.role} data-sources={item.role === 'assistant' ? (item.sources ?? []).join(',') : undefined} data-blocked={item.role === 'assistant' && item.blocked ? 'true' : undefined} data-hidden={item.role === 'assistant' && item.blocked ? item.hidden : undefined}>
+							<li data-role={item.role} data-sources={item.role === 'assistant' ? (item.sources ?? []).join(',') : undefined} data-blocked={item.role === 'assistant' && item.blocked ? 'true' : undefined} data-blocked-by={item.role === 'assistant' ? item.blocked : undefined} data-hidden={item.role === 'assistant' && item.blocked ? item.hidden : undefined}>
 								<span class="who mono">{item.role === 'user' ? 'You' : item.role === 'assistant' ? 'Assistant' : 'Error'}</span>
 								<p class="text">{item.text}</p>
-								{#if item.role === 'assistant' && item.blocked}<span class="mono blocked">Blocked by the output check (D3)</span>{/if}
+								{#if item.role === 'assistant' && item.blocked}<span class="mono blocked">{BLOCKED_LABEL[item.blocked]}</span>{/if}
 							</li>
 						{/each}
 					</ol>
