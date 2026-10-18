@@ -2,7 +2,7 @@
 	import { onMount, tick } from 'svelte';
 	import { loopSrc, slides } from '$lib/present/slides';
 	import { preloadAll } from '$lib/present/preload';
-	import { hashFor, indexFromHash, keyAction, step } from '$lib/present/deck';
+	import { hashFor, indexFromHash, keyAction, step, swipeAction, type Action } from '$lib/present/deck';
 	import Stage from './Stage.svelte';
 	import Slide from './Slide.svelte';
 
@@ -51,11 +51,7 @@
 		await tick();
 	}
 
-	function onkeydown(e: KeyboardEvent) {
-		if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
-		const action = keyAction(e.key);
-		if (!action) return;
-		e.preventDefault(); // Space would also click a focused button, so the deck handles it alone
+	function act(action: Action) {
 		if (!started) return void (action === 'next' && begin());
 		if (action === 'fullscreen') {
 			if (document.fullscreenElement) document.exitFullscreen();
@@ -64,11 +60,33 @@
 		}
 		go(step(index, action, count));
 	}
+
+	function onkeydown(e: KeyboardEvent) {
+		if (e.repeat || e.altKey || e.ctrlKey || e.metaKey) return;
+		const action = keyAction(e.key);
+		if (!action) return;
+		e.preventDefault(); // Space would also click a focused button, so the deck handles it alone
+		act(action);
+	}
+
+	// Phones: swipe up for the next slide, down to go back (like scrolling a feed).
+	let touch: { x: number; y: number } | null = null;
+	function ontouchstart(e: TouchEvent) {
+		const t = e.changedTouches[0];
+		touch = e.touches.length === 1 ? { x: t.clientX, y: t.clientY } : null; // ignore pinches
+	}
+	function ontouchend(e: TouchEvent) {
+		if (!touch) return;
+		const t = e.changedTouches[0];
+		const action = swipeAction(t.clientX - touch.x, t.clientY - touch.y);
+		touch = null;
+		if (action) act(action); // a touchend is a user gesture, so starting the intro with sound still works
+	}
 </script>
 
 <svelte:window {onkeydown} {onhashchange} />
 
-<main class="present" data-index={started ? index : undefined} data-dir={dir}>
+<main class="present" data-index={started ? index : undefined} data-dir={dir} {ontouchstart} {ontouchend}>
 	<Stage />
 
 	<!-- No speech, only music and sound effects; the slides that follow say the same in words. -->
@@ -115,6 +133,7 @@
 	.present {
 		--paper: #141213; --plate: #1d1a1b; --ink: #f3eeee; --ink-soft: #a9a1a1; --ink-faint: #938a8a;
 		--red: #ff4f4f; --hairline: #2e292a; --green: #6fcf97; --on-ink: #141213;
+		touch-action: none; overscroll-behavior: none; /* swipes change slides; no page scroll or pull-to-refresh */
 		color-scheme: dark; position: fixed; inset: 0; overflow: hidden; background: var(--paper); color: var(--ink); }
 	video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
 	.hidden { visibility: hidden; }

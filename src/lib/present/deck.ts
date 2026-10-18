@@ -24,3 +24,11 @@ export function indexFromHash(hash: string, count: number): number | null {
 }
 
 export const hashFor = (index: number) => `#${index}`;
+
+const SWIPE = 50; // px: shorter moves are taps or wobbles
+
+/** Phones: finger moving up the screen = next slide, down = back (like scrolling a feed). dx, dy = end − start. */
+export function swipeAction(dx: number, dy: number): Action {
+	if (Math.abs(dy) < SWIPE || Math.abs(dy) < Math.abs(dx)) return null;
+	return dy < 0 ? 'next' : 'prev';
+}

@@ -82,6 +82,7 @@ test('the top bar links to the presentation', async ({ page }) => {
 const sizes = [{ width: 1920, height: 1080 }, { width: 1280, height: 720 }];
 
 test('every slide fits at 1280×720 and 1920×1080', async ({ page }) => {
+	test.setTimeout(90_000); // 18 slide views with entrance waits; WebKit needs more than the default 30 s
 	for (const size of sizes) {
 		await page.setViewportSize(size);
 		await page.goto('/present#1');
@@ -172,4 +173,34 @@ test('the start screen preloads every banner', async ({ page }) => {
 	await expect(page.getByText('Ready')).toBeVisible({ timeout: 30_000 });
 	for (const id of ['swarm', 'boxes', 'pipeline', 'device', 'sea', 'sound', 'rag', 'coming', 'site'])
 		expect(urls.some((u) => u.endsWith(`/present/${id}.mp4`)), id).toBe(true);
+});
+
+test.describe('on a phone', () => {
+	test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+	// Playwright's Windows WebKit can't construct Touch events; real iPhone Safari swipes are covered by the same handler.
+	test.skip(({ browserName }) => browserName === 'webkit', 'no Touch constructor in Windows WebKit');
+	/** A one-finger swipe on the deck; dy < 0 moves the finger up the screen. */
+	const swipe = (page: Page, dy: number) =>
+		page.locator('main.present').evaluate((el, dy) => {
+			const at = (y: number) => [new Touch({ identifier: 1, target: el, clientX: 200, clientY: y })];
+			el.dispatchEvent(new TouchEvent('touchstart', { touches: at(500), changedTouches: at(500), bubbles: true }));
+			el.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: at(500 + dy), bubbles: true }));
+		}, dy);
+
+	test('swiping up goes to the next slide, swiping down goes back', async ({ page }) => {
+		await page.goto('/present#3');
+		await at(page, 3);
+		await swipe(page, -200);
+		await at(page, 4);
+		await swipe(page, 200);
+		await at(page, 3);
+		await swipe(page, -20); // a tap-sized wobble does nothing
+		await at(page, 3);
+	});
+
+	test('swiping up on the start screen starts the presentation', async ({ page }) => {
+		await page.goto('/present');
+		await swipe(page, -200);
+		await at(page, 0);
+	});
 });
