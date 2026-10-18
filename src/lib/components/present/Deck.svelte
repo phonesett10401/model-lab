@@ -2,6 +2,8 @@
 	import { onMount, tick } from 'svelte';
 	import { slides } from '$lib/present/slides';
 	import { hashFor, indexFromHash, keyAction, step } from '$lib/present/deck';
+	import Stage from './Stage.svelte';
+	import Slide from './Slide.svelte';
 
 	let { qr }: { qr: string } = $props();
 
@@ -10,14 +12,23 @@
 	let started = $state(false);
 	let blocked = $state(false);
 	let index = $state(0);
+	let dir = $state<'forward' | 'back'>('forward');
+	let cut = $state(0); // bumps on every slide change to replay the scan-wipe
 
 	onMount(() => {
 		const i = indexFromHash(location.hash, count);
 		if (i !== null) go(i);
 	});
 
+	function onhashchange() {
+		const i = indexFromHash(location.hash, count);
+		if (i !== null) go(i);
+	}
+
 	function go(i: number) {
 		if (i === index && started) return;
+		dir = i < index ? 'back' : 'forward';
+		if (started && i !== index) cut++;
 		started = true;
 		index = i;
 		if (i > 0) video?.pause(); // leaving the intro stops it, not keeps playing off-screen
@@ -50,9 +61,11 @@
 	}
 </script>
 
-<svelte:window {onkeydown} />
+<svelte:window {onkeydown} {onhashchange} />
 
-<main class="present" data-index={started ? index : undefined}>
+<main class="present" data-index={started ? index : undefined} data-dir={dir}>
+	<Stage />
+
 	<!-- No speech, only music and sound effects; the slides that follow say the same in words. -->
 	<!-- svelte-ignore a11y_media_has_caption -->
 	<video
@@ -75,22 +88,20 @@
 			<button class="btn start" onclick={begin}>▶ Start the presentation</button>
 			<p class="mono hint">Space, arrows or a clicker · F for full screen</p>
 		</div>
-	{:else if index > 0}
-		{#each slides as s (s.n)}
-			{#if s.n === index}
-				<section class="slide" data-n={s.n} aria-current="step" aria-label="Slide {s.n} of {count}">
-					<h2>{s.title} {s.titleEm}</h2>
-					<ul>{#each s.bullets as b (b)}<li>{b}</li>{/each}</ul>
-				</section>
-			{/if}
-		{/each}
-		<p class="mono counter">LIVE {String(index).padStart(2, '0')} / {String(count).padStart(2, '0')}</p>
 	{/if}
+	{#each slides as s (s.n)}
+		<Slide slide={s} active={started && index === s.n} {count} />
+	{/each}
+	{#key cut}{#if cut}<div class="wipe {dir}" aria-hidden="true"></div>{/if}{/key}
 	{#if qr}<!-- QR markup arrives in Task 4 -->{/if}
 </main>
 
 <style>
-	.present { color-scheme: dark; position: fixed; inset: 0; overflow: hidden; background: var(--paper); color: var(--ink); }
+	/* Always dark. The build's light-dark() fallback resolves tokens at :root, so the dark values are pinned here (from tokens.css). */
+	.present {
+		--paper: #141213; --plate: #1d1a1b; --ink: #f3eeee; --ink-soft: #a9a1a1; --ink-faint: #938a8a;
+		--red: #ff4f4f; --hairline: #2e292a; --green: #6fcf97; --on-ink: #141213;
+		color-scheme: dark; position: fixed; inset: 0; overflow: hidden; background: var(--paper); color: var(--ink); }
 	video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
 	.hidden { visibility: hidden; }
 	.gate { position: absolute; inset: 0; display: grid; align-content: center; justify-items: start; gap: var(--space-2); padding: 0 var(--gutter); background: rgba(20, 18, 19, 0.85); }
@@ -98,5 +109,12 @@
 	h1 { font-size: var(--step-4); }
 	.start { min-height: 52px; font-size: var(--step-0); padding: 0 var(--space-3); }
 	.hint { color: var(--ink-soft); }
-	.counter { position: absolute; top: 4%; right: 4%; color: var(--red); }
+	video { z-index: 5; }
+	.gate { z-index: 6; }
+	/* The broadcast cut between slides: a red scan line sweeps across once. */
+	.wipe { position: absolute; top: 0; bottom: 0; width: 18%; z-index: 4; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(255, 79, 79, 0.35) 80%, #ff4f4f 80.5%, transparent 81%); animation: wipe 0.45s cubic-bezier(0.6, 0, 0.4, 1) forwards; }
+	.wipe.back { transform: scaleX(-1); animation-name: wipe-back; }
+	@keyframes wipe { from { left: -20%; } to { left: 102%; } }
+	@keyframes wipe-back { from { left: 102%; } to { left: -20%; } }
+	@media (prefers-reduced-motion: reduce) { .wipe { display: none; } }
 </style>

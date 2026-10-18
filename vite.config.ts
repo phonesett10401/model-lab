@@ -30,6 +30,7 @@ export default defineConfig({
 				},
 				handleHttpError: ({ path, message }) => {
 					if (path.startsWith('/og/')) return;
+					if (path.startsWith('/present/')) return; // TEMP until Task 6 renders the banner loops
 					throw new Error(message);
 				}
 			}
