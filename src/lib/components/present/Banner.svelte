@@ -13,7 +13,7 @@
 	});
 </script>
 
-<div class="banner" data-layout={layout}>
+<div class="banner" data-layout={layout} data-loop={loop}>
 	<video bind:this={video} src={src ?? loopSrc(loop)} poster={posterSrc(loop)} muted loop playsinline preload={src ? 'auto' : 'none'} aria-hidden="true"></video>
 </div>
 

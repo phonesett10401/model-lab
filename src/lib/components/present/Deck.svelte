@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { loopSrc, slides } from '$lib/present/slides';
+	import { loopFor, loopSrc, slides } from '$lib/present/slides';
+	import { MediaQuery } from 'svelte/reactivity';
 	import { preloadAll } from '$lib/present/preload';
 	import { hashFor, indexFromHash, keyAction, step, swipeAction, type Action } from '$lib/present/deck';
 	import Stage from './Stage.svelte';
@@ -17,9 +18,10 @@
 	let cut = $state(0); // bumps on every slide change to replay the scan-wipe
 	let loaded = $state(0);
 	let banners = $state<Map<string, string>>(new Map());
+	const portrait = new MediaQuery('orientation: portrait'); // phones held upright get the square band loops
 
 	onMount(() => {
-		const urls = slides.map((s) => loopSrc(s.loop));
+		const urls = slides.map((s) => loopSrc(loopFor(s, portrait.current)));
 		preloadAll(urls, (d) => (loaded = d)).then((m) => (banners = m));
 		const i = indexFromHash(location.hash, count);
 		if (i !== null) go(i);
@@ -114,7 +116,7 @@
 		</div>
 	{/if}
 	{#each slides as s (s.n)}
-		<Slide slide={s} active={started && index === s.n} {count} src={banners.get(loopSrc(s.loop))}>
+		<Slide slide={s} active={started && index === s.n} {count} loop={loopFor(s, portrait.current)} src={banners.get(loopSrc(loopFor(s, portrait.current)))}>
 			{#snippet extra()}
 				{#if s.n === count && qr}
 					<div class="qr" data-origin={origin}>

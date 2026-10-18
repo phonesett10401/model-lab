@@ -2,7 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 
-const ids = ['swarm', 'boxes', 'pipeline', 'device', 'sea', 'sound', 'rag', 'coming', 'site']; // same order as src/loops/sizes.ts (tested)
+const ids = ['swarm', 'boxes', 'pipeline', 'device', 'sea', 'sound', 'rag', 'coming', 'site', 'pipeline-tall', 'rag-tall']; // loops then tallLoops in src/loops/sizes.ts (tested)
 const only = process.argv.slice(2);
 const run = (args) => {
 	const r = spawnSync('pnpm', ['exec', 'remotion', ...args], { shell: true, stdio: 'inherit' });

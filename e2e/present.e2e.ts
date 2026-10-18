@@ -100,6 +100,13 @@ test('every slide fits at 1280×720 and 1920×1080', async ({ page }) => {
 	await expect.poll(() => page.locator('.stage canvas').evaluate((c) => Math.round(c.getBoundingClientRect().width))).toBe(1280);
 });
 
+test('widescreen slides 3 and 7 keep their wide band loops', async ({ page }) => {
+	for (const [n, loop] of [[3, 'pipeline'], [7, 'rag']] as const) {
+		await page.goto(`/present#${n}`);
+		await expect(page.locator('section.slide[aria-current="step"] .banner')).toHaveAttribute('data-loop', loop);
+	}
+});
+
 test('each slide uses its banner layout', async ({ page }) => {
 	const layouts = ['slant', 'monitor', 'band', 'strip', 'slant', 'strip', 'band', 'slant', 'monitor'];
 	for (let n = 1; n <= 9; n++) {
@@ -218,6 +225,13 @@ test.describe('on a phone', () => {
 			expect(b.y + b.height, `slide ${n}: banner/QR above the presenter tag`).toBeLessThanOrEqual(lower.y + 1);
 			expect(b.x >= 0 && b.x + b.width <= 390, `slide ${n}: banner/QR inside the screen`).toBe(true);
 			expect(b.height, `slide ${n}: banner/QR big enough to see`).toBeGreaterThanOrEqual(n === 9 ? 160 : 100);
+		}
+	});
+
+	test('slides 3 and 7 play their upright banner versions on a phone', async ({ page }) => {
+		for (const [n, loop] of [[3, 'pipeline-tall'], [7, 'rag-tall'], [5, 'sea']] as const) {
+			await page.goto(`/present#${n}`);
+			await expect(page.locator('section.slide[aria-current="step"] .banner')).toHaveAttribute('data-loop', loop);
 		}
 	});
 

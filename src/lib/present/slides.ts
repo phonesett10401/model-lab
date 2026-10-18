@@ -15,10 +15,14 @@ export type Slide = {
 	presenter: Presenter['key'];
 	layout: BannerLayout;
 	loop: string;
+	/** Square version for phones held upright, where a wide band would be a sliver. */
+	loopTall?: string;
 };
 
 export const loopSrc = (id: string) => `/present/${id}.mp4`;
 export const posterSrc = (id: string) => `/present/${id}.jpg`;
+/** The loop a slide plays: its upright version on a phone held upright, when it has one. */
+export const loopFor = (s: Slide, portrait: boolean) => (portrait && s.loopTall) || s.loop;
 
 export const slides: Slide[] = [
 	{
@@ -38,7 +42,7 @@ export const slides: Slide[] = [
 		]
 	},
 	{
-		n: 3, act: 'II · THE MAKING', tag: '§3 METHODS', presenter: 'B', layout: 'band', loop: 'pipeline',
+		n: 3, act: 'II · THE MAKING', tag: '§3 METHODS', presenter: 'B', layout: 'band', loop: 'pipeline', loopTall: 'pipeline-tall',
 		kicker: 'METHODS · LEARNING', title: 'How the models', titleEm: 'learn',
 		bullets: [
 			'Supervised learning on labelled data: 7,637 sea photos (Open Images, Aquarium Combined) and 13,825 sound clips (FSD50K, Freesound)',
@@ -70,7 +74,7 @@ export const slides: Slide[] = [
 		stat: { value: 0.79, digits: 2, label: 'mAP · 4,216 test clips' }, built: true
 	},
 	{
-		n: 7, act: "IV · WHAT'S NEXT", tag: 'EXTRA · IN PROGRESS', presenter: 'D', layout: 'band', loop: 'rag',
+		n: 7, act: "IV · WHAT'S NEXT", tag: 'EXTRA · IN PROGRESS', presenter: 'D', layout: 'band', loop: 'rag', loopTall: 'rag-tall',
 		kicker: 'IN PROGRESS', title: 'RAG', titleEm: 'assistants',
 		bullets: [
 			'Answers from its own documents: retrieve the right passages, then a small language model writes the reply',

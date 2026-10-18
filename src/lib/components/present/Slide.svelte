@@ -6,7 +6,7 @@
 	import Banner from './Banner.svelte';
 	import type { Snippet } from 'svelte';
 
-	let { slide, active, count, src, extra }: { slide: Slide; active: boolean; count: number; src?: string; extra?: Snippet } = $props();
+	let { slide, active, count, loop = slide.loop, src, extra }: { slide: Slide; active: boolean; count: number; loop?: string; src?: string; extra?: Snippet } = $props();
 
 	const presenter = $derived(team.find((p) => p.key === slide.presenter)!);
 	const pad = (n: number) => String(n).padStart(2, '0');
@@ -50,7 +50,7 @@
 
 	<p class="lower in"><b class="mono">NOW PRESENTING</b><span>{presenter.name} · {presenter.role}</span></p>
 
-	<Banner layout={slide.layout} loop={slide.loop} {src} {active} />
+	<Banner layout={slide.layout} {loop} {src} {active} />
 </section>
 
 <style>
@@ -125,9 +125,6 @@
 		}
 		.on :global(.banner) { opacity: 1; transition: opacity 0.6s 0.3s; }
 		.slide :global(.banner video) { object-fit: contain; }
-		/* The wide bands would be a sliver if shown whole: a 16:5 window onto their middle instead. */
-		.slide[data-layout='band'] :global(.banner) { flex: 0 0 auto; aspect-ratio: 16 / 5 !important; margin-top: auto; }
-		.slide[data-layout='band'] :global(.banner video) { object-fit: cover; }
 		/* Slide 9: the QR code takes the banner's place. */
 		.slide[data-n='9'] :global(.banner) { display: none; }
 	}

@@ -8,7 +8,8 @@ import { Device } from './Device';
 import { Pipeline } from './Pipeline';
 import { Rag } from './Rag';
 import { Swarm } from './Swarm';
-import { LOOP_FPS, framesOf, loops, sizeOf } from './sizes';
+import { LOOP_FPS, framesOf, loops, sizeOf, tallLoops } from './sizes';
+import { PipelineTall, RagTall } from './Upright';
 
 // Pixel sizes of the real captures in public/captures (2× screenshots from scripts/capture-present.mjs).
 const Sea = () => (
@@ -26,11 +27,11 @@ const Sea = () => (
 );
 const Site = () => <Capture label="LIVE SITE" shots={[{ file: 'home.png', w: 2560, h: 4652 }]} />;
 
-const parts: Record<string, React.FC> = { swarm: Swarm, boxes: Boxes, pipeline: Pipeline, device: Device, sea: Sea, sound: Sound, rag: Rag, coming: Coming, site: Site };
+const parts: Record<string, React.FC> = { swarm: Swarm, boxes: Boxes, pipeline: Pipeline, device: Device, sea: Sea, sound: Sound, rag: Rag, coming: Coming, site: Site, 'pipeline-tall': PipelineTall, 'rag-tall': RagTall };
 
 export const Loops: React.FC = () => (
 	<>
-		{loops.map((l) => (
+		{[...loops, ...tallLoops].map((l) => (
 			<Composition key={l.id} id={`Loop-${l.id}`} component={parts[l.id]} durationInFrames={framesOf(l)} fps={LOOP_FPS} {...sizeOf(l)} />
 		))}
 	</>
