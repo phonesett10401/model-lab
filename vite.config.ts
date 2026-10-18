@@ -9,7 +9,7 @@ const origin = process.env.VERCEL_PROJECT_PRODUCTION_URL
 	: 'http://localhost:4173';
 
 export default defineConfig({
-	define: { __SHOW_DRAFTS__: JSON.stringify(showDrafts) },
+	define: { __SHOW_DRAFTS__: JSON.stringify(showDrafts), __SITE_ORIGIN__: JSON.stringify(origin) },
 	// Vite's dependency pre-bundling breaks onnxruntime-web's own loading of its engine files.
 	optimizeDeps: { exclude: ['onnxruntime-web'] },
 	plugins: [
