@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { hashFor, indexFromHash, keyAction, step } from './deck';
+import { hashFor, indexFromHash, keyAction, step, swipeAction } from './deck';
 
 it('keys map like PowerPoint and clickers', () => {
 	for (const k of [' ', 'ArrowDown', 'ArrowRight', 'PageDown']) expect(keyAction(k)).toBe('next');
@@ -25,4 +25,11 @@ it('hash round-trips and rejects junk', () => {
 	expect(hashFor(4)).toBe('#4');
 	expect(indexFromHash('#4', 9)).toBe(4);
 	for (const h of ['', '#', '#0', '#10', '#x', '#-1']) expect(indexFromHash(h, 9)).toBeNull();
+});
+
+it('swipes work like a phone feed: finger up = next, finger down = back', () => {
+	expect(swipeAction(0, -120)).toBe('next'); // finger moved up the screen
+	expect(swipeAction(0, 120)).toBe('prev');
+	expect(swipeAction(10, -30)).toBeNull(); // too short: a tap or a wobble
+	expect(swipeAction(150, -60)).toBeNull(); // mostly sideways
 });
