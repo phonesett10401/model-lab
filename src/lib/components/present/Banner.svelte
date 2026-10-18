@@ -7,13 +7,14 @@
 	// Only the slide on screen plays; a video that fails to load keeps showing its poster.
 	$effect(() => {
 		if (!video) return;
+		void src; // a new src (the preloaded copy) resets the element, so play again
 		if (active) video.play().catch(() => {});
 		else video.pause();
 	});
 </script>
 
 <div class="banner" data-layout={layout}>
-	<video bind:this={video} src={src ?? loopSrc(loop)} poster={posterSrc(loop)} muted loop playsinline preload="auto" aria-hidden="true"></video>
+	<video bind:this={video} src={src ?? loopSrc(loop)} poster={posterSrc(loop)} muted loop playsinline preload={src ? 'auto' : 'none'} aria-hidden="true"></video>
 </div>
 
 <style>

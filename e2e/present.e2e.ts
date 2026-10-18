@@ -148,3 +148,28 @@ test('slide 9 shows a QR for the site and its address', async ({ page }) => {
 	expect(box.height).toBeGreaterThanOrEqual(0.28 * 720);
 	await expect(qr.getByText('localhost:4173')).toBeVisible();
 });
+
+test('a missing banner video falls back to its poster', async ({ page }) => {
+	await page.route('**/present/sea.mp4', (r) => r.abort());
+	await page.goto('/present#5');
+	await expect(page.locator('section.slide[aria-current="step"] .banner video')).toHaveAttribute('poster', '/present/sea.jpg');
+	await page.keyboard.press('ArrowDown');
+	await at(page, 6);
+});
+
+test('/ never loads presentation assets', async ({ page }) => {
+	const urls: string[] = [];
+	page.on('request', (r) => urls.push(r.url()));
+	await page.goto('/');
+	await page.waitForLoadState('networkidle');
+	expect(urls.filter((u) => u.includes('/present/'))).toEqual([]);
+});
+
+test('the start screen preloads every banner', async ({ page }) => {
+	const urls: string[] = [];
+	page.on('request', (r) => urls.push(r.url()));
+	await page.goto('/present');
+	await expect(page.getByText('Ready')).toBeVisible({ timeout: 30_000 });
+	for (const id of ['swarm', 'boxes', 'pipeline', 'device', 'sea', 'sound', 'rag', 'coming', 'site'])
+		expect(urls.some((u) => u.endsWith(`/present/${id}.mp4`)), id).toBe(true);
+});

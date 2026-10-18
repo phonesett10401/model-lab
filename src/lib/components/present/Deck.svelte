@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
-	import { slides } from '$lib/present/slides';
+	import { loopSrc, slides } from '$lib/present/slides';
+	import { preloadAll } from '$lib/present/preload';
 	import { hashFor, indexFromHash, keyAction, step } from '$lib/present/deck';
 	import Stage from './Stage.svelte';
 	import Slide from './Slide.svelte';
@@ -14,8 +15,12 @@
 	let index = $state(0);
 	let dir = $state<'forward' | 'back'>('forward');
 	let cut = $state(0); // bumps on every slide change to replay the scan-wipe
+	let loaded = $state(0);
+	let banners = $state<Map<string, string>>(new Map());
 
 	onMount(() => {
+		const urls = slides.map((s) => loopSrc(s.loop));
+		preloadAll(urls, (d) => (loaded = d)).then((m) => (banners = m));
 		const i = indexFromHash(location.hash, count);
 		if (i !== null) go(i);
 	});
@@ -87,10 +92,11 @@
 			<h1 class="serif">Project presentation</h1>
 			<button class="btn start" onclick={begin}>▶ Start the presentation</button>
 			<p class="mono hint">Space, arrows or a clicker · F for full screen</p>
+			<p class="mono hint" aria-live="polite">{loaded < count ? `Loading banners ${loaded} / ${count}` : 'Ready'}</p>
 		</div>
 	{/if}
 	{#each slides as s (s.n)}
-		<Slide slide={s} active={started && index === s.n} {count}>
+		<Slide slide={s} active={started && index === s.n} {count} src={banners.get(loopSrc(s.loop))}>
 			{#snippet extra()}
 				{#if s.n === count && qr}
 					<div class="qr" data-origin={origin}>
