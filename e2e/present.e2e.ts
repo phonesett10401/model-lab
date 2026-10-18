@@ -138,3 +138,13 @@ test('present has no axe violations', async ({ page }) => {
 		expect(r.violations.map((v) => `${v.id}: ${v.nodes.map((x) => `${x.target} ${x.any.map((a) => a.message).join()}`).join(' ')}`), `slide ${n}`).toEqual([]);
 	}
 });
+
+test('slide 9 shows a QR for the site and its address', async ({ page }) => {
+	await page.goto('/present#9');
+	const qr = page.locator('section.slide[aria-current="step"] .qr');
+	await expect(qr.locator('svg')).toBeVisible();
+	await expect(qr).toHaveAttribute('data-origin', 'http://localhost:4173');
+	const box = (await qr.locator('svg').boundingBox())!;
+	expect(box.height).toBeGreaterThanOrEqual(0.28 * 720);
+	await expect(qr.getByText('localhost:4173')).toBeVisible();
+});

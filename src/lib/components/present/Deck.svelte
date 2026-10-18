@@ -5,7 +5,7 @@
 	import Stage from './Stage.svelte';
 	import Slide from './Slide.svelte';
 
-	let { qr }: { qr: string } = $props();
+	let { qr, origin }: { qr: string; origin: string } = $props();
 
 	const count = slides.length;
 	let video = $state<HTMLVideoElement>();
@@ -90,10 +90,18 @@
 		</div>
 	{/if}
 	{#each slides as s (s.n)}
-		<Slide slide={s} active={started && index === s.n} {count} />
+		<Slide slide={s} active={started && index === s.n} {count}>
+			{#snippet extra()}
+				{#if s.n === count && qr}
+					<div class="qr" data-origin={origin}>
+						<p class="mono">Try it live<br /><b>{origin.replace(/^https?:\/\//, '')}</b></p>
+						{@html qr /* our own build-time SVG */}
+					</div>
+				{/if}
+			{/snippet}
+		</Slide>
 	{/each}
 	{#key cut}{#if cut}<div class="wipe {dir}" aria-hidden="true"></div>{/if}{/key}
-	{#if qr}<!-- QR markup arrives in Task 4 -->{/if}
 </main>
 
 <style>
@@ -117,4 +125,9 @@
 	@keyframes wipe { from { left: -20%; } to { left: 102%; } }
 	@keyframes wipe-back { from { left: 102%; } to { left: -20%; } }
 	@media (prefers-reduced-motion: reduce) { .wipe { display: none; } }
+	/* Page-drawn and never animated, so it scans from the back of the room. */
+	.qr { --u: min(1vw, 1.7778vh); position: absolute; z-index: 3; right: 7%; top: 64%; height: 29%; display: flex; align-items: flex-end; gap: calc(var(--u) * 1.2); }
+	.qr p { margin: 0; text-align: right; font-size: calc(var(--u) * 0.95); color: var(--ink-soft); letter-spacing: 0.1em; }
+	.qr b { color: var(--ink); font-weight: 400; font-size: 1.3em; }
+	.qr :global(svg) { height: 100%; width: auto; display: block; }
 </style>
