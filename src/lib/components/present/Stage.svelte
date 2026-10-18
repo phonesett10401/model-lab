@@ -105,4 +105,6 @@
 	.c3 { left: 3%; bottom: 6%; border-right: 0; border-top: 0; }
 	.c4 { right: 3%; bottom: 6%; border-left: 0; border-top: 0; }
 	@media (prefers-reduced-motion: reduce) { .scan { display: none; } .grain { animation: none; } }
+	/* Phones held upright: the stacked slide runs edge to edge, so the frame brackets would sit on the header. */
+	@media (orientation: portrait) { .corner { display: none; } }
 </style>
