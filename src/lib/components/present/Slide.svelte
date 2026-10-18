@@ -68,6 +68,9 @@
 	.copy { position: absolute; z-index: 3; left: 6%; top: 15%; width: 46%; }
 	.slide[data-layout='strip'] .copy { width: 62%; }
 	.slide[data-layout='band'] .copy { width: 85%; top: 13%; }
+	/* Slide 5's real captures sit in a narrower slant (its loop is rendered 850 px wide to match). */
+	.slide[data-n='5'] :global(.banner) { width: 44%; }
+	.slide[data-n='5'] .copy { width: 50%; }
 	.kick { font-size: calc(var(--u) * 0.95); letter-spacing: 0.2em; color: var(--red); }
 	h2 { font-weight: 400; font-size: calc(var(--u) * 4.4); line-height: 1; margin: 0.25em 0 0.35em; }
 	h2 em { color: var(--red); }

@@ -1,5 +1,5 @@
 export const LOOP_FPS = 30;
-export const LOOP_FRAMES = 150; // 5 s; every loop's motion is periodic in frame / LOOP_FRAMES, so it repeats seamlessly
+export const LOOP_FRAMES = 150; // 5 s by default; every loop's motion is periodic in its own length, so it repeats seamlessly
 
 /** One size per banner layout on the deck (src/lib/components/present/Banner.svelte). */
 export const loopSize = {
@@ -12,14 +12,18 @@ export const loopSize = {
 export type LoopLayout = keyof typeof loopSize;
 
 /** In slide order; ids match `loop` in src/lib/present/slides.ts (tested). */
-export const loops: readonly { id: string; layout: LoopLayout }[] = [
+/** `frames` / `size` override the defaults (slide 5 runs longer and sits in a narrower slant). */
+export const loops: readonly { id: string; layout: LoopLayout; frames?: number; size?: { width: number; height: number } }[] = [
 	{ id: 'swarm', layout: 'slant' },
 	{ id: 'boxes', layout: 'monitor' },
 	{ id: 'pipeline', layout: 'band' },
 	{ id: 'device', layout: 'strip' },
-	{ id: 'sea', layout: 'slant' },
+	{ id: 'sea', layout: 'slant', frames: 540, size: { width: 850, height: 1080 } },
 	{ id: 'sound', layout: 'strip' },
 	{ id: 'rag', layout: 'band' },
 	{ id: 'coming', layout: 'slant' },
 	{ id: 'site', layout: 'monitor' }
 ];
+
+export const framesOf = (l: (typeof loops)[number]) => l.frames ?? LOOP_FRAMES;
+export const sizeOf = (l: (typeof loops)[number]) => l.size ?? loopSize[l.layout];

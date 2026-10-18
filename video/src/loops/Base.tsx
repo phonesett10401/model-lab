@@ -1,12 +1,12 @@
 import type React from 'react';
-import { AbsoluteFill, Img, staticFile, useCurrentFrame } from 'remotion';
+import { AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig } from 'remotion';
 import { Grain, Vignette } from '../fx';
 import { Stamp } from '../parts';
 import { c, font } from '../theme';
-import { LOOP_FRAMES } from './sizes';
+import { seaSamples, type SeaSample } from './samples';
 
-/** Loop phase 0 → 1; frame LOOP_FRAMES is the same as frame 0. */
-export const usePhase = () => useCurrentFrame() / LOOP_FRAMES;
+/** Loop phase 0 → 1; the last frame + 1 is the same as frame 0. */
+export const usePhase = () => useCurrentFrame() / useVideoConfig().durationInFrames;
 /** A smooth 0 → 1 → 0 wave over the loop, shifted by `at` (0..1). */
 export const wave = (p: number, at = 0) => 0.5 - 0.5 * Math.cos(2 * Math.PI * (p - at));
 export const TAU = Math.PI * 2;
@@ -42,19 +42,20 @@ export const Plate: React.FC<{ no: string; name: string; hot?: number; width?: n
 );
 
 /**
- * The lab's own dolphin sample with the box and score the real model gave it (src/lib/data/sea-creature-detector.json),
- * so the illustration never shows a detection the model can't make.
+ * One of the lab's own sea samples with the boxes and scores the real model gave it (samples.ts, copied from
+ * src/lib/data/sea-creature-detector.json), so an illustration never shows a detection the model can't make.
  */
-const DOLPHIN = { w: 1024, h: 678, box: [0.0065, 0.1842, 0.9422, 0.8947], label: 'dolphin 66%' };
-export const Detected: React.FC<{ width: number; boxed: number; credit?: boolean }> = ({ width, boxed, credit }) => {
-	const [x1, y1, x2, y2] = DOLPHIN.box;
-	return (
-		<div style={{ position: 'relative', width, height: (width * DOLPHIN.h) / DOLPHIN.w, border: `2px solid ${c.hairline}`, boxShadow: '0 10px 30px rgba(0,0,0,0.6)' }}>
-			<Img src={staticFile('photos/dolphin.jpg')} style={{ width: '100%', height: '100%', display: 'block' }} />
-			<div style={{ position: 'absolute', left: `${x1 * 100}%`, top: `${y1 * 100}%`, width: `${(x2 - x1) * 100}%`, height: `${(y2 - y1) * 100}%`, border: `3px solid ${c.red}`, opacity: boxed }}>
-				<span style={{ position: 'absolute', top: -2, left: -3, transform: 'translateY(-100%)', background: c.red, color: c.ground, fontFamily: font.mono, fontSize: Math.max(11, width / 18), padding: '1px 6px', whiteSpace: 'nowrap' }}>{DOLPHIN.label}</span>
-			</div>
-			{credit && <div style={{ position: 'absolute', top: '100%', marginTop: 6, left: 0, fontFamily: font.mono, fontSize: 12, color: c.faint, whiteSpace: 'nowrap' }}>bp6316 · Flickr · CC BY 2.0</div>}
-		</div>
-	);
-};
+export const Detected: React.FC<{ sample?: SeaSample; width: number; boxed: number; credit?: boolean }> = ({ sample = seaSamples[0], width, boxed, credit }) => (
+	<div style={{ position: 'relative', width, height: (width * sample.h) / sample.w, border: `2px solid ${c.hairline}`, boxShadow: '0 10px 30px rgba(0,0,0,0.6)' }}>
+		<Img src={staticFile(`photos/${sample.file}`)} style={{ width: '100%', height: '100%', display: 'block' }} />
+		{sample.boxes.map((b, i) => {
+			const [x1, y1, x2, y2] = b.box;
+			return (
+				<div key={i} style={{ position: 'absolute', left: `${x1 * 100}%`, top: `${y1 * 100}%`, width: `${(x2 - x1) * 100}%`, height: `${(y2 - y1) * 100}%`, border: `3px solid ${c.red}`, opacity: boxed }}>
+					{i === 0 && <span style={{ position: 'absolute', top: -2, left: -3, transform: 'translateY(-100%)', background: c.red, color: c.ground, fontFamily: font.mono, fontSize: Math.max(11, width / 18), padding: '1px 6px', whiteSpace: 'nowrap' }}>{b.label} {Math.round(b.score * 100)}%</span>}
+				</div>
+			);
+		})}
+		{credit && <div style={{ position: 'absolute', top: '100%', marginTop: 6, left: 0, fontFamily: font.mono, fontSize: 12, color: c.faint, whiteSpace: 'nowrap' }}>bp6316 · Flickr · CC BY 2.0</div>}
+	</div>
+);

@@ -1,4 +1,4 @@
-// Real screen captures for the presentation's banner loops (slides 5, 6 and 9).
+// Real screen captures for the presentation's banner loops (slides 5 and 9).
 // Needs the site running first: pnpm build && pnpm preview --port 4173
 import { mkdirSync } from 'node:fs';
 import { chromium } from '@playwright/test';
@@ -37,10 +37,9 @@ async function shot(path, title, file) {
 	console.log('wrote', file);
 }
 
-await shot('/models/sea-creature-detector', 'Aquarium tank', 'sea-1.png');
-await shot('/models/sea-creature-detector', 'Seal or sea lion?', 'sea-2.png'); // shows a failure, honestly
-await shot('/models/sound-detective', 'Two sounds at once', 'sound-1.png');
-await shot('/models/sound-detective', 'Car horn (it misses this)', 'sound-2.png');
+// Slide 5 moves through every sea sample once; the seal shows a failure, honestly.
+for (const [title, file] of [['Aquarium tank', 'sea-aquarium.png'], ['Dolphin', 'sea-dolphin.png'], ['Sea turtle', 'sea-turtle.png'], ['Seal or sea lion?', 'sea-seal.png'], ['Shark or fish?', 'sea-shark.png'], ['School of fish', 'sea-school.png']])
+	await shot('/models/sea-creature-detector', title, file);
 
 await page.goto(base + '/');
 await page.waitForTimeout(1500);
