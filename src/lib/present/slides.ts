@@ -82,7 +82,13 @@ export const slides: Slide[] = [
 	{
 		n: 8, act: "IV · WHAT'S NEXT", tag: 'EXTRA', presenter: 'D', layout: 'slant', loop: 'coming',
 		kicker: 'ROADMAP', title: "What's", titleEm: 'coming',
-		bullets: ['More sea creatures: octopus, manta ray, orca, lionfish', 'Sound detective v2: better timing, more sounds', 'A speech translator', 'Text models']
+		bullets: [
+			'RAG testing: finish measuring each defence against tricky prompts on both assistants, then all of them combined',
+			'A private document assistant as the next RAG test target',
+			'More sea creatures: octopus, manta ray, orca, lionfish',
+			'Sound detective v2: better timing, more sounds',
+			'A speech translator and text models'
+		]
 	},
 	{
 		n: 9, act: 'V · CONCLUSION', tag: '§7 CONCLUSION', presenter: 'E', layout: 'monitor', loop: 'site',

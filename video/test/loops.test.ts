@@ -13,6 +13,8 @@ test('every loop has a banner size and lasts 5 s unless it says otherwise', () =
 	for (const l of loops) assert.ok(loopSize[l.layout], l.id);
 	assert.equal(LOOP_FRAMES / LOOP_FPS, 5);
 	assert.equal(loops.find((l) => l.id === 'sea')!.frames! / LOOP_FPS, 18); // six real captures, 3 s each
+	assert.equal(loops.find((l) => l.id === 'rag')!.frames! / LOOP_FPS, 10); // owner: slower
+	assert.equal(loops.find((l) => l.id === 'pipeline')!.frames! / LOOP_FPS, 12); // gaps between photos at the old speed
 });
 
 test('illustrations use the real model output for the lab samples', async () => {

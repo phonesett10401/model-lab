@@ -1,4 +1,5 @@
 import type React from 'react';
+import { useVideoConfig } from 'remotion';
 import { c, font } from '../theme';
 import { Detected, LoopFrame, usePhase } from './Base';
 import { seaSamples } from './samples';
@@ -7,12 +8,15 @@ const stations = ['COLLECT', 'TRAIN', 'TEST', 'SHIP'];
 const at = [0.14, 0.38, 0.62, 0.86]; // share of the width
 const CARD = 150;
 
-/** Slide 3: a train of the lab's sample photos travels Collect → Train → Test → Ship; each gets its real boxes at Test. */
+/** Slide 3: the lab's sample photos travel, one at a time with gaps, Collect → Train → Test → Ship; each gets its real boxes at Test. */
 export const Pipeline: React.FC = () => {
 	const p = usePhase();
 	const n = seaSamples.length;
-	const span = 1 + (2 * CARD) / 1920; // a card leaves fully on the right as the next enters fully on the left
-	const cards = seaSamples.map((s, i) => ({ s, x: -CARD / 1920 + (((p + i / n) % 1) * span) }));
+	const { width } = useVideoConfig();
+	// A photo, a blank stretch, the next photo: cards sit GAP apart, so about two are on the band at once.
+	// The whole train (n × GAP) is longer than the band, so each card wraps while it is off-screen.
+	const GAP = 960;
+	const cards = seaSamples.map((s, i) => ({ s, x: (((p + i / n) % 1) * n * GAP - CARD) / width }));
 	const near = (i: number) => Math.max(0, ...cards.map((k) => 1 - Math.abs(k.x - at[i]) / 0.06));
 	const atTest = cards.reduce((a, b) => (Math.abs(b.x - at[2]) < Math.abs(a.x - at[2]) ? b : a));
 	return (
