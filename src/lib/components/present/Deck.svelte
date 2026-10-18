@@ -155,4 +155,9 @@
 	.qr p { margin: 0; text-align: right; font-size: calc(var(--u) * 0.95); color: var(--ink-soft); letter-spacing: 0.1em; }
 	.qr b { color: var(--ink); font-weight: 400; font-size: 1.3em; }
 	.qr :global(svg) { height: 100%; width: auto; display: block; }
+	@media (orientation: portrait) {
+		.qr { --u: 2.45vw; position: static; order: 2; flex: 1 1 0; min-height: 0; height: auto; flex-direction: column-reverse; align-items: center; justify-content: center; }
+		.qr p { text-align: center; font-size: 2.6vw; }
+		.qr :global(svg) { height: auto; width: min(70vw, 100%); max-height: 100%; }
+	}
 </style>

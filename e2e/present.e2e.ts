@@ -198,6 +198,29 @@ test.describe('on a phone', () => {
 		await at(page, 3);
 	});
 
+	test('every slide is readable and stacked on a phone held upright', async ({ page }) => {
+		test.setTimeout(90_000);
+		await page.goto('/present#1');
+		for (let n = 1; n <= 9; n++) {
+			await page.evaluate((n) => (location.hash = `#${n}`), n);
+			await at(page, n);
+			await expect.poll(() => page.evaluate(() => document.getAnimations().filter((a) => a instanceof CSSTransition).length)).toBe(0);
+			const slide = page.locator('section.slide[aria-current="step"]');
+			const copy = (await slide.locator('.copy').boundingBox())!;
+			const lower = (await slide.locator('.lower').boundingBox())!;
+			expect(copy.y + copy.height, `slide ${n}: text fits`).toBeLessThanOrEqual(844);
+			expect(lower.y + lower.height, `slide ${n}: presenter tag fits`).toBeLessThanOrEqual(844);
+			const bullet = await slide.locator('li').first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+			expect(bullet, `slide ${n}: bullets readable`).toBeGreaterThanOrEqual(12);
+			const shown = n === 9 ? slide.locator('.qr svg') : slide.locator('.banner');
+			const b = (await shown.boundingBox())!;
+			expect(b.y, `slide ${n}: banner/QR below the text`).toBeGreaterThanOrEqual(copy.y + copy.height - 1);
+			expect(b.y + b.height, `slide ${n}: banner/QR above the presenter tag`).toBeLessThanOrEqual(lower.y + 1);
+			expect(b.x >= 0 && b.x + b.width <= 390, `slide ${n}: banner/QR inside the screen`).toBe(true);
+			expect(b.height, `slide ${n}: banner/QR big enough to see`).toBeGreaterThanOrEqual(n === 9 ? 160 : 100);
+		}
+	});
+
 	test('swiping up on the start screen starts the presentation', async ({ page }) => {
 		await page.goto('/present');
 		await swipe(page, -200);

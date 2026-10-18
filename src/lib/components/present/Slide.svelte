@@ -109,6 +109,29 @@
 	:global([data-dir='back']) .in { transform: translateY(-14px); }
 	:global([data-dir='back']) .on .in { transform: none; }
 
+	/* Phones held upright: stack header, text, banner and presenter tag top to bottom, with bigger text.
+	   The banner takes the space left and shows its whole loop; the !important lines beat the widescreen geometry in Banner.svelte. */
+	@media (orientation: portrait) {
+		.slide { --u: 2.45vw; display: flex; flex-direction: column; gap: 3.5vw; padding: max(7vw, env(safe-area-inset-top)) 6vw max(8vw, env(safe-area-inset-bottom)); }
+		.hud, .copy, .lower { position: static; width: auto !important; }
+		.hud { order: 0; flex-wrap: wrap; gap: 0.4em 1em; font-size: 2.3vw; }
+		.copy { order: 1; }
+		.slide[data-n='9'] ul { font-size: 3.1vw; }
+		.lower { order: 3; font-size: 2.6vw; }
+		.slide :global(.banner) {
+			order: 2; position: relative !important; inset: auto !important; width: auto !important; height: auto !important; aspect-ratio: auto !important;
+			flex: 1 1 0; min-height: 0; border: 1px solid var(--hairline) !important; box-shadow: none !important;
+			clip-path: none !important; opacity: 0; transition: opacity 0.25s;
+		}
+		.on :global(.banner) { opacity: 1; transition: opacity 0.6s 0.3s; }
+		.slide :global(.banner video) { object-fit: contain; }
+		/* The wide bands would be a sliver if shown whole: a 16:5 window onto their middle instead. */
+		.slide[data-layout='band'] :global(.banner) { flex: 0 0 auto; aspect-ratio: 16 / 5 !important; margin-top: auto; }
+		.slide[data-layout='band'] :global(.banner video) { object-fit: cover; }
+		/* Slide 9: the QR code takes the banner's place. */
+		.slide[data-n='9'] :global(.banner) { display: none; }
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.in, .on .in { transform: none; transition: opacity 0.15s; transition-delay: 0s !important; }
 		.slide :global(.banner), .on :global(.banner) { transition: opacity 0.15s; }
