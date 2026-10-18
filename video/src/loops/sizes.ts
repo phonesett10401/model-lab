@@ -25,5 +25,11 @@ export const loops: readonly { id: string; layout: LoopLayout; frames?: number; 
 	{ id: 'site', layout: 'monitor' }
 ];
 
+/** Square versions of the band loops for phones held upright (the deck picks them with an orientation check). */
+export const tallLoops: typeof loops = [
+	{ id: 'pipeline-tall', layout: 'band', frames: 360, size: { width: 1000, height: 1000 } },
+	{ id: 'rag-tall', layout: 'band', frames: 300, size: { width: 1000, height: 1000 } }
+];
+
 export const framesOf = (l: (typeof loops)[number]) => l.frames ?? LOOP_FRAMES;
 export const sizeOf = (l: (typeof loops)[number]) => l.size ?? loopSize[l.layout];

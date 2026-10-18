@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
-import { LOOP_FPS, framesOf, loops, sizeOf } from '../src/loops/sizes.ts';
+import { LOOP_FPS, framesOf, loops, sizeOf, tallLoops } from '../src/loops/sizes.ts';
 
 // Run after `pnpm render:loops`: checks the files the site actually serves.
 const probe = (file: string) => {
@@ -11,7 +11,7 @@ const probe = (file: string) => {
 	return JSON.parse(r.stdout) as { format: { duration: string }; streams: { codec_type: string; width?: number; height?: number }[] };
 };
 
-for (const l of loops)
+for (const l of [...loops, ...tallLoops])
 	test(`${l.id}: ${framesOf(l) / LOOP_FPS} s, ${sizeOf(l).width}×${sizeOf(l).height}, silent, ≤ 1.5 MB per 5 s, with a poster`, () => {
 		const file = `../static/present/${l.id}.mp4`;
 		const p = probe(file);

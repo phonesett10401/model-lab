@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { LOOP_FPS, LOOP_FRAMES, loopSize, loops } from '../src/loops/sizes.ts';
+import { LOOP_FPS, LOOP_FRAMES, loopSize, loops, tallLoops } from '../src/loops/sizes.ts';
 
 test('nine loops, in slide order, matching the deck', () => {
 	const deck = [...readFileSync('../src/lib/present/slides.ts', 'utf8').matchAll(/loop: '(\w+)'/g)].map((m) => m[1]);
@@ -30,4 +30,12 @@ test('the sound loop shows the real output for "Two sounds at once"', async () =
 	const { soundEvents } = await import('../src/loops/samples.ts');
 	const snd = JSON.parse(readFileSync('../src/lib/data/sound-detective.json', 'utf8')) as { samples: { id: string; expected: unknown[] }[] };
 	assert.deepEqual(soundEvents, snd.samples.find((s) => s.id === 'overlap')!.expected);
+});
+
+test('every band loop has an upright twin for phones, at the same speed, listed in the render script', () => {
+	const bands = loops.filter((l) => l.layout === 'band');
+	assert.deepEqual(tallLoops.map((l) => l.id), bands.map((l) => `${l.id}-tall`));
+	for (const b of bands) assert.equal(tallLoops.find((t) => t.id === `${b.id}-tall`)!.frames, b.frames);
+	const script = readFileSync('scripts/render-loops.mjs', 'utf8');
+	for (const l of [...loops, ...tallLoops]) assert.ok(script.includes(`'${l.id}'`), l.id);
 });
