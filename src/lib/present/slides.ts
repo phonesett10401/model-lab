@@ -94,7 +94,8 @@ export const slides: Slide[] = [
 		n: 9, act: 'V · CONCLUSION', tag: '§7 CONCLUSION', presenter: 'E', layout: 'monitor', loop: 'site',
 		kicker: 'CONCLUSION · REFERENCES', title: 'What we', titleEm: 'built',
 		bullets: [
-			'2 working models and 2 RAG assistants, all running on your device',
+			'2 working models, running on your device',
+			'2 RAG assistants built, still being tested',
 			'Every number is measured; every report card shows how it fails',
 			'Data: Open Images V7 (CC BY 2.0), Aquarium Combined (Roboflow, CC BY 4.0), FSD50K and Freesound (CC0 / CC BY)',
 			'Models: Ultralytics YOLO26 (AGPL-3.0), EfficientAT (MIT), Qwen2.5, snowflake-arctic-embed',
