@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Model Lab — Presentation outline</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+	@page { size: A4; margin: 16mm 16mm 18mm; }
+	* { box-sizing: border-box; }
+	body { font-family: Inter, system-ui, sans-serif; font-size: 10.5pt; line-height: 1.45; color: #161212; margin: 0; }
+	.mono { font-family: 'JetBrains Mono', monospace; }
+	h1, h2 { font-family: 'Instrument Serif', serif; font-weight: 400; margin: 0; }
+	h1 { font-size: 34pt; line-height: 1; }
+	h1 em, h2 em { color: #b3261e; }
+	.page { page-break-after: always; }
+	.page:last-child { page-break-after: auto; }
+	.kick { color: #b3261e; letter-spacing: 0.18em; font-size: 8.5pt; }
+	.meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 14px; }
+	.meta span { border: 1px solid #ddd6d4; border-radius: 3px; padding: 2px 8px; font-size: 8.5pt; }
+	.meta .who { background: #b3261e; color: #fff; border-color: #b3261e; }
+	h2 { font-size: 24pt; line-height: 1.05; }
+	h3 { font-size: 8.5pt; letter-spacing: 0.16em; text-transform: uppercase; color: #6e6565; margin: 16px 0 6px; font-weight: 600; }
+	.screen { background: #141213; color: #f3eeee; border-radius: 4px; padding: 12px 16px; }
+	.screen .t { font-family: 'Instrument Serif', serif; font-size: 17pt; }
+	.screen .t em { color: #ff4f4f; }
+	.screen ul { margin: 6px 0 0; padding-left: 16px; color: #d6cfcf; }
+	.screen li { margin: 2px 0; }
+	ul { margin: 0; padding-left: 18px; }
+	li { margin: 3px 0; }
+	.banner { border-left: 3px solid #b3261e; padding: 4px 10px; background: #faf8f7; }
+	.handoff { margin-top: 14px; padding: 8px 12px; background: #f6d3cf; border-radius: 4px; }
+	.lines { margin-top: 16px; border-top: 1px dashed #ddd6d4; }
+	.lines div { border-bottom: 1px dashed #ddd6d4; height: 26px; }
+	table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin-top: 10px; }
+	th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #ddd6d4; vertical-align: top; }
+	th { font-size: 8pt; letter-spacing: 0.12em; text-transform: uppercase; color: #6e6565; }
+	.note { font-size: 9pt; color: #5c5454; }
+	.cover { font-size: 9.5pt; }
+	.cover table { font-size: 8.8pt; margin-top: 6px; }
+	.cover th, .cover td { padding: 4px 8px; }
+	.cover h3 { margin-top: 12px; }
+	.rule { border: 1px solid #b3261e; border-radius: 4px; padding: 10px 14px; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<!-- Cover -->
+<section class="page cover">
+	<p class="kick mono">AI CLASS · PROJECT PROPOSAL · PRESENTATION OUTLINE</p>
+	<h1 style="margin-top:10px">AI Model <em>Lab</em></h1>
+	<p style="font-family:'Instrument Serif',serif;font-style:italic;font-size:16pt;margin:8px 0 18px">Click it. Test it. See the result.</p>
+	<p>One page per slide. Each page says <b>what is on screen</b>, <b>what the banner video shows</b> and <b>the points to cover</b>, so each presenter can write their own script in their own words. There are lined spaces at the bottom of each page for notes.</p>
+
+	<table>
+		<tr><th>#</th><th>Slide</th><th>Professor's section</th><th>Presenter</th><th>Suggested time</th></tr>
+		<tr><td>0</td><td>Intro video (21 s, with sound)</td><td>—</td><td>A starts it</td><td>0:30</td></tr>
+		<tr><td>1</td><td>AI Model Lab · title and team</td><td>§1 Topic &amp; team</td><td>A</td><td>0:45</td></tr>
+		<tr><td>2</td><td>What the lab does</td><td>§2 Scope / functions</td><td>A</td><td>1:00</td></tr>
+		<tr><td>3</td><td>How the models learn</td><td>§3 Techniques</td><td>B</td><td>1:30</td></tr>
+		<tr><td>4</td><td>How they predict, and how we measure</td><td>§4 Techniques</td><td>B</td><td>1:30</td></tr>
+		<tr><td>5</td><td>Sea creature detector</td><td>§5 Result / UI prototype</td><td>C</td><td>1:15</td></tr>
+		<tr><td>6</td><td>Sound detective</td><td>§6 Result / UI prototype</td><td>C</td><td>1:15</td></tr>
+		<tr><td>7</td><td>RAG assistants (in progress)</td><td>Extra</td><td>D</td><td>1:00</td></tr>
+		<tr><td>8</td><td>What's coming</td><td>Extra</td><td>D</td><td>0:45</td></tr>
+		<tr><td>9</td><td>What we built · references · live site</td><td>§7 Conclusion &amp; references</td><td>E</td><td>1:00</td></tr>
+	</table>
+	<p class="note">Times are a suggestion (about 10–11 minutes in total). Change them to fit your slot.</p>
+
+	<h3>Presenters</h3>
+	<table>
+		<tr><th>Presenter</th><th>Role</th><th>Slides</th><th>Name</th></tr>
+		<tr><td>A</td><td>The lab</td><td>0–2</td><td></td></tr>
+		<tr><td>B</td><td>The making</td><td>3–4</td><td></td></tr>
+		<tr><td>C</td><td>The models</td><td>5–6</td><td></td></tr>
+		<tr><td>D</td><td>What's next</td><td>7–8</td><td></td></tr>
+		<tr><td>E</td><td>Conclusion</td><td>9</td><td></td></tr>
+	</table>
+
+	<h3>Controls</h3>
+	<p>Open <span class="mono">/present</span> on the site → press <b>Space</b> (or the start button) → the intro plays and holds on its last frame → <b>Space / ↓ / → / PageDown</b> for the next slide, <b>↑ / ← / PageUp</b> to go back, <b>Home / End</b> for first / last, <b>F</b> for full screen. A presentation clicker works too.</p>
+
+	<div class="rule"><b>One rule for every script:</b> only say numbers that are on the slides or in this outline. They are all measured. If someone asks for something we haven't measured, say "we haven't measured that yet".</div>
+</section>
+
+<!-- Slide 0 -->
+<section class="page">
+	<p class="kick mono">SLIDE 0 · INTRO VIDEO</p>
+	<div class="meta"><span class="who">Presenter A</span><span>About 0:30</span><span>No slide text</span></div>
+	<h2>Intro <em>video</em></h2>
+	<h3>On screen</h3>
+	<div class="banner">The 21-second AI Model Lab intro with music. It flies through a swarm of small models, a photo is tested, the result appears, then the report card is stamped HOW IT FAILS. It stops on its last frame and waits.</div>
+	<h3>Points to cover</h3>
+	<ul>
+		<li>Before pressing Space: one sentence to the class, for example a greeting and "this is our project, AI Model Lab".</li>
+		<li>Let the video play. Don't talk over it; the music carries it.</li>
+		<li>When it stops, press Space and move straight into slide 1.</li>
+	</ul>
+	<div class="lines"><div></div><div></div><div></div><div></div><div></div><div></div></div>
+</section>
+
+<!-- Slide 1 -->
+<section class="page">
+	<p class="kick mono">SLIDE 1 · §1 TOPIC &amp; TEAM</p>
+	<div class="meta"><span class="who">Presenter A · The lab</span><span>About 0:45</span><span>Banner: slanted, right half</span></div>
+	<h2>AI Model <em>Lab</em></h2>
+	<h3>On screen</h3>
+	<div class="screen"><div class="mono" style="color:#ff4f4f;font-size:8pt;letter-spacing:.2em">AI CLASS · PROJECT PROPOSAL</div><div class="t">AI Model <em>Lab</em></div>
+		<ul><li><i>Click it. Test it. See the result.</i></li><li>Presenter A · The lab</li><li>Presenter B · The making</li><li>Presenter C · The models</li><li>Presenter D · What's next</li><li>Presenter E · Conclusion</li></ul></div>
+	<h3>Banner shows</h3>
+	<div class="banner">A swarm of specimen boxes, each one a small AI model. One box, "No. 01 · Sea creature detector", glows in front. (Stamped SAMPLE: an illustration.)</div>
+	<h3>Points to cover</h3>
+	<ul>
+		<li>The topic in one line: a library of small AI models that anyone can try in a web browser.</li>
+		<li>The idea behind it: each model does <b>one job</b>, and each one has an <b>honest report card</b> that shows how it fails, not just a score.</li>
+		<li>Introduce the team: say each name and what part they will present.</li>
+	</ul>
+	<div class="handoff"><b>Hand-off:</b> stay on. Presenter A continues with slide 2.</div>
+	<div class="lines"><div></div><div></div><div></div><div></div><div></div></div>
+</section>
+
+<!-- Slide 2 -->
+<section class="page">
+	<p class="kick mono">SLIDE 2 · §2 SCOPE / FUNCTIONS</p>
+	<div class="meta"><span class="who">Presenter A · The lab</span><span>About 1:00</span><span>Banner: floating monitor</span></div>
+	<h2>What the lab <em>does</em></h2>
+	<h3>On screen</h3>
+	<div class="screen"><div class="t">What the lab <em>does</em></div>
+		<ul><li>Try a small AI model right in your browser</li><li>Use a sample, your own photo or sound, or live listening</li><li>See an honest report card: the score and how it fails</li><li>Nothing you add is uploaded: it runs on your device</li><li>2 models live, more planned</li></ul></div>
+	<h3>Banner shows</h3>
+	<div class="banner">A grid of nine model plates; a red highlight moves from one to the next: "one job each". (SAMPLE.)</div>
+	<h3>Points to cover</h3>
+	<ul>
+		<li>Walk through the five functions as a list; this is the professor's "scope / functions" slide.</li>
+		<li>Two models are live today: the <b>Sea creature detector</b> (finds sea animals in a photo) and the <b>Sound detective</b> (finds everyday sounds in a recording). Others, such as Fresh or spoiled, are planned.</li>
+		<li>Privacy: the model downloads to your device and runs there, so the photo or sound never leaves it.</li>
+	</ul>
+	<div class="handoff"><b>Hand-off to Presenter B:</b> "B will now explain how we actually made these models."</div>
+	<div class="lines"><div></div><div></div><div></div><div></div><div></div></div>
+</section>
+
+<!-- Slide 3 -->
+<section class="page">
+	<p class="kick mono">SLIDE 3 · §3 TECHNIQUES</p>
+	<div class="meta"><span class="who">Presenter B · The making</span><span>About 1:30</span><span>Banner: band along the bottom</span></div>
+	<h2>How the models <em>learn</em></h2>
+	<h3>On screen</h3>
+	<div class="screen"><div class="t">How the models <em>learn</em></div>
+		<ul><li>Supervised learning on labelled data: 7,637 sea photos (Open Images, Aquarium Combined) and 13,825 sound clips (FSD50K, Freesound)</li><li>Transfer learning: fine-tuned pretrained CNNs, YOLO26 Nano for detection and EfficientAT mn10 (AudioSet) for sound</li><li>Train / validation / test split; the test set stays frozen: 767 photos and 4,216 clips never seen in training</li><li>Sound is multi-label: spectrograms of 1 s slices every 0.5 s, several sounds at once</li></ul></div>
+	<h3>Banner shows</h3>
+	<div class="banner">The lab's sample photos travel, one at a time, through COLLECT → TRAIN → TEST → SHIP. At TEST each photo gets the box and score our real model gave it (for example "dolphin 66%"). (SAMPLE.)</div>
+	<h3>Points to cover</h3>
+	<ul>
+		<li><b>Supervised learning:</b> every training photo has boxes drawn around each creature (22,718 labelled creatures across 7,637 photos); every sound clip is labelled with which sounds it contains.</li>
+		<li><b>Transfer learning:</b> we didn't train from zero. YOLO26 Nano (2.5 million parameters) already knew general shapes; EfficientAT mn10 was pretrained on AudioSet. We fine-tuned them on our data.</li>
+		<li><b>Fair split:</b> sea photos 5,312 train · 1,558 validation · 767 test. Sound clips 8,617 train · 992 validation · 4,216 test. The test set is never used for training or tuning.</li>
+		<li><b>Multi-label sound:</b> audio is turned into a spectrogram (a picture of sound). The model looks at 1-second slices every half second, and one slice can contain several sounds at once.</li>
+	</ul>
+	<div class="lines"><div></div><div></div><div></div><div></div></div>
+</section>
+
+<!-- Slide 4 -->
+<section class="page">
+	<p class="kick mono">SLIDE 4 · §4 TECHNIQUES</p>
+	<div class="meta"><span class="who">Presenter B · The making</span><span>About 1:30</span><span>Banner: tall strip on the right</span></div>
+	<h2>How they predict, and how we <em>measure</em></h2>
+	<h3>On screen</h3>
+	<div class="screen"><div class="t">How they predict, and how we <em>measure</em></div>
+		<ul><li>Object detection: boxes with confidence; IoU and non-max suppression remove duplicates</li><li>Thresholds: 45% for creatures; per-sound thresholds tuned on validation, never on test</li><li>Metrics: mAP@50, mean average precision and F1, plus a list of how each model fails</li><li>On-device inference: exported to ONNX and run by ONNX Runtime Web in the browser</li></ul></div>
+	<h3>Banner shows</h3>
+	<div class="banner">A phone: the ONNX model streams in from above as particles, a photo inside gets its real box, a shield pulses, "PHOTO STAYS HERE". (SAMPLE.)</div>
+	<h3>Points to cover</h3>
+	<ul>
+		<li><b>Object detection:</b> the model outputs boxes with a confidence. Overlapping boxes for the same animal are measured with IoU (how much two boxes overlap) and non-max suppression keeps only the best one.</li>
+		<li><b>Thresholds:</b> a creature is shown only if the model is at least 45% sure. Each of the 17 sounds has its own threshold, tuned on the validation set, so the test score stays honest.</li>
+		<li><b>Metrics:</b> mAP@50 means a box counts as correct when it overlaps the true box by at least 50%. For sound we also report F1: 0.59 second-by-second on 97 test mixes.</li>
+		<li><b>On-device:</b> both models are exported to ONNX and run with ONNX Runtime Web inside the browser. Nothing is uploaded.</li>
+	</ul>
+	<div class="handoff"><b>Hand-off to Presenter C:</b> "C will show you the two models working, and their real results."</div>
+	<div class="lines"><div></div><div></div><div></div></div>
+</section>
+
+<!-- Slide 5 -->
+<section class="page">
+	<p class="kick mono">SLIDE 5 · §5 RESULT / UI PROTOTYPE</p>
+	<div class="meta"><span class="who">Presenter C · The models</span><span>About 1:15</span><span>Banner: slanted, narrower</span></div>
+	<h2>Sea creature <em>detector</em></h2>
+	<h3>On screen</h3>
+	<div class="screen"><div class="mono" style="color:#ff4f4f;font-size:8pt;letter-spacing:.2em">MODEL 01 · UI PROTOTYPE</div><div class="t">Sea creature <em>detector</em></div>
+		<div class="mono" style="margin-top:4px">EXPECTED → BUILT ✓ &nbsp; 0.74 mAP@50 · 767 test photos</div>
+		<ul><li>Boxes 14 kinds of sea creature in a photo</li><li>0.82 on aquarium photos</li><li>Fails on: seal vs sea lion, dolphin vs whale, small distant fish</li></ul></div>
+	<h3>Banner shows</h3>
+	<div class="banner"><b>Real screen captures</b> of the live page, one sample at a time: aquarium tank, dolphin, sea turtle, seal or sea lion (a mistake it makes), shark or fish, school of fish.</div>
+	<h3>Points to cover</h3>
+	<ul>
+		<li>This is the professor's "UI prototype" section, but it's not a mock-up: the label flips from EXPECTED to <b>BUILT</b>, and the banner is the real page.</li>
+		<li>Score: <b>0.74 mAP@50</b> on 767 photos it never saw; <b>0.82</b> on aquarium photos.</li>
+		<li>Be honest about failures: it mixes up seals and sea lions, dolphins and whales, and misses small, distant fish. It knows no octopus, manta ray or orca yet.</li>
+		<li>Best and worst creatures if asked: sea turtle 0.87, starfish 0.86; puffin and fish about 0.62.</li>
+	</ul>
+	<div class="lines"><div></div><div></div><div></div><div></div></div>
+</section>
+
+<!-- Slide 6 -->
+<section class="page">
+	<p class="kick mono">SLIDE 6 · §6 RESULT / UI PROTOTYPE</p>
+	<div class="meta"><span class="who">Presenter C · The models</span><span>About 1:15</span><span>Banner: tall strip on the right</span></div>
+	<h2>Sound <em>detective</em></h2>
+	<h3>On screen</h3>
+	<div class="screen"><div class="mono" style="color:#ff4f4f;font-size:8pt;letter-spacing:.2em">MODEL 04 · UI PROTOTYPE</div><div class="t">Sound <em>detective</em></div>
+		<div class="mono" style="margin-top:4px">EXPECTED → BUILT ✓ &nbsp; 0.79 mAP · 4,216 test clips</div>
+		<ul><li>17 everyday sounds on a timeline</li><li>From a recording, an upload or live listening</li><li>Weak spots: doorbell, footsteps, car horn; timing is rough</li></ul></div>
+	<h3>Banner shows</h3>
+	<div class="banner"><b>The real model output</b> for the sample "Two sounds at once": a playhead runs down the clip and bars grow for speech, engine / traffic and clapping, with their real confidences (68%, 75%, 99%…).</div>
+	<h3>Points to cover</h3>
+	<ul>
+		<li>It finds 17 everyday sounds (dog bark, siren, glass breaking, knocking…) and places them on a timeline. Three ways in: record, upload, or listen live (live mode stops by itself after 2 minutes).</li>
+		<li>Score: <b>0.79 mean average precision</b> on 4,216 test clips.</li>
+		<li>A design choice: the bigger mn10 model scores 0.79 at 20.5 MB; the smaller mn04 scores 0.76 at 6.5 MB. We chose accuracy.</li>
+		<li>Honest weak spots: doorbell is the weakest sound (0.46); footsteps and car horn are also weak; timing is rough: it finds 49% of sounds within 0.5 s of when they start.</li>
+	</ul>
+	<div class="handoff"><b>Hand-off to Presenter D:</b> "D will tell you what we're working on now."</div>
+	<div class="lines"><div></div><div></div><div></div></div>
+</section>
+
+<!-- Slide 7 -->
+<section class="page">
+	<p class="kick mono">SLIDE 7 · EXTRA · IN PROGRESS</p>
+	<div class="meta"><span class="who">Presenter D · What's next</span><span>About 1:00</span><span>Banner: band along the bottom</span></div>
+	<h2>RAG <em>assistants</em></h2>
+	<h3>On screen</h3>
+	<div class="screen"><div class="mono" style="color:#ff4f4f;font-size:8pt;letter-spacing:.2em">IN PROGRESS</div><div class="t">RAG <em>assistants</em></div>
+		<ul><li>Answers from its own documents: retrieve the right passages, then a small language model writes the reply</li><li>Runs in the browser: Qwen2.5-1.5B and snowflake-arctic-embed-s on WebLLM</li><li>Two built: University of Raffel Luo and Pathum Rai District</li><li>Tested, not complete yet: we are measuring defences against tricky prompts</li></ul></div>
+	<h3>Banner shows</h3>
+	<div class="banner">Questions glide along the band into a shield; past it, each one is "answered from its documents". Stamped IN PROGRESS. (SAMPLE.)</div>
+	<h3>Points to cover</h3>
+	<ul>
+		<li>RAG = retrieval-augmented generation: first search the assistant's own documents for the passages that answer the question, then a small language model writes the reply from them.</li>
+		<li>Like the other models, it runs fully in the browser (WebLLM, Qwen2.5-1.5B for answers, snowflake-arctic-embed-s for search).</li>
+		<li>Two assistants are built: a university helpdesk (University of Raffel Luo) and a district emergency helpdesk (Pathum Rai District).</li>
+		<li>Status: <b>tested, not complete</b>. We are testing how well defences hold up against tricky prompts, one defence at a time and then all together. Don't quote results yet; they aren't final.</li>
+	</ul>
+	<div class="lines"><div></div><div></div><div></div><div></div></div>
+</section>
+
+<!-- Slide 8 -->
+<section class="page">
+	<p class="kick mono">SLIDE 8 · EXTRA</p>
+	<div class="meta"><span class="who">Presenter D · What's next</span><span>About 0:45</span><span>Banner: slanted, right half</span></div>
+	<h2>What's <em>coming</em></h2>
+	<h3>On screen</h3>
+	<div class="screen"><div class="t">What's <em>coming</em></div>
+		<ul><li>RAG testing: finish measuring each defence against tricky prompts on both assistants, then all of them combined</li><li>A private document assistant as the next RAG test target</li><li>More sea creatures: octopus, manta ray, orca, lionfish</li><li>Sound detective v2: better timing, more sounds</li><li>A speech translator and text models</li></ul></div>
+	<h3>Banner shows</h3>
+	<div class="banner">New specimen plates (Octopus, Manta ray, Orca, Lionfish) fly in from the depth of the swarm. (SAMPLE.)</div>
+	<h3>Points to cover</h3>
+	<ul>
+		<li>First priority: finish the RAG testing, every defence alone, then all combined, on both assistants.</li>
+		<li>Next RAG target: a private document assistant.</li>
+		<li>Widen the sea detector to the creatures it can't find yet; Sound detective v2 with better timing (training data with timestamps) and more sounds.</li>
+		<li>Later: a speech translator and text models.</li>
+	</ul>
+	<div class="handoff"><b>Hand-off to Presenter E:</b> "E will wrap up."</div>
+	<div class="lines"><div></div><div></div><div></div><div></div></div>
+</section>
+
+<!-- Slide 9 -->
+<section class="page">
+	<p class="kick mono">SLIDE 9 · §7 CONCLUSION &amp; REFERENCES</p>
+	<div class="meta"><span class="who">Presenter E · Conclusion</span><span>About 1:00</span><span>Banner: floating monitor + QR code</span></div>
+	<h2>What we <em>built</em></h2>
+	<h3>On screen</h3>
+	<div class="screen"><div class="t">What we <em>built</em></div>
+		<ul><li>2 working models, running on your device</li><li>2 RAG assistants built, still being tested</li><li>Every number is measured; every report card shows how it fails</li><li>Data: Open Images V7 (CC BY 2.0), Aquarium Combined (Roboflow, CC BY 4.0), FSD50K and Freesound (CC0 / CC BY)</li><li>Models: Ultralytics YOLO26 (AGPL-3.0), EfficientAT (MIT), Qwen2.5, snowflake-arctic-embed</li><li>Tools: ONNX Runtime Web, WebLLM, Remotion</li><li>Music: "Tech Circuit Data Stream" by Alex Morgan (Pixabay licence)</li></ul>
+		<div class="mono" style="margin-top:6px;color:#a9a1a1">+ a large QR code and the site address: "Try it live"</div></div>
+	<h3>Banner shows</h3>
+	<div class="banner">A slow fly-through of the real home page of the live site.</div>
+	<h3>Points to cover</h3>
+	<ul>
+		<li>Summary: two working models that run on your device, and two RAG assistants that are built and still being tested.</li>
+		<li>What makes the lab different: every number is measured, and every model shows how it fails.</li>
+		<li>Read the references briefly: where the data, models and music come from, and their licences.</li>
+		<li>Invite everyone to scan the QR code and try the models on their phones. Then thank the audience and ask for questions.</li>
+	</ul>
+	<div class="lines"><div></div><div></div><div></div></div>
+</section>
+
+</body>
+</html>
