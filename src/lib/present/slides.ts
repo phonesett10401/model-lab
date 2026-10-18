@@ -85,7 +85,7 @@ export const slides: Slide[] = [
 		bullets: ['More sea creatures: octopus, manta ray, orca, lionfish', 'Sound detective v2: better timing, more sounds', 'A speech translator', 'Text models']
 	},
 	{
-		n: 9, act: "IV · WHAT'S NEXT", tag: '§7 CONCLUSION', presenter: 'D', layout: 'monitor', loop: 'site',
+		n: 9, act: 'V · CONCLUSION', tag: '§7 CONCLUSION', presenter: 'E', layout: 'monitor', loop: 'site',
 		kicker: 'CONCLUSION · REFERENCES', title: 'What we', titleEm: 'built',
 		bullets: [
 			'2 working models and 2 RAG assistants, all running on your device',
