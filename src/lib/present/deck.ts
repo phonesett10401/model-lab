@@ -8,11 +8,11 @@ const keys: Record<string, Action> = {
 
 export const keyAction = (key: string): Action => keys[key] ?? null;
 
-/** Index 0 is the intro video, 1..count are slides. Back from slide 1 does not reopen the intro. */
+/** Index 0 is the cover (project name and motto), 1..count are slides. */
 export function step(index: number, action: Action, count: number): number {
 	if (action === 'next') return Math.min(index + 1, count);
-	if (action === 'prev') return index <= 1 ? index : index - 1;
-	if (action === 'first') return 1;
+	if (action === 'prev') return Math.max(index - 1, 0);
+	if (action === 'first') return 0;
 	if (action === 'last') return count;
 	return index;
 }

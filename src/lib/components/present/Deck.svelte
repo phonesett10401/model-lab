@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, tick } from 'svelte';
+	import { onMount } from 'svelte';
 	import { loopFor, loopSrc, slides } from '$lib/present/slides';
 	import { MediaQuery } from 'svelte/reactivity';
 	import { preloadAll } from '$lib/present/preload';
@@ -10,9 +10,7 @@
 	let { qr, origin }: { qr: string; origin: string } = $props();
 
 	const count = slides.length;
-	let video = $state<HTMLVideoElement>();
 	let started = $state(false);
-	let blocked = $state(false);
 	let index = $state(0);
 	let dir = $state<'forward' | 'back'>('forward');
 	let cut = $state(0); // bumps on every slide change to replay the scan-wipe
@@ -38,20 +36,11 @@
 		if (started && i !== index) cut++;
 		started = true;
 		index = i;
-		if (i > 0) video?.pause(); // leaving the intro stops it, not keeps playing off-screen
-		history.replaceState(null, '', hashFor(i));
+		history.replaceState(null, '', i > 0 ? hashFor(i) : location.pathname);
 	}
 
-	// This click is the user gesture that lets the browser play with sound: play() must run before any await.
-	async function begin() {
-		started = true;
-		index = 0;
-		if (video) {
-			video.muted = false;
-			video.play().catch(() => (blocked = true));
-		}
-		await tick();
-	}
+	// Start opens the cover slide (index 0); the intro video was dropped from the presentation.
+	const begin = () => go(0);
 
 	function act(action: Action) {
 		if (!started) return void (action === 'next' && begin());
@@ -82,7 +71,7 @@
 		const t = e.changedTouches[0];
 		const action = swipeAction(t.clientX - touch.x, t.clientY - touch.y);
 		touch = null;
-		if (action) act(action); // a touchend is a user gesture, so starting the intro with sound still works
+		if (action) act(action); // swipe up on the start screen starts the deck
 	}
 </script>
 
@@ -90,21 +79,6 @@
 
 <main class="present" data-index={started ? index : undefined} data-dir={dir} {ontouchstart} {ontouchend}>
 	<Stage />
-
-	<!-- No speech, only music and sound effects; the slides that follow say the same in words. -->
-	<!-- svelte-ignore a11y_media_has_caption -->
-	<video
-		class="intro"
-		class:hidden={!started || index !== 0}
-		bind:this={video}
-		src="/intro/intro-wide.mp4"
-		poster="/intro/poster-wide.jpg"
-		playsinline
-		preload="auto"
-		controls={blocked}
-		aria-label="AI Model Lab intro, 21 seconds with sound"
-		onplay={() => (blocked = false)}
-	></video>
 
 	{#if !started}
 		<div class="gate">
@@ -115,6 +89,12 @@
 			<p class="mono hint" aria-live="polite">{loaded < count ? `Loading banners ${loaded} / ${count}` : 'Ready'}</p>
 		</div>
 	{/if}
+	<section class="cover" class:on={started && index === 0} aria-current={started && index === 0 ? 'step' : undefined} aria-hidden={!(started && index === 0)} aria-label="Cover">
+		<p class="mono kick">AI CLASS · PROJECT PROPOSAL · GROUP&nbsp;7 · 5&nbsp;LAZY&nbsp;LADS</p>
+		<h2 class="serif">AI Model <em>Lab</em></h2>
+		<p class="serif motto">Click it. Test it. <em>See the result.</em></p>
+		<p class="mono next">PRESS SPACE OR SWIPE UP</p>
+	</section>
 	{#each slides as s (s.n)}
 		<Slide slide={s} active={started && index === s.n} {count} loop={loopFor(s, portrait.current)} src={banners.get(loopSrc(loopFor(s, portrait.current)))}>
 			{#snippet extra()}
@@ -137,15 +117,34 @@
 		--red: #ff4f4f; --hairline: #2e292a; --green: #6fcf97; --on-ink: #141213;
 		touch-action: none; overscroll-behavior: none; /* swipes change slides; no page scroll or pull-to-refresh */
 		color-scheme: dark; position: fixed; inset: 0; overflow: hidden; background: var(--paper); color: var(--ink); }
-	video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
-	.hidden { visibility: hidden; }
 	.gate { position: absolute; inset: 0; display: grid; align-content: center; justify-items: start; gap: var(--space-2); padding: 0 var(--gutter); background: rgba(20, 18, 19, 0.85); }
 	.name { color: var(--red); letter-spacing: 0.2em; }
 	h1 { font-size: var(--step-4); }
 	.start { min-height: 52px; font-size: var(--step-0); padding: 0 var(--space-3); }
 	.hint { color: var(--ink-soft); }
-	video { z-index: 5; }
 	.gate { z-index: 6; }
+	/* The cover: the project name and motto, centred on the stage. */
+	.cover { --u: min(1vw, 1.7778vh); position: absolute; inset: 0; z-index: 1; display: grid; place-content: center; justify-items: center; text-align: center; gap: calc(var(--u) * 1.6); padding: 0 6%; visibility: hidden; transition: visibility 0s 0.3s; }
+	.cover.on { visibility: visible; transition: none; }
+	.cover > * { margin: 0; opacity: 0; transform: translateY(18px); transition: opacity 0.25s, transform 0.25s; }
+	.cover.on > * { opacity: 1; transform: none; transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
+	.cover.on > :nth-child(2) { transition-delay: 0.12s; }
+	.cover.on > :nth-child(3) { transition-delay: 0.3s; }
+	.cover.on > :nth-child(4) { transition-delay: 0.9s; }
+	.cover .kick { color: var(--red); letter-spacing: 0.24em; font-size: calc(var(--u) * 1); }
+	.cover h2 { font-weight: 400; font-size: calc(var(--u) * 11); line-height: 0.95; text-shadow: 0 0 calc(var(--u) * 4) rgba(255, 79, 79, 0.35); }
+	.cover em { color: var(--red); }
+	.cover .motto { font-style: italic; font-size: calc(var(--u) * 3.6); color: var(--ink); }
+	.cover .next { color: var(--ink-faint); letter-spacing: 0.2em; font-size: calc(var(--u) * 0.9); margin-top: calc(var(--u) * 3); }
+	@media (orientation: portrait) {
+		.cover { --u: 2.45vw; }
+		.cover h2 { font-size: calc(var(--u) * 7.5); }
+		.cover .motto { font-size: calc(var(--u) * 2.6); }
+		.cover .kick { font-size: 2.3vw; }
+		.cover .next { font-size: 2.4vw; }
+	}
+	@media (prefers-reduced-motion: reduce) { .cover > *, .cover.on > * { transform: none; transition: opacity 0.15s; transition-delay: 0s !important; } }
+
 	/* The broadcast cut between slides: a red scan line sweeps across once. */
 	.wipe { position: absolute; top: 0; bottom: 0; width: 18%; z-index: 4; pointer-events: none; background: linear-gradient(90deg, transparent, rgba(255, 79, 79, 0.35) 80%, #ff4f4f 80.5%, transparent 81%); animation: wipe 0.45s cubic-bezier(0.6, 0, 0.4, 1) forwards; }
 	.wipe.back { transform: scaleX(-1); animation-name: wipe-back; }
