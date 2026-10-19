@@ -45,10 +45,10 @@
 		<tr><th>Part</th><th>Presenter</th><th>Slides</th><th>Time</th></tr>
 		<tr><td>1 · The lab</td><td>A · Aung Kyaw Phyo</td><td>Intro video, 1, 2</td><td>about 2:45</td></tr>
 		<tr><td>2 · The making</td><td>B · Bhone Pyae Hein</td><td>3, 4</td><td>about 3:30</td></tr>
-		<tr><td>3 · The models</td><td>C · Phone Sett Paing Kyaw</td><td>5, 6</td><td>about 2:45</td></tr>
+		<tr><td>3 · The models</td><td>C · Phone Sett Paing Kyaw</td><td>5, 6</td><td>about 2:00</td></tr>
 		<tr><td>4 · What's next</td><td>D · Han Phyo Htet</td><td>7, 8</td><td>about 2:00</td></tr>
 		<tr><td>5 · Conclusion</td><td>E · Saw Stephen Win</td><td>9 (then questions)</td><td>about 1:15</td></tr>
-		<tr><td colspan="3"><b>Total</b></td><td><b>about 12 minutes</b></td></tr>
+		<tr><td colspan="3"><b>Total</b></td><td><b>about 11 minutes</b></td></tr>
 	</table>
 	<p style="font-size:9.5pt;color:#5c5454;margin:6px 0 0">Times are at a calm speaking pace (about 130 words a minute). If your slot is shorter, skip the optional ▸ banner notes first, then shorten slides 3 and 4.</p>
 	<div class="box"><b>Before you start:</b> open <span class="mono">model-lab-library.vercel.app/present</span> on the classroom computer, wait for "Ready" under the start button, turn the sound on, and press <b>F</b> for full screen.</div>
@@ -135,24 +135,27 @@
 	<h2>Slides 5 and 6</h2>
 
 	<div class="slide">
-		<div class="head"><b>Slide 5 · Sea creature detector</b><span class="time">about 1:25</span></div>
+		<div class="head"><b>Slide 5 · Sea creature detector</b><span class="time">about 1:00</span></div>
 		<div class="say">
-			<p>Thank you, Bhone Pyae Hein. This part of the proposal asks for the expected result as a UI prototype. But as you can see, the label just changed from "expected" to <b>"built"</b>. This is already working, and the video on the right is a real screen capture of the live page.</p>
-			<p>This is our first model, the <b>sea creature detector</b>. You give it a photo, and it finds and boxes 14 kinds of sea creatures: fish, sharks, dolphins, sea turtles, penguins and more.</p>
-			<p>On 767 test photos it never saw, it scores <b>0.74 mAP at 50</b>. On aquarium photos, it does even better: <b>0.82</b>.</p>
-			<p>And here's the honest part. It mixes up seals and sea lions, and dolphins and whales, and it misses small fish that are far away. You can see real mistakes in the video: it calls a seal a sea lion, it calls a shark a plain fish, and in the school of fish it finds only 9 of the 23 fish.</p>
+			<p>Thank you, Bhone Pyae Hein.</p>
+			<p>This part of the proposal asks for the expected result. But our model is already built. The video on the right is a real recording of our website.</p>
+			<p>This is our first model, the <b>sea creature detector</b>. You give it a photo. It finds the sea animals and draws a box around each one. It knows 14 kinds of sea creatures, like fish, sharks, dolphins and sea turtles.</p>
+			<p>We tested it on 767 photos it had never seen. It scored <b>0.74 mAP</b>. On aquarium photos, it scored <b>0.82</b>.</p>
+			<p>It also makes mistakes. Sometimes it thinks a seal is a sea lion. Sometimes it calls a shark a fish. And it can miss small fish that are far away. You can see these mistakes in the video.</p>
 			<span class="press">SPACE</span>
 		</div>
 	</div>
 
 	<div class="slide">
-		<div class="head"><b>Slide 6 · Sound detective</b><span class="time">about 1:20</span></div>
+		<div class="head"><b>Slide 6 · Sound detective</b><span class="time">about 1:00</span></div>
 		<div class="say">
-			<p>Our second model is the <b>sound detective</b>. It listens for 17 everyday sounds, like a dog barking, a siren, glass breaking or knocking, and shows when each one happens on a timeline. You can record, upload a file, or let it listen live.</p>
-			<p>The video shows its real output for one of our samples, called "Two sounds at once". You can see it hearing speech, traffic and clapping at the same time, each with its confidence.</p>
-			<p>On 4,216 test clips, it scores <b>0.79 mean average precision</b>. We also made a design choice here: a bigger version scores 0.79 at 20.5 megabytes, and a smaller one scores 0.76 at 6.5 megabytes. We chose the more accurate one.</p>
-			<p>Its weak spots: the doorbell is its hardest sound, footsteps and car horns are also difficult, and the timing is still rough. It finds about half of the sounds within half a second of when they really start.</p>
-			<p>Now Han Phyo Htet will tell you what we're working on next.</p>
+			<p>Our second model is the <b>sound detective</b>. It listens to a recording and finds 17 everyday sounds, like a dog barking, a siren or glass breaking. It shows when each sound happens on a timeline.</p>
+			<p>You can record a sound, upload a file, or let it listen live.</p>
+			<p>In the video, it hears three sounds at the same time: speech, traffic and clapping.</p>
+			<p>We tested it on 4,216 sound clips. It scored <b>0.79 mAP</b>.</p>
+			<p>We had two versions. The bigger one scored 0.79, and the smaller one scored 0.76. We chose the bigger one because it is more accurate.</p>
+			<p>Its hardest sound is the doorbell. Footsteps and car horns are also difficult. The timing is not perfect yet.</p>
+			<p>Now, Han Phyo Htet will tell you what we are working on next.</p>
 			<span class="press">SPACE</span>
 		</div>
 	</div>
