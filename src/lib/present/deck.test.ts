@@ -15,7 +15,8 @@ it('clamps and ignores repeats', () => {
 	expect(step(9, 'next', 9)).toBe(9);
 	expect(step(0, 'prev', 9)).toBe(0);
 	expect(step(0, 'next', 9)).toBe(1);
-	expect(step(4, 'first', 9)).toBe(1);
+	expect(step(4, 'first', 9)).toBe(0); // Home goes to the cover
+	expect(step(1, 'prev', 9)).toBe(0); // back from slide 1 returns to the cover
 	expect(step(4, 'last', 9)).toBe(9);
 	expect(step(4, null, 9)).toBe(4);
 	expect(step(4, 'fullscreen', 9)).toBe(4);

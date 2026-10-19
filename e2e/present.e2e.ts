@@ -21,23 +21,19 @@ test('the gate shows the start button and the title', async ({ page }) => {
 	await expect(page).toHaveTitle('Presentation · AI Model Lab');
 });
 
-test('Space on the focused start button starts once', async ({ page }) => {
+test('Start opens the cover (name and motto, no intro video); Space then goes to slide 1', async ({ page }) => {
 	await page.goto('/present');
 	await page.getByRole('button', { name: '▶ Start the presentation' }).focus();
 	await page.keyboard.press('Space');
 	await at(page, 0);
-	await expect(page.locator('video.intro')).toBeVisible();
+	const cover = page.locator('section.cover[aria-current="step"]');
+	await expect(cover.getByRole('heading', { name: 'AI Model Lab' })).toBeVisible();
+	await expect(cover.getByText('Click it. Test it. See the result.')).toBeVisible();
+	await expect(page.locator('video.intro')).toHaveCount(0);
 	await page.keyboard.press('Space');
 	await at(page, 1);
-});
-
-test('the intro holds its last frame until a press', async ({ page }) => {
-	await start(page);
-	await page.locator('video.intro').dispatchEvent('ended');
-	await page.waitForTimeout(300);
+	await page.keyboard.press('ArrowUp');
 	await at(page, 0);
-	await page.keyboard.press('ArrowDown');
-	await at(page, 1);
 });
 
 test('arrows, PageUp/PageDown, Home and End move one slide', async ({ page }) => {
@@ -54,9 +50,9 @@ test('arrows, PageUp/PageDown, Home and End move one slide', async ({ page }) =>
 	await at(page, 9);
 	await expect(page.locator('section.slide[aria-current="step"] .counter')).toHaveText('LIVE 09 / 09');
 	await page.keyboard.press('Home');
-	await at(page, 1);
+	await at(page, 0);
 	await page.keyboard.press('ArrowLeft');
-	await at(page, 1);
+	await at(page, 0);
 });
 
 test('mashing Space never skips past the last slide', async ({ page }) => {
@@ -233,6 +229,14 @@ test.describe('on a phone', () => {
 			await page.goto(`/present#${n}`);
 			await expect(page.locator('section.slide[aria-current="step"] .banner')).toHaveAttribute('data-loop', loop);
 		}
+	});
+
+	test('tapping Start opens the cover', async ({ page }) => {
+		await page.goto('/present');
+		await expect(page.getByText('Ready')).toBeVisible({ timeout: 30_000 });
+		await page.getByRole('button', { name: '▶ Start the presentation' }).tap();
+		await at(page, 0);
+		await expect(page.locator('section.cover[aria-current="step"]')).toBeVisible();
 	});
 
 	test('swiping up on the start screen starts the presentation', async ({ page }) => {
