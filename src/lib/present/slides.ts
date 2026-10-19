@@ -28,7 +28,7 @@ export const slides: Slide[] = [
 	{
 		n: 1, act: 'I · THE LAB', tag: '§1 TOPIC & TEAM', presenter: 'A', layout: 'slant', loop: 'swarm',
 		kicker: 'AI CLASS · PROJECT PROPOSAL', title: 'AI Model', titleEm: 'Lab',
-		bullets: ['Click it. Test it. See the result.', ...team.map((p) => `${p.name} · ${p.role}`)]
+		bullets: ['Click it. Test it. See the result.', ...team.map((p) => `${p.name} (${p.id}) · ${p.role}`)]
 	},
 	{
 		n: 2, act: 'I · THE LAB', tag: '§2 SCOPE', presenter: 'A', layout: 'monitor', loop: 'boxes',
