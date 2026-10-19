@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Model Lab — Presentation guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+	@page { size: A4; margin: 15mm 16mm 14mm; }
+	* { box-sizing: border-box; }
+	body { font-family: Inter, system-ui, sans-serif; font-size: 10pt; line-height: 1.45; color: #161212; margin: 0; }
+	.mono { font-family: 'JetBrains Mono', monospace; }
+	.kick { color: #b3261e; letter-spacing: 0.18em; font-size: 8pt; margin: 0; }
+	h1 { font-family: 'Instrument Serif', serif; font-weight: 400; font-size: 30pt; line-height: 1; margin: 6px 0 2px; }
+	h1 em { color: #b3261e; }
+	.tag { font-family: 'Instrument Serif', serif; font-style: italic; font-size: 13pt; margin: 0 0 10px; color: #3a3434; }
+	h2 { font-size: 8.5pt; letter-spacing: 0.16em; text-transform: uppercase; color: #6e6565; margin: 14px 0 5px; font-weight: 600; }
+	table { width: 100%; border-collapse: collapse; }
+	td, th { padding: 4px 6px; border-bottom: 1px solid #ddd6d4; vertical-align: top; text-align: left; }
+	th { font-size: 7.5pt; letter-spacing: 0.12em; text-transform: uppercase; color: #6e6565; font-weight: 600; }
+	a { color: #b3261e; text-decoration: none; font-family: 'JetBrains Mono', monospace; }
+	.link { border: 2px solid #b3261e; border-radius: 6px; padding: 10px 14px; margin: 8px 0 4px; }
+	.link .big { font-size: 13pt; }
+	.link p { margin: 3px 0; }
+	.keys { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+	.keys div { background: #faf8f7; border-radius: 4px; padding: 8px 12px; }
+	.keys b { display: block; margin-bottom: 3px; }
+	kbd { font-family: 'JetBrains Mono', monospace; font-size: 8.5pt; background: #141213; color: #f3eeee; border-radius: 3px; padding: 0 5px; }
+	.note { font-size: 8.8pt; color: #5c5454; margin-top: 10px; }
+</style>
+</head>
+<body>
+	<p class="kick mono">AI CLASS · PROJECT PROPOSAL · GROUP 7 · 5 LAZY LADS</p>
+	<h1>AI Model <em>Lab</em></h1>
+	<p class="tag">Click it. Test it. See the result.</p>
+
+	<table>
+		<tr><th>Presenter</th><th>Student ID</th><th>Part</th><th>Slides</th></tr>
+		<tr><td>Aung Kyaw Phyo</td><td>6708142</td><td>The lab</td><td>Intro, 1–2</td></tr>
+		<tr><td>Bhone Pyae Hein</td><td>6708463</td><td>The making</td><td>3–4</td></tr>
+		<tr><td>Phone Sett Paing Kyaw</td><td>6708369</td><td>The models</td><td>5–6</td></tr>
+		<tr><td>Han Phyo Htet</td><td>6708463</td><td>What's next</td><td>7–8</td></tr>
+		<tr><td>Saw Stephen Win</td><td>6708566</td><td>Conclusion</td><td>9</td></tr>
+	</table>
+
+	<h2>Open the presentation</h2>
+	<div class="link">
+		<p class="big"><b>Presentation:</b> <a href="https://model-lab-library.vercel.app/present">model-lab-library.vercel.app/present</a></p>
+		<p><b>Try the working models:</b> <a href="https://model-lab-library.vercel.app">model-lab-library.vercel.app</a></p>
+	</div>
+	<p class="note" style="margin-top:4px">It opens in any modern browser, with nothing to install. The slides are part of our project's own website.</p>
+
+	<h2>How to move through it</h2>
+	<div class="keys">
+		<div><b>On a computer</b>Press <kbd>Space</kbd> or click <b>Start</b>: a 21-second intro video plays (sound on). Then <kbd>Space</kbd> / <kbd>↓</kbd> / <kbd>→</kbd> for the next slide, <kbd>↑</kbd> / <kbd>←</kbd> to go back, <kbd>F</kbd> for full screen.</div>
+		<div><b>On a phone</b>Tap <b>Start</b> or swipe up to begin. <b>Swipe up</b> for the next slide, <b>swipe down</b> to go back. On the last slide, scan the QR code to open the live models.</div>
+	</div>
+
+	<h2>What each slide covers</h2>
+	<table>
+		<tr><th>#</th><th>Slide</th><th>Proposal section</th></tr>
+		<tr><td>1</td><td>AI Model Lab: topic and team</td><td>§1 Topic &amp; team</td></tr>
+		<tr><td>2</td><td>What the lab does</td><td>§2 Scope / functions</td></tr>
+		<tr><td>3</td><td>How the models learn: supervised learning, transfer learning, a frozen test set</td><td>§3 Techniques</td></tr>
+		<tr><td>4</td><td>How they predict and how we measure: object detection, thresholds, mAP and F1, running on the device</td><td>§4 Techniques</td></tr>
+		<tr><td>5</td><td>Sea creature detector: real UI, 0.74 mAP@50 on 767 test photos</td><td>§5 Result / UI prototype</td></tr>
+		<tr><td>6</td><td>Sound detective: real UI, 0.79 mAP on 4,216 test clips</td><td>§6 Result / UI prototype</td></tr>
+		<tr><td>7</td><td>RAG assistants: built, still being tested</td><td>Extra</td></tr>
+		<tr><td>8</td><td>What's coming next</td><td>Extra</td></tr>
+		<tr><td>9</td><td>What we built, references, QR code to the live site</td><td>§7 Conclusion &amp; references</td></tr>
+	</table>
+
+	<p class="note">Every number in the presentation is measured on test data the models never saw during training. Each model's page on the site also shows where it fails.</p>
+</body>
+</html>
