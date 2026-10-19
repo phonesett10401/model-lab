@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Model Lab — AI tools used</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+	@page { size: A4; margin: 13mm 15mm 12mm; }
+	* { box-sizing: border-box; }
+	body { font-family: Inter, system-ui, sans-serif; font-size: 9.3pt; line-height: 1.35; color: #161212; margin: 0; }
+	.mono { font-family: 'JetBrains Mono', monospace; }
+	.kick { color: #b3261e; letter-spacing: 0.18em; font-size: 8pt; margin: 0; }
+	h1 { font-family: 'Instrument Serif', serif; font-weight: 400; font-size: 28pt; line-height: 1; margin: 6px 0 4px; }
+	h1 em { color: #b3261e; }
+	.sub { color: #5c5454; margin: 0 0 10px; }
+	h2 { font-size: 8.5pt; letter-spacing: 0.16em; text-transform: uppercase; color: #6e6565; margin: 11px 0 3px; font-weight: 600; }
+	table { width: 100%; border-collapse: collapse; }
+	td { padding: 3.5px 6px; border-bottom: 1px solid #ddd6d4; vertical-align: top; }
+	td:first-child { width: 31%; font-weight: 600; }
+	td:nth-child(2) { width: 37%; }
+	a { color: #b3261e; text-decoration: none; word-break: break-all; font-family: 'JetBrains Mono', monospace; font-size: 8.3pt; }
+	.team { font-size: 9pt; color: #3a3434; margin: 0 0 6px; }
+	.links { margin-top: 4px; padding: 8px 12px; border: 1px solid #b3261e; border-radius: 4px; }
+	.links p { margin: 2px 0; }
+</style>
+</head>
+<body>
+	<p class="kick mono">AI CLASS · PROJECT PROPOSAL</p>
+	<h1>AI Model <em>Lab</em> · AI tools used</h1>
+	<p class="team">Aung Kyaw Phyo (6708142) · Bhone Pyae Hein (6708463) · Phone Sett Paing Kyaw (6708369) · Han Phyo Htet (6708463) · Saw Stephen Win (6708566)</p>
+
+	<div class="links">
+		<p><b>Live project:</b> <a href="https://model-lab-library.vercel.app">https://model-lab-library.vercel.app</a></p>
+		<p><b>Presentation:</b> <a href="https://model-lab-library.vercel.app/present">https://model-lab-library.vercel.app/present</a></p>
+		<p><b>Source code:</b> <a href="https://github.com/phonesett10401/model-lab">https://github.com/phonesett10401/model-lab</a></p>
+	</div>
+
+	<h2>AI models in the lab</h2>
+	<table>
+		<tr><td>YOLO26 Nano (Ultralytics)</td><td>Sea creature detector (object detection)</td><td><a href="https://github.com/ultralytics/ultralytics">github.com/ultralytics/ultralytics</a></td></tr>
+		<tr><td>EfficientAT (MobileNet mn10)</td><td>Sound detective (audio tagging)</td><td><a href="https://github.com/fschmid56/EfficientAT">github.com/fschmid56/EfficientAT</a></td></tr>
+		<tr><td>Qwen2.5-1.5B-Instruct</td><td>Writes the RAG assistants' answers</td><td><a href="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct">huggingface.co/Qwen/Qwen2.5-1.5B-Instruct</a></td></tr>
+		<tr><td>snowflake-arctic-embed-s</td><td>Finds the right document passages for the RAG assistants</td><td><a href="https://huggingface.co/Snowflake/snowflake-arctic-embed-s">huggingface.co/Snowflake/snowflake-arctic-embed-s</a></td></tr>
+	</table>
+
+	<h2>AI frameworks for training and running</h2>
+	<table>
+		<tr><td>PyTorch</td><td>Training both models</td><td><a href="https://pytorch.org">pytorch.org</a></td></tr>
+		<tr><td>Ultralytics</td><td>Training and evaluating the detector</td><td><a href="https://docs.ultralytics.com">docs.ultralytics.com</a></td></tr>
+		<tr><td>ONNX / ONNX Runtime Web</td><td>Running the two models in the browser, on the device</td><td><a href="https://onnxruntime.ai">onnxruntime.ai</a></td></tr>
+		<tr><td>WebLLM (MLC)</td><td>Running the RAG assistants in the browser</td><td><a href="https://github.com/mlc-ai/web-llm">github.com/mlc-ai/web-llm</a></td></tr>
+	</table>
+
+	<h2>AI used while preparing the data</h2>
+	<table>
+		<tr><td>OpenCLIP</td><td>Photo-data pipeline (filtering step)</td><td><a href="https://github.com/mlfoundations/open_clip">github.com/mlfoundations/open_clip</a></td></tr>
+		<tr><td>AudioSet-pretrained model (EfficientAT)</td><td>Double-checked extra sound clips before training</td><td><a href="https://research.google.com/audioset/">research.google.com/audioset</a></td></tr>
+	</table>
+
+	<h2>AI assistant used to build the project</h2>
+	<table>
+		<tr><td>Claude Code (Anthropic)</td><td>Helped write the site, training scripts and presentation deck</td><td><a href="https://claude.com/claude-code">claude.com/claude-code</a></td></tr>
+	</table>
+
+	<h2>Datasets the models learned from</h2>
+	<table>
+		<tr><td>Open Images V7 (CC BY 2.0)</td><td>Sea creature photos</td><td><a href="https://storage.googleapis.com/openimages/web/index.html">storage.googleapis.com/openimages/web</a></td></tr>
+		<tr><td>Aquarium Combined (Roboflow, CC BY 4.0)</td><td>Sea creature photos</td><td><a href="https://universe.roboflow.com">universe.roboflow.com</a></td></tr>
+		<tr><td>FSD50K and Freesound (CC0 / CC BY)</td><td>Sound clips</td><td><a href="https://zenodo.org/records/4060432">zenodo.org/records/4060432</a> · <a href="https://freesound.org">freesound.org</a></td></tr>
+	</table>
+</body>
+</html>
