@@ -9,4 +9,6 @@ export type TranslateReply =
 	| { ok: true; lines: GotLine[]; model: string }
 	| { ok: false; error: 'bad-request' | 'forbidden' | 'quota' | 'upstream' };
 
+export type LineProblem = 'missing' | 'not-burmese' | 'zawgyi' | 'length';
+
 export interface ServerEnv { key: string; model: string; tier: 'free' | 'paid' }

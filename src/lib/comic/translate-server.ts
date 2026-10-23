@@ -1,4 +1,4 @@
-import type { GotLine, RegionClass, SentLine, ServerEnv, Speaker, TranslateReply } from './types';
+import type { GotLine, RegionClass, SentLine, ServerEnv, Speaker, TranslateReply } from './types.ts';
 
 export const LIMITS = { maxLines: 200, maxLineChars: 500, maxBodyBytes: 20_000 };
 
