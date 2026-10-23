@@ -40,6 +40,16 @@ Last updated: 2026-10-09. Owner: Phone Sett (GitHub `phonesett10401`, private re
 - Shareable project overview for contributors: artifact https://claude.ai/artifact/7T9D5mvDGx1oYb8yJqEPF5 and `Downloads/AI-Model-Lab-Overview.pdf` on the owner's laptop.
 - Specs and plans: `docs/superpowers/specs/*`, `docs/superpowers/plans/*`.
 
+## Comic translator (English → Burmese, for MandaX) — plan 1 built on `claude/friendly-shaw-952d0e`, not merged
+
+- Spec `docs/superpowers/specs/2026-10-24-comic-translator-design.md`; plan 1 `docs/superpowers/plans/2026-10-24-comic-translator-1-translate-page.md`. Next: plan 2 (data, labelling, train an Apache-2.0/MIT detector, **not** Ultralytics), plan 3 (detector + OCR in the page, examples, report card, home link).
+- Page `/comic-translator` (`noindex`, not linked yet): open an image or PDF (≤ 50 pages, pdf.js loads only for PDFs), drag boxes, type English, pick speaker/kind, "Translate page", Burmese is checked (missing / not Burmese / Zawgyi / odd length), lettered in Noto Sans Myanmar, "Download PNG". Only the numbered text goes to `/api/translate`; the yellow box shows exactly what is sent.
+- Code: `src/lib/comic/` (pure logic, unit-tested), `src/lib/components/ComicTranslator.svelte`, Vercel function `api/translate.ts` (dev: same handler mounted in `vite.config.ts`). Same-site origin only, text only, 20 kB cap.
+- Env: `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-3.5-flash`), `GEMINI_TIER` (`free`|`paid`) in `.env` (git-ignored; template `.env.example`) and in Vercel. Key check: `node --env-file=.env scripts/check-gemini.mjs` (never prints the key). **Free tier = public-domain / openly licensed pages only; switch to paid before any real artist's page.**
+- Tests: `src/lib/comic/*.test.ts`; `e2e/comic.e2e.ts` fakes `/api/translate` (`e2e/comic-fake.ts`). Run e2e on another port while 4173 is busy: `$env:E2E_PORT=4180`.
+- Known limits: the browser's Burmese word breaker sometimes splits compounds (ပင်ပန်း → ပင် / ပန်း); overlong words break at syllables; a box drawn short of the English leaves bits visible.
+- Vercel builds `api/translate.ts` next to the static site: checked on the PR preview 2026-10-24 (`GET /api/translate` → `{"model":"gemini-3.5-flash","tier":"free"}`); the three env vars are set in Vercel for Production + Preview.
+
 ## RAG assistants (research targets)
 
 - Pages `/assistant/raffel-luo` and `/assistant/pathum-rai` (live, `noindex`; `/assistant` forwards to the home page). In-browser RAG chat, WebLLM 0.2.85, Qwen2.5-1.5B-Instruct q4f16_1 + snowflake-arctic-embed-s. Role switch (not a real login), v0 = access rule in the prompt only, a "What it read" panel that turns restricted documents red. Settings per assistant in `src/lib/assistant/assistants.ts`; page body `src/lib/components/AssistantChat.svelte`; home card `AssistantCard.svelte`. Specs `docs/superpowers/specs/2026-10-09-uofl-rag-assistant-design.md` and `2026-10-09-rag-assistants-pathum-rai-design.md`; plans in `docs/superpowers/plans/`.

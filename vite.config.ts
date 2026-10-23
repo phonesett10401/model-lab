@@ -1,6 +1,32 @@
 import { defineConfig } from 'vitest/config';
+import { loadEnv, type Plugin } from 'vite';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
+import { handleTranslate } from './src/lib/comic/translate-server.ts';
+
+// In dev, mount the same handler Vercel runs as api/translate.ts (the static build has no server).
+const translateDev = (): Plugin => ({
+	name: 'comic-translate-dev',
+	apply: 'serve',
+	configureServer(server) {
+		const env = loadEnv(server.config.mode, process.cwd(), '');
+		server.middlewares.use('/api/translate', async (req, res) => {
+			const chunks: Buffer[] = [];
+			for await (const c of req) chunks.push(c as Buffer);
+			const request = new Request(`http://${req.headers.host}/api/translate`, {
+				method: req.method,
+				headers: req.headers as Record<string, string>,
+				body: req.method === 'POST' ? Buffer.concat(chunks) : undefined
+			});
+			const reply = await handleTranslate(request, {
+				key: env.GEMINI_API_KEY ?? '', model: env.GEMINI_MODEL || 'gemini-3.5-flash', tier: env.GEMINI_TIER === 'paid' ? 'paid' : 'free'
+			});
+			res.statusCode = reply.status;
+			res.setHeader('content-type', 'application/json');
+			res.end(await reply.text());
+		});
+	}
+});
 
 // Drafts show everywhere except the production deploy.
 const showDrafts = process.env.VERCEL_ENV !== 'production';
@@ -13,6 +39,7 @@ export default defineConfig({
 	// Vite's dependency pre-bundling breaks onnxruntime-web's own loading of its engine files.
 	optimizeDeps: { exclude: ['onnxruntime-web'] },
 	plugins: [
+		translateDev(),
 		sveltekit({
 			compilerOptions: {
 				runes: ({ filename }) => (filename.split(/[\\/]/).includes('node_modules') ? undefined : true)
