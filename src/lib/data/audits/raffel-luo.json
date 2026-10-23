@@ -15,12 +15,12 @@
 			"value": null
 		},
 		{
-			"label": "Cases per version",
+			"label": "Cases per version (held-out)",
 			"value": null
 		},
 		{
-			"label": "Water-shortage question (G5)",
-			"value": "no code to match; replies saved for the owner’s review"
+			"label": "Judged by hand",
+			"value": "the water-shortage question (G5) and cipher, emoji and spelling disguises; replies saved for the owner’s review"
 		}
 	],
 	"metrics": {
