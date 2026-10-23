@@ -74,9 +74,9 @@ test('RAG assistants have their own group, a card, and open their page', async (
 	await expect(page).toHaveURL(/\/assistant\/pathum-rai$/);
 });
 
-test('a shared link opens an assistant card; nothing downloads from the home page', async ({ page }) => {
+test('a shared link opens an assistant card; nothing downloads from the home page', async ({ page, baseURL }) => {
 	const offsite: string[] = [];
-	page.on('request', (r) => { if (!r.url().startsWith('http://localhost:4173')) offsite.push(r.url()); });
+	page.on('request', (r) => { if (!r.url().startsWith(baseURL!)) offsite.push(r.url()); });
 	await page.goto('/?entry=raffel-luo');
 	await expect(page.locator('[data-bench-title]')).toHaveText('University of Raffel Luo assistant');
 	await page.waitForLoadState('networkidle');

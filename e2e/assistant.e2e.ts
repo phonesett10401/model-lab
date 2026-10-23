@@ -5,9 +5,9 @@ import { askFake, releaseChat, releaseLoad, startFake, useFakeEngine } from './a
 
 const log = (page: import('@playwright/test').Page) => page.locator('.log li');
 
-test('shows the notice and version, and downloads nothing before Start', async ({ page }) => {
+test('shows the notice and version, and downloads nothing before Start', async ({ page, baseURL }) => {
 	const offsite: string[] = [];
-	page.on('request', (r) => { if (!r.url().startsWith('http://localhost:4173')) offsite.push(r.url()); });
+	page.on('request', (r) => { if (!r.url().startsWith(baseURL!)) offsite.push(r.url()); });
 	await page.goto('/assistant/raffel-luo');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('University of Raffel Luo assistant');
 	await expect(page.locator('.assistant')).toHaveAttribute('data-assistant', 'raffel-luo');
