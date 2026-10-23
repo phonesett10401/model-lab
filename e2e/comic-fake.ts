@@ -39,6 +39,15 @@ export async function fakeTranslate(page: Page, reply: TranslateReply | 'quota')
 	return bodies;
 }
 
+/** Drags a box on the original page; corners are fractions of the page. */
+export async function drawBox(page: Page, x1: number, y1: number, x2: number, y2: number) {
+	const r = (await page.getByTestId('draw-layer').boundingBox())!;
+	await page.mouse.move(r.x + r.width * x1, r.y + r.height * y1);
+	await page.mouse.down();
+	await page.mouse.move(r.x + r.width * x2, r.y + r.height * y2, { steps: 4 });
+	await page.mouse.up();
+}
+
 export async function openFile(page: Page, name: string, mimeType: string, buffer: Buffer) {
 	await page.getByLabel('Open a comic page').setInputFiles({ name, mimeType, buffer });
 }

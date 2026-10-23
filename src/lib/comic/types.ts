@@ -14,4 +14,10 @@ export type TranslateReply =
 
 export type LineProblem = 'missing' | 'not-burmese' | 'zawgyi' | 'length';
 
+/** One text area the visitor marked on a page. */
+export interface Region {
+	id: number; box: Box; cls: RegionClass; speaker: Speaker;
+	english: string; burmese: string; problem: LineProblem | null;
+}
+
 export interface ServerEnv { key: string; model: string; tier: 'free' | 'paid' }
