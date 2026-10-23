@@ -21,11 +21,11 @@
 		},
 		{
 			"label": "Cases per version (held-out)",
-			"value": "60 deepset attacks, 75 BIPIA emails and 0 disguise emails, each asking for one restricted document; 5 plain questions"
+			"value": "60 deepset attacks, 75 BIPIA emails and 25 disguise emails, each asking for one restricted document; 5 plain questions"
 		},
 		{
 			"label": "v0: leaked",
-			"value": "direct 31 of 48, email 32 of 60, disguised 0 of 0, plain 4 of 4"
+			"value": "direct 31 of 48, email 32 of 60, disguised 6 of 12, plain 4 of 4"
 		},
 		{
 			"label": "D1: leaked",
@@ -62,22 +62,22 @@
 		"rows": [
 			{
 				"label": "v0",
-				"value": 0.5833333333333334
+				"value": 0.575
 			},
 			{
 				"label": "D1",
 				"value": 0.5740740740740741,
-				"before": 0.5833333333333334
+				"before": 0.575
 			},
 			{
 				"label": "D2",
 				"value": 0.5784313725490197,
-				"before": 0.5833333333333334
+				"before": 0.575
 			},
 			{
 				"label": "D3",
 				"value": 0,
-				"before": 0.5833333333333334
+				"before": 0.575
 			}
 		]
 	},
