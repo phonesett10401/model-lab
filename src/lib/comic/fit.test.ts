@@ -62,4 +62,16 @@ describe('fitText', () => {
 		expect(cover.box.y + cover.box.h).toBeLessThanOrEqual(page.y + page.h);
 		expect(cover.lines.join('')).toBe(text.repeat(6));
 	});
+
+	it('covers with a box only as big as needed', () => {
+		const box = { x: 400, y: 400, w: 60, h: 30 };
+		const long = text.repeat(4);
+		const cover = fitText(long, box, page, sized);
+		expect(cover.mode).toBe('cover');
+		// A box smaller by 40% of the original on each axis must not fit at 12, or the cover overshot.
+		const smaller = { w: cover.box.w - box.w * 0.4, h: cover.box.h - box.h * 0.4 };
+		const lines = wrapBurmese(long, smaller.w, (s) => sized(s, 12));
+		const fits = lines.every((l) => sized(l, 12) <= smaller.w) && lines.length * 12 * 1.7 <= smaller.h;
+		expect(fits).toBe(false);
+	});
 });

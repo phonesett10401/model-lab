@@ -61,7 +61,8 @@ export function fitText(
 		if (r) return { ...r, box: b, mode: 'grown' };
 	}
 	let b = box;
-	for (let by = 0.3; ; by *= 2) {
+	// Small steps, so the covering box is only as big as the text needs and hides as little art as possible.
+	for (let by = 0.3; ; by += 0.15) {
 		const next = grow(box, by, page);
 		const r = lay(next, minSize);
 		const stuck = next.w === b.w && next.h === b.h;
