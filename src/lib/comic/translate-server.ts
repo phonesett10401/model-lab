@@ -29,6 +29,7 @@ export function buildPrompt(lines: SentLine[]): { system: string; user: string }
 		'You translate English comic text into natural spoken Burmese for comic readers.',
 		'The lines are one comic page in reading order. Each has a number, a speaker and a kind of text.',
 		'Make endings fit the speaker: a polite man ends with ခင်ဗျာ, a polite woman with ရှင်; friends talk casually.',
+		'Keep each line short, like real comic dialogue: about as long as the English where you can, so it fits the speech bubble.',
 		'Translate sound effects (sfx) as Burmese sound words. Keep names as names.',
 		'Write Myanmar Unicode only, never Zawgyi.',
 		'Reply with JSON only, exactly {"lines":[{"n":<number>,"text":"<Burmese>"}]}, with the same numbers you were given, one entry each.'

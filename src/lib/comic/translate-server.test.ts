@@ -48,6 +48,7 @@ describe('buildPrompt', () => {
 		expect(p.system).toContain('ခင်ဗျာ');
 		expect(p.system).toContain('ရှင်');
 		expect(p.system).toContain('{"lines":[{"n":');
+		expect(p.system).toContain('short');
 	});
 });
 

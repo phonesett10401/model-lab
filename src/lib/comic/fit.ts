@@ -26,6 +26,12 @@ export function wrapBurmese(text: string, maxWidth: number, measure: (s: string)
 	return lines;
 }
 
+/** Font sizes in page pixels, scaled to the page: a 600 px scan and a 1600 px page should look alike. */
+export function fontRange(pageWidth: number): { minSize: number; maxSize: number } {
+	const minSize = Math.max(10, Math.round(pageWidth * 0.012));
+	return { minSize, maxSize: Math.max(minSize, Math.round(pageWidth * 0.03)) };
+}
+
 function grow(box: Box, by: number, page: Box): Box {
 	const x = Math.max(page.x, box.x - box.w * by);
 	const y = Math.max(page.y, box.y - box.h * by);

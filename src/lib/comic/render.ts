@@ -1,5 +1,5 @@
 import { eraseStyle } from './erase.ts';
-import { fitText } from './fit.ts';
+import { fitText, fontRange } from './fit.ts';
 import type { Region } from './types.ts';
 
 const FONT = '"Noto Sans Myanmar"';
@@ -10,7 +10,7 @@ const LINE_HEIGHT = 1.7;
 export async function renderPage(
 	ctx: CanvasRenderingContext2D, page: ImageBitmap, regions: Region[]
 ): Promise<{ fit: number; grown: number; cover: number }> {
-	await document.fonts.load(`28px ${FONT}`, 'မ');
+	await document.fonts.load(`16px ${FONT}`, 'မ');
 	const counts = { fit: 0, grown: 0, cover: 0 };
 	const full = { x: 0, y: 0, w: page.width, h: page.height };
 	ctx.drawImage(page, 0, 0);
@@ -25,7 +25,7 @@ export async function renderPage(
 			ctx.font = `${size}px ${FONT}`;
 			return ctx.measureText(s).width;
 		};
-		const fit = fitText(text, inner, full, measure, { lineHeight: LINE_HEIGHT });
+		const fit = fitText(text, inner, full, measure, { ...fontRange(page.width), lineHeight: LINE_HEIGHT });
 		counts[fit.mode]++;
 
 		if (erase.mode === 'fill' && fit.mode !== 'cover') {

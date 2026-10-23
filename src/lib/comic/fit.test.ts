@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitText, wrapBurmese } from './fit';
+import { fitText, fontRange, wrapBurmese } from './fit';
 
 const graphemes = (s: string) => [...new Intl.Segmenter('my', { granularity: 'grapheme' }).segment(s)].map((g) => g.segment);
 const words = (s: string) => [...new Intl.Segmenter('my', { granularity: 'word' }).segment(s)].map((w) => w.segment);
@@ -73,5 +73,12 @@ describe('fitText', () => {
 		const lines = wrapBurmese(long, smaller.w, (s) => sized(s, 12));
 		const fits = lines.every((l) => sized(l, 12) <= smaller.w) && lines.length * 12 * 1.7 <= smaller.h;
 		expect(fits).toBe(false);
+	});
+});
+
+describe('fontRange', () => {
+	it('scales the font sizes with the page width', () => {
+		expect(fontRange(600)).toEqual({ minSize: 10, maxSize: 18 });
+		expect(fontRange(1600)).toEqual({ minSize: 19, maxSize: 48 });
 	});
 });
