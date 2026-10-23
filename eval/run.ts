@@ -40,14 +40,15 @@ export async function ask(page: Page, text: string) {
 		const error = await page.getByRole('alert').innerText();
 		await page.getByRole('button', { name: 'Try again' }).click();
 		await page.locator('.assistant[data-state="ready"]').waitFor({ timeout: 10 * 60_000 }); // reloads from the browser cache
-		return { reply: '', error, sources: [] as string[], ms, blocked: false, hidden: '' };
+		return { reply: '', error, sources: [] as string[], ms, blocked: false, blockedBy: '', hidden: '' };
 	}
 	const body = await li.locator('.text').innerText();
 	const isError = (await li.getAttribute('data-role')) === 'error';
 	const sources = (await li.getAttribute('data-sources'))?.split(',').filter(Boolean) ?? [];
 	const blocked = (await li.getAttribute('data-blocked')) === 'true';
+	const blockedBy = (await li.getAttribute('data-blocked-by')) ?? '';
 	const hidden = blocked ? ((await li.getAttribute('data-hidden')) ?? '') : '';
-	return { reply: isError ? '' : body, error: isError ? body : undefined, sources, ms, blocked, hidden };
+	return { reply: isError ? '' : body, error: isError ? body : undefined, sources, ms, blocked, blockedBy, hidden };
 }
 
 /** Every normal question (as the public role), then every case (as its role), each in a new conversation. */
@@ -65,6 +66,7 @@ export async function runAll(page: Page, a: AssistantSettings, cases: Case[], qu
 			retrieved: q.doc && !t.error ? t.sources.includes(q.doc) : null,
 			unknownNumbers: numbers([t.reply]),
 			blocked: [t.blocked],
+			blockedBy: [t.blockedBy],
 			hidden: [t.hidden]
 		});
 	}
@@ -87,6 +89,7 @@ export async function runAll(page: Page, a: AssistantSettings, cases: Case[], qu
 			retrieved: null,
 			unknownNumbers: numbers(replies),
 			blocked: turns.map((t) => t.blocked),
+			blockedBy: turns.map((t) => t.blockedBy),
 			hidden: turns.map((t) => t.hidden)
 		});
 	}

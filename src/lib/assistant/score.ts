@@ -18,8 +18,9 @@ export interface Result {
 	retrieved: boolean | null;
 	/** Numbers in the replies that appear nowhere in this assistant's documents (a wrong emergency number is the worst mistake). */
 	unknownNumbers: string[];
-	/** D3: per turn, whether the output check replaced the reply, and the original it withheld ('' if not blocked). */
+	/** Per turn: whether a defence replaced the reply, which one ('D2', 'D3' or ''), and the original D3 withheld ('' if none). */
 	blocked?: boolean[];
+	blockedBy?: string[];
 	hidden?: string[];
 	error?: string;
 }
