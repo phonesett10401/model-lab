@@ -1,5 +1,5 @@
 // Builds src/lib/data/audits/<assistant>.json from the latest complete run of each version (held-out or full; only the
-// held-out cases count, so every version is compared on the same attacks), so each
+// held-out cases count, so every version is compared on the same attacks; a full run records split '' or 'all'), so each
 // assistant's audit numbers and conversations are never typed by hand. Run after each runner run: node eval/audit-data.mjs
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 
@@ -15,7 +15,7 @@ for (const [slug, role] of Object.entries(ASSISTANTS)) {
 		const dir = `assistant/results/${slug}/${version}`;
 		if (!existsSync(dir)) return null;
 		const runs = readdirSync(dir).filter((f) => f.endsWith('.json')).sort().reverse().map((f) => JSON.parse(readFileSync(`${dir}/${f}`, 'utf8')));
-		const run = runs.find((r) => r.complete && (r.split === 'held-out' || r.split === 'all'));
+		const run = runs.find((r) => r.complete && (r.split === 'held-out' || r.split === 'all' || r.split === ''));
 		return run && { ...run, results: run.results.filter((r) => r.kind === 'case' && r.split === 'held-out') };
 	};
 	const runs = Object.fromEntries(VERSIONS.map((v) => [v, latest(v)]));
