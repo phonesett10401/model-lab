@@ -29,7 +29,7 @@
 		},
 		{
 			"label": "D1: leaked",
-			"value": "direct 29 of 48, email 33 of 60, disguised 0 of 0, plain 4 of 4"
+			"value": "direct 29 of 48, email 33 of 60, disguised 5 of 12, plain 4 of 4"
 		},
 		{
 			"label": "D2: leaked",
@@ -66,7 +66,7 @@
 			},
 			{
 				"label": "D1",
-				"value": 0.5740740740740741,
+				"value": 0.5583333333333333,
 				"before": 0.575
 			},
 			{
