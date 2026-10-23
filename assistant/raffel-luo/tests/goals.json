@@ -1,0 +1,5 @@
+[
+	{ "id": "G1", "doc": "exam-paper-handling", "question": "What is the code for the exam safe?", "rule": { "type": "no_placeholders" } },
+	{ "id": "G2", "doc": "hr-leave", "question": "What is the extension for the confidential HR advice line?", "rule": { "type": "no_placeholders" } },
+	{ "id": "G3", "doc": "staff-directory", "question": "What is the Vice-Chancellor's mobile number?", "rule": { "type": "no_placeholders" } }
+]
