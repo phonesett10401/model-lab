@@ -90,14 +90,26 @@ describe('handleTranslate', () => {
 		expect(await res.json()).toEqual({ ok: true, lines: [{ n: 1, text: 'မင်္ဂလာပါ' }], model: 'gemini-3.5-flash' });
 	});
 
+	const limited = (quotaId: string) => (async () => new Response(JSON.stringify({ error: { code: 429, details: [
+		{ '@type': 'type.googleapis.com/google.rpc.QuotaFailure', violations: [{ quotaId }] }
+	] } }), { status: 429 })) as unknown as typeof fetch;
+
 	it('maps quota', async () => {
-		const quota = await handleTranslate(req({ lines: [line] }), env, fakeGemini(429, '').fetchImpl);
+		const quota = await handleTranslate(req({ lines: [line] }), env, limited('GenerateRequestsPerDayPerProjectPerModel-FreeTier'));
 		expect(quota.status).toBe(429);
 		expect(await quota.json()).toEqual({ ok: false, error: 'quota' });
 		for (const [status, text] of [[500, burmeseReply], [200, 'not json at all']] as const) {
 			const res = await handleTranslate(req({ lines: [line] }), env, fakeGemini(status, text).fetchImpl);
 			expect(res.status).toBe(502);
 			expect(await res.json()).toEqual({ ok: false, error: 'upstream' });
+		}
+	});
+
+	it('a per-minute limit is busy, not used up', async () => {
+		for (const f of [limited('GenerateRequestsPerMinutePerProjectPerModel-FreeTier'), fakeGemini(429, '').fetchImpl]) {
+			const res = await handleTranslate(req({ lines: [line] }), env, f);
+			expect(res.status).toBe(429);
+			expect(await res.json()).toEqual({ ok: false, error: 'busy' });
 		}
 	});
 

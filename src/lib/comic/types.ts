@@ -10,7 +10,7 @@ export interface GotLine { n: number; text: string }
 
 export type TranslateReply =
 	| { ok: true; lines: GotLine[]; model: string }
-	| { ok: false; error: 'bad-request' | 'forbidden' | 'quota' | 'upstream' };
+	| { ok: false; error: 'bad-request' | 'forbidden' | 'quota' | 'busy' | 'upstream' };
 
 export type LineProblem = 'missing' | 'not-burmese' | 'zawgyi' | 'length';
 

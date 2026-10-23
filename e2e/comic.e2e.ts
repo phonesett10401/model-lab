@@ -197,3 +197,42 @@ test('fits a phone', async ({ page }) => {
 	await translated(page);
 	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
 });
+
+test('releases old pages and PDF workers', async ({ page, browserName }) => {
+	test.skip(browserName !== 'chromium', 'PDFs are made with Chromium print');
+	await page.addInitScript(() => {
+		const close = ImageBitmap.prototype.close;
+		(window as any).__closed = 0;
+		ImageBitmap.prototype.close = function () { (window as any).__closed++; return close.call(this); };
+	});
+	await page.reload();
+	const workers: import('@playwright/test').Worker[] = [];
+	page.on('worker', (w) => workers.push(w));
+	await openFile(page, 'a.pdf', 'application/pdf', await comicPdf(page, 3));
+	await page.getByRole('button', { name: 'Next page' }).click();
+	await expect(page.getByText('Page 2 of 3')).toBeVisible();
+	await page.getByRole('button', { name: 'Next page' }).click();
+	await expect(page.getByText('Page 3 of 3')).toBeVisible();
+	await expect.poll(() => page.evaluate(() => (window as any).__closed)).toBeGreaterThanOrEqual(2);
+	const first = workers[0];
+	const closed = new Promise((r) => first.once('close', r));
+	await openFile(page, 'b.pdf', 'application/pdf', await comicPdf(page, 2));
+	await expect(page.getByText('Page 1 of 2')).toBeVisible();
+	await closed;
+});
+
+test('a failed load says so', async ({ page, browserName }) => {
+	test.skip(browserName !== 'chromium', 'PDFs are made with Chromium print');
+	// Like a stale deploy: any script fetched after the page loaded fails, so pdf.js can't load.
+	await page.waitForLoadState('networkidle');
+	await page.route(/\/_app\/.*\.m?js$/, (r) => r.abort());
+	await openFile(page, 'a.pdf', 'application/pdf', await comicPdf(page, 2));
+	await expect(page.getByRole('alert')).toHaveText('That file couldn’t be opened. Try again.');
+});
+
+test('busy says a minute', async ({ page }) => {
+	await fakeTranslate(page, { ok: false, error: 'busy' });
+	await setUp(page);
+	await page.getByRole('button', { name: 'Translate page' }).click();
+	await expect(page.getByRole('alert')).toHaveText('Busy right now. Try again in a minute.');
+});

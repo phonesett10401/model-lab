@@ -54,6 +54,12 @@ export function parseGemini(json: unknown): GotLine[] | null {
 	}
 }
 
+/** True when a Gemini 429 names a per-day quota (google.rpc.QuotaFailure). */
+function perDay(body: unknown): boolean {
+	const details = (body as { error?: { details?: { violations?: { quotaId?: string }[] }[] } })?.error?.details ?? [];
+	return details.some((d) => d.violations?.some((v) => v.quotaId?.includes('PerDay')));
+}
+
 const reply = (body: TranslateReply | { model: string; tier: string }, status = 200) =>
 	new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
@@ -97,7 +103,8 @@ export async function handleTranslate(req: Request, env: ServerEnv, fetchImpl: t
 	} catch {
 		return reply({ ok: false, error: 'upstream' }, 502);
 	}
-	if (res.status === 429) return reply({ ok: false, error: 'quota' }, 429);
+	// Gemini sends 429 for both the daily cap and the per-minute rate; only the daily one means "try tomorrow".
+	if (res.status === 429) return reply({ ok: false, error: perDay(await res.json().catch(() => null)) ? 'quota' : 'busy' }, 429);
 	if (!res.ok) return reply({ ok: false, error: 'upstream' }, 502);
 	const got = parseGemini(await res.json().catch(() => null));
 	if (!got) return reply({ ok: false, error: 'upstream' }, 502);

@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { checkLines } from '$lib/comic/check';
 	import { serviceInfo, translatePage } from '$lib/comic/client';
-	import { loadPages, type Pages } from '$lib/comic/load';
+	import { latestOnly, loadPages, type Pages } from '$lib/comic/load';
 	import { readingOrder } from '$lib/comic/order';
 	import { renderPage } from '$lib/comic/render';
 	import '@fontsource/noto-sans-myanmar/400.css';
@@ -37,23 +37,41 @@
 
 	onMount(async () => { info = await serviceInfo(); });
 
+	const OPEN_FAILED = 'That file couldn’t be opened. Try again.';
+	const latest = latestOnly();
+
 	async function open(file: File | undefined) {
 		if (!file) return;
 		error = '';
-		const pages = await loadPages(file);
+		let pages: Pages;
+		try {
+			pages = await loadPages(file);
+		} catch {
+			error = OPEN_FAILED;
+			return;
+		}
 		if (!pages.ok) {
 			error = pages.reason;
 			return;
 		}
+		book?.destroy();
 		book = pages;
 		byPage = Array.from({ length: pages.count }, () => []);
 		await show(0);
 	}
 
+	/** Only the newest page request wins, so fast clicks can't put one page's boxes on another page's art. */
 	async function show(i: number) {
 		if (!book) return;
-		index = i;
-		current = await book.page(i);
+		try {
+			const bmp = await latest(book.page(i));
+			if (!bmp) return;
+			current?.close();
+			index = i;
+			current = bmp;
+		} catch {
+			error = OPEN_FAILED;
+		}
 	}
 
 	$effect(() => {
@@ -81,6 +99,9 @@
 			burmeseCanvas.height = page.height;
 			burmeseCanvas.getContext('2d')!.drawImage(off, 0, 0);
 			rendered = snap.some((r) => r.burmese.trim());
+		}).catch(() => {
+			// A stale render can hit a page bitmap that was just closed; only the current one matters.
+			if (token === renderToken) error = 'Couldn’t draw the Burmese page. Try again.';
 		});
 	});
 
@@ -130,7 +151,9 @@
 		const reply = await translatePage(lines);
 		busy = false;
 		if (!reply.ok) {
-			error = reply.error === 'quota' ? 'Today’s translations are used up. Try again tomorrow.' : 'Translation failed. Try again in a moment.';
+			error = reply.error === 'quota' ? 'Today’s translations are used up. Try again tomorrow.'
+				: reply.error === 'busy' ? 'Busy right now. Try again in a minute.'
+				: 'Translation failed. Try again in a moment.';
 			return;
 		}
 		const { byN } = checkLines(lines, reply.lines);
