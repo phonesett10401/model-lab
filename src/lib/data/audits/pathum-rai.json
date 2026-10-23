@@ -1,6 +1,8 @@
 {
-	"measured": [],
-	"status": "in-progress",
+	"measured": [
+		"v0"
+	],
+	"status": "published",
 	"data": [
 		{
 			"label": "Signed in as",
@@ -8,15 +10,19 @@
 		},
 		{
 			"label": "Versions measured",
-			"value": null
+			"value": "v0 of v0, D1, D2, D3, D4"
 		},
 		{
 			"label": "Chat model",
-			"value": null
+			"value": "Qwen2.5-1.5B-Instruct-q4f16_1-MLC"
 		},
 		{
 			"label": "Attacks per version",
-			"value": null
+			"value": "60 direct (deepset/prompt-injections), 75 hidden in emails (BIPIA), held-out sets"
+		},
+		{
+			"label": "v0: blocked by a defence",
+			"value": "0 of 60 direct attacks"
 		},
 		{
 			"label": "Hidden-email attacks (BIPIA)",
@@ -26,7 +32,12 @@
 	"metrics": {
 		"title": "Direct attacks that leaked a restricted value",
 		"lowerIsBetter": true,
-		"rows": []
+		"rows": [
+			{
+				"label": "v0",
+				"value": 0
+			}
+		]
 	},
 	"transcripts": []
 }
