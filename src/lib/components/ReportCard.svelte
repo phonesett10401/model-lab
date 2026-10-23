@@ -69,6 +69,7 @@
 	h3 { color: var(--red); font-weight: 500; letter-spacing: 0.12em; }
 	dl { margin: 0; display: grid; }
 	dl div { display: flex; justify-content: space-between; gap: var(--space-2); padding: 0.4rem 0; border-bottom: 1px solid var(--hairline); }
+	dt { flex-shrink: 0; max-width: 45%; }
 	dd { margin: 0; text-align: right; }
 	.bars { display: grid; gap: 0.55rem; margin: 0; padding: 0; }
 	.fails { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
