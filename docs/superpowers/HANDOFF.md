@@ -48,7 +48,7 @@ Last updated: 2026-10-09. Owner: Phone Sett (GitHub `phonesett10401`, private re
 - Env: `GEMINI_API_KEY`, `GEMINI_MODEL` (default `gemini-3.5-flash`), `GEMINI_TIER` (`free`|`paid`) in `.env` (git-ignored; template `.env.example`) and in Vercel. Key check: `node --env-file=.env scripts/check-gemini.mjs` (never prints the key). **Free tier = public-domain / openly licensed pages only; switch to paid before any real artist's page.**
 - Tests: `src/lib/comic/*.test.ts`; `e2e/comic.e2e.ts` fakes `/api/translate` (`e2e/comic-fake.ts`). Run e2e on another port while 4173 is busy: `$env:E2E_PORT=4180`.
 - Known limits: the browser's Burmese word breaker sometimes splits compounds (ပင်ပန်း → ပင် / ပန်း); overlong words break at syllables; a box drawn short of the English leaves bits visible.
-- **Not yet checked:** that Vercel builds `api/translate.ts` next to the static site (needs a pushed branch + env vars in Vercel).
+- Vercel builds `api/translate.ts` next to the static site: checked on the PR preview 2026-10-24 (`GET /api/translate` → `{"model":"gemini-3.5-flash","tier":"free"}`); the three env vars are set in Vercel for Production + Preview.
 
 ## RAG assistants (research targets)
 
