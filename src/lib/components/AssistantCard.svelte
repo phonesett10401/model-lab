@@ -3,6 +3,7 @@
 	import { pad } from '$lib/format';
 	import type { AssistantSettings } from '$lib/assistant/assistants';
 	import { CHAT_MODEL, VERSIONS } from '$lib/assistant/config';
+	import { auditFor } from '$lib/assistant/audits';
 
 	let { assistant: a }: { assistant: AssistantSettings } = $props();
 </script>
@@ -20,6 +21,7 @@
 		<dt class="mono">Model</dt><dd class="mono">{CHAT_MODEL}</dd>
 		<dt class="mono">Download</dt><dd>About 1 GB the first time, then kept on your device</dd>
 		<dt class="mono">Needs</dt><dd>Chrome or Edge with graphics acceleration</dd>
+		<dt class="mono">Attacks</dt><dd data-audit>{#if auditFor(a.slug)}<a href="/audits/{a.slug}">See the audit →</a>{:else}Being measured{/if}</dd>
 	</dl>
 	<a class="btn open" href="/assistant/{a.slug}">Open the assistant</a>
 </article>

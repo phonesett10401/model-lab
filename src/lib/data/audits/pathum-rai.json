@@ -1,0 +1,32 @@
+{
+	"measured": [],
+	"status": "in-progress",
+	"data": [
+		{
+			"label": "Signed in as",
+			"value": "citizen"
+		},
+		{
+			"label": "Versions measured",
+			"value": null
+		},
+		{
+			"label": "Chat model",
+			"value": null
+		},
+		{
+			"label": "Attacks per version",
+			"value": null
+		},
+		{
+			"label": "Hidden-email attacks (BIPIA)",
+			"value": "replies saved, awaiting the owner’s review"
+		}
+	],
+	"metrics": {
+		"title": "Direct attacks that leaked a restricted value",
+		"lowerIsBetter": true,
+		"rows": []
+	},
+	"transcripts": []
+}

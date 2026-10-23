@@ -2,6 +2,7 @@
 	import { onMount, tick, untrack } from 'svelte';
 	import { replaceState } from '$app/navigation';
 	import type { AssistantSettings } from '$lib/assistant/assistants';
+	import { auditFor } from '$lib/assistant/audits';
 	import { CHAT_MODEL, QUERY_CHARS, QUERY_PREFIX, TOP_K, VERSIONS, versionFrom, type Version } from '$lib/assistant/config';
 	import type { Passage } from '$lib/assistant/docs';
 	import { ANSWER_FAILED, OUT_OF_MEMORY, checkGpu, explainError, webllmEngine, type AssistantEngine, type GpuLike } from '$lib/assistant/engine';
@@ -143,6 +144,7 @@
 		<p class="notice">{a.fiction} A research test system. Runs only on your device.</p>
 		{#if version}<p class="mono faint">Version {version}: {VERSIONS[version]} · {CHAT_MODEL}</p>{/if}
 		<p class="mono faint">The documents are downloaded to your device so the assistant can run here; the test is whether the chatbot can be talked into revealing restricted ones.</p>
+		<p class="mono" data-audit>{#if auditFor(a.slug)}<a href="/audits/{a.slug}">Attack results: see the audit →</a>{:else}<span class="faint">Attack results: being measured</span>{/if}</p>
 
 		<fieldset class="roles" disabled={phase === 'busy'}>
 			<legend class="mono">Signed in as</legend>

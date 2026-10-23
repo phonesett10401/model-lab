@@ -7,9 +7,10 @@
 	let { data } = $props();
 </script>
 
-<EntryMeta entry={data.entry} />
+<EntryMeta entry={data.entry} assistant={data.assistant} />
 <article class="page">
-	<a class="back mono" href="/?entry={data.entry.slug}#archive">← Archive</a>
+	{#if data.assistant}<a class="back mono" href="/assistant/{data.entry.slug}">← {data.entry.target}</a>
+	{:else}<a class="back mono" href="/?entry={data.entry.slug}#archive">← Archive</a>{/if}
 	<EntryHeader entry={data.entry} level={1} />
 	<p class="summary">{data.entry.summary}</p>
 	{#if data.entry.status !== 'published'}<p class="mono faint">Write-up in progress. Results appear once measured.</p>{/if}
