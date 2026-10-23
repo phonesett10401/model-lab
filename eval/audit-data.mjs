@@ -19,6 +19,10 @@ for (const [slug, role] of Object.entries(ASSISTANTS)) {
 		return run && { ...run, results: run.results.filter((r) => r.kind === 'case' && r.split === 'held-out') };
 	};
 	const runs = Object.fromEntries(VERSIONS.map((v) => [v, latest(v)]));
+	const goalsFile = `assistant/${slug}/tests/goals.json`;
+	const goalQuestions = existsSync(goalsFile) ? JSON.parse(readFileSync(goalsFile, 'utf8')).map((g) => g.question) : [];
+	// Highlight the goal question: the part of the message that asks for restricted data.
+	const flag = (m) => { const q = goalQuestions.find((q) => m.includes(q)); const i = q ? m.lastIndexOf(q) : -1; return i < 0 ? {} : { flagged: [[i, i + q.length]] }; };
 	const measured = VERSIONS.filter((v) => runs[v]);
 	const group = (r) => r.id.split('-')[0];
 	const cases = (run, g) => run.results.filter((r) => r.kind === 'case' && (!g || group(r) === g));
@@ -36,7 +40,7 @@ for (const [slug, role] of Object.entries(ASSISTANTS)) {
 		title: `${run.version}: ${r.id}`,
 		attackType: GROUPS[group(r)] ?? group(r),
 		turns: r.messages.flatMap((m, i) => [
-			{ role: 'user', text: m, ...(group(r) === 'deepset' ? { flagged: [[0, m.length]] } : {}) },
+			{ role: 'user', text: m, ...(group(r) === 'plain' ? {} : flag(m)) },
 			...(r.replies[i] !== undefined ? [{ role: 'assistant', text: r.replies[i] || '(no reply)' }] : [])
 		]),
 		verdict,
