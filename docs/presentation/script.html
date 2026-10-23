@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Model Lab — Presentation script</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+	@page { size: A4; margin: 16mm 18mm 18mm; }
+	* { box-sizing: border-box; }
+	body { font-family: Inter, system-ui, sans-serif; font-size: 11pt; line-height: 1.6; color: #161212; margin: 0; }
+	.mono { font-family: 'JetBrains Mono', monospace; }
+	h1, h2 { font-family: 'Instrument Serif', serif; font-weight: 400; margin: 0; }
+	h1 { font-size: 34pt; line-height: 1; }
+	h1 em, h2 em { color: #b3261e; }
+	h2 { font-size: 22pt; line-height: 1.1; margin: 4px 0 10px; }
+	.kick { color: #b3261e; letter-spacing: 0.18em; font-size: 8.5pt; margin: 0; }
+	.part { page-break-before: always; }
+	.who { display: inline-block; background: #b3261e; color: #fff; border-radius: 3px; padding: 2px 10px; font-size: 9pt; margin-bottom: 6px; }
+	.slide { margin: 18px 0 0; padding-top: 12px; border-top: 1px solid #ddd6d4; page-break-inside: avoid; }
+	.slide:first-of-type { border-top: 0; }
+	.head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+	.head b { font-size: 12pt; }
+	.time { font-size: 8.5pt; color: #6e6565; white-space: nowrap; }
+	.say p { margin: 6px 0; }
+	.cue { font-size: 9pt; color: #6e6565; font-style: italic; margin: 6px 0; }
+	.cue::before { content: '▸ '; color: #b3261e; font-style: normal; }
+	.press { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 8.5pt; background: #141213; color: #f3eeee; border-radius: 3px; padding: 1px 7px; margin: 4px 0; }
+	.say b { color: #b3261e; font-weight: 600; }
+	table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin-top: 10px; }
+	th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid #ddd6d4; vertical-align: top; }
+	th { font-size: 8pt; letter-spacing: 0.12em; text-transform: uppercase; color: #6e6565; }
+	.box { border: 1px solid #b3261e; border-radius: 4px; padding: 10px 14px; margin-top: 14px; font-size: 10pt; }
+	.qa p { margin: 4px 0 10px; }
+	.qa b { display: block; }
+</style>
+</head>
+<body>
+
+<section>
+	<p class="kick mono">AI CLASS · PROJECT PROPOSAL · SPEAKING SCRIPT</p>
+	<h1 style="margin-top:10px">AI Model <em>Lab</em></h1>
+	<p style="font-family:'Instrument Serif',serif;font-style:italic;font-size:16pt;margin:8px 0 18px">Click it. Test it. See the result.</p>
+	<p>This is a full script, one part per presenter. Read it a few times, then say it in your own words: it sounds more natural than reading word for word. Grey lines with ▸ are stage directions, and <span class="press">SPACE</span> means press Space (or the clicker) to go to the next slide.</p>
+	<table>
+		<tr><th>Part</th><th>Presenter</th><th>Slides</th><th>Time</th></tr>
+		<tr><td>1 · The lab</td><td>A · Aung Kyaw Phyo</td><td>Cover, 1, 2</td><td>about 2:30</td></tr>
+		<tr><td>2 · The making</td><td>B · Bhone Pyae Hein</td><td>3, 4</td><td>about 3:30</td></tr>
+		<tr><td>3 · The models</td><td>C · Phone Sett Paing Kyaw</td><td>5, 6</td><td>about 2:00</td></tr>
+		<tr><td>4 · What's next</td><td>D · Han Phyo Htet</td><td>7, 8</td><td>about 2:00</td></tr>
+		<tr><td>5 · Conclusion</td><td>E · Saw Stephen Win</td><td>9 (then questions)</td><td>about 1:15</td></tr>
+		<tr><td colspan="3"><b>Total</b></td><td><b>about 11 minutes</b></td></tr>
+	</table>
+	<p style="font-size:9.5pt;color:#5c5454;margin:6px 0 0">Times are at a calm speaking pace (about 130 words a minute). If your slot is shorter, skip the optional ▸ banner notes first, then shorten slides 3 and 4.</p>
+	<div class="box"><b>Before you start:</b> open <span class="mono">model-lab-library.vercel.app/present</span> on the classroom computer, wait for "Ready" under the start button, and press <b>F</b> for full screen.</div>
+	<div class="box"><b>One rule:</b> every number in this script is measured. Don't add numbers that aren't here. If the professor asks about something we haven't measured, say: "We haven't measured that yet."</div>
+</section>
+
+<!-- Part 1 -->
+<section class="part">
+	<p class="kick mono">PART 1 · THE LAB</p>
+	<span class="who">Presenter A · Aung Kyaw Phyo (6708142)</span>
+	<h2>Cover, slides 1 and 2</h2>
+
+	<div class="slide">
+		<div class="head"><b>Cover · AI Model Lab</b><span class="time">about 0:20</span></div>
+		<div class="say">
+			<p class="cue">Press Space (or tap Start) before you begin: the cover shows our project name and motto.</p>
+			<p>Good morning, everyone. Good morning, Professor. We are a group of five, and today we're presenting our project: <b>AI Model Lab</b>. Our motto is on the screen: click it, test it, see the result.</p>
+			<span class="press">SPACE</span>
+		</div>
+	</div>
+
+	<div class="slide">
+		<div class="head"><b>Slide 1 · Topic and team</b><span class="time">about 0:55</span></div>
+		<div class="say">
+			<p>So, what is AI Model Lab? It's a library of small AI models that anyone can try, right in a web browser.</p>
+			<p>Each model in the lab does one job, and does it well. And each one comes with an honest report card. Not just a score, but also the cases where the model gets it wrong.</p>
+			<p>There are five of us. I'm Aung Kyaw Phyo, and I'll introduce the lab. Bhone Pyae Hein will explain how we made the models. Phone Sett Paing Kyaw will show you the two working models and their results. Han Phyo Htet will talk about what we're working on now, and Saw Stephen Win will wrap up.</p>
+			<span class="press">SPACE</span>
+		</div>
+	</div>
+
+	<div class="slide">
+		<div class="head"><b>Slide 2 · What the lab does</b><span class="time">about 1:10</span></div>
+		<div class="say">
+			<p>Here's what the lab can do.</p>
+			<p>First, you can try a small AI model right in your browser. There's nothing to install.</p>
+			<p>Second, you can test it in different ways: use one of our sample photos or sounds, upload your own, or let it listen live through the microphone.</p>
+			<p>Third, every model has an honest report card. It shows the score we measured, and it shows how the model fails.</p>
+			<p>Fourth, nothing you add is uploaded. The model downloads to your phone or laptop and runs there, so your photo or your recording never leaves your device.</p>
+			<p>And right now, <b>two models are live</b>: a sea creature detector and a sound detective. More are planned.</p>
+			<p>Now Bhone Pyae Hein will explain how we actually built these models.</p>
+			<span class="press">SPACE</span>
+		</div>
+	</div>
+</section>
+
+<!-- Part 2 -->
+<section class="part">
+	<p class="kick mono">PART 2 · THE MAKING</p>
+	<span class="who">Presenter B · Bhone Pyae Hein (6708463)</span>
+	<h2>Slides 3 and 4</h2>
+
+	<div class="slide">
+		<div class="head"><b>Slide 3 · How the models learn</b><span class="time">about 1:45</span></div>
+		<div class="say">
+			<p>Thank you, Aung Kyaw Phyo. I'll explain the AI techniques we used.</p>
+			<p>The first one is <b>supervised learning</b>. The model learns from examples where we already know the right answer. For the sea creature detector, we used <b>7,637 photos</b> from Open Images and the Aquarium Combined dataset, with every creature marked by a box. For the sound detective, we used <b>13,825 sound clips</b> from FSD50K and Freesound, each labelled with the sounds it contains.</p>
+			<p>The second technique is <b>transfer learning</b>. We didn't train from zero. We started from models that were already trained on huge datasets, and fine-tuned them on our data. For photos, that's YOLO26 Nano, a small object-detection network. For sound, that's EfficientAT, which was trained on AudioSet.</p>
+			<p>Third, we split the data fairly into training, validation and test sets. The test set stays frozen: <b>767 photos and 4,216 sound clips</b> that the models never see during training. So our scores come from data the models have never seen.</p>
+			<p>And finally, sound is <b>multi-label</b>. We turn the audio into a spectrogram, which is basically a picture of sound. The model looks at one-second slices, every half second, and one slice can contain several sounds at the same time.</p>
+			<p class="cue">If there's time, point at the banner: the photos move through Collect, Train, Test and Ship, and at Test each one gets the box our real model gave it.</p>
+			<span class="press">SPACE</span>
+		</div>
+	</div>
+
+	<div class="slide">
+		<div class="head"><b>Slide 4 · How they predict, and how we measure</b><span class="time">about 1:45</span></div>
+		<div class="say">
+			<p>Next: how the models make predictions, and how we measure them.</p>
+			<p>The sea model does <b>object detection</b>. It draws a box around each creature and gives a confidence score. It often draws several boxes on the same animal, so we use <b>IoU</b>, which measures how much two boxes overlap, and <b>non-max suppression</b>, which keeps only the best box.</p>
+			<p>Then we use <b>thresholds</b>. A creature is shown only if the model is at least 45% sure. The sound model has a separate threshold for each of its 17 sounds. We tuned those on the validation set, never on the test set, so the test score stays honest.</p>
+			<p>To measure the models, we use <b>mAP</b>, mean average precision. For the detector we use mAP at 50, which means a box counts as correct if it overlaps the real box by at least half. For sound we also use <b>F1</b>. And for each model we keep a list of how it fails.</p>
+			<p>Last, both models are exported to <b>ONNX</b> and run with ONNX Runtime Web inside the browser. That's why nothing gets uploaded.</p>
+			<p>Now Phone Sett Paing Kyaw will show you the two models working, and their real results.</p>
+			<span class="press">SPACE</span>
+		</div>
+	</div>
+</section>
+
+<!-- Part 3 -->
+<section class="part">
+	<p class="kick mono">PART 3 · THE MODELS</p>
+	<span class="who">Presenter C · Phone Sett Paing Kyaw (6708369)</span>
+	<h2>Slides 5 and 6</h2>
+
+	<div class="slide">
+		<div class="head"><b>Slide 5 · Sea creature detector</b><span class="time">about 1:00</span></div>
+		<div class="say">
+			<p>This is our first model, the <b>sea creature detector</b>. You give it a photo. It finds the sea animals and draws a box around each one. It knows 14 kinds of sea creatures, like fish, sharks, dolphins and sea turtles.</p>
+			<p>This part of the proposal asks for the expected result. But our model is already built. The video on the right is a real recording of our website.</p>
+			<p>We tested it on 767 photos it had never seen. It scored <b>0.74 mAP</b>. On aquarium photos, it scored <b>0.82</b>.</p>
+			<p>It also makes mistakes. Sometimes it thinks a seal is a sea lion. Sometimes it calls a shark a fish. And it can miss small fish that are far away. You can see these mistakes in the video.</p>
+			<span class="press">SPACE</span>
+		</div>
+	</div>
+
+	<div class="slide">
+		<div class="head"><b>Slide 6 · Sound detective</b><span class="time">about 1:00</span></div>
+		<div class="say">
+			<p>Our second model is the <b>sound detective</b>. It listens to a recording and finds 17 everyday sounds, like a dog barking, a siren or glass breaking. It shows when each sound happens on a timeline.</p>
+			<p>You can record a sound, upload a file, or let it listen live.</p>
+			<p>In the video, it hears three sounds at the same time: speech, traffic and clapping.</p>
+			<p>We tested it on 4,216 sound clips. It scored <b>0.79 mAP</b>.</p>
+			<p>We had two versions. The bigger one scored 0.79, and the smaller one scored 0.76. We chose the bigger one because it is more accurate.</p>
+			<p>Its hardest sound is the doorbell. Footsteps and car horns are also difficult. The timing is not perfect yet.</p>
+			<p>Now, Han Phyo Htet will tell you what we are working on next.</p>
+			<span class="press">SPACE</span>
+		</div>
+	</div>
+</section>
+
+<!-- Part 4 -->
+<section class="part">
+	<p class="kick mono">PART 4 · WHAT'S NEXT</p>
+	<span class="who">Presenter D · Han Phyo Htet (6708463)</span>
+	<h2>Slides 7 and 8</h2>
+
+	<div class="slide">
+		<div class="head"><b>Slide 7 · RAG assistants</b><span class="time">about 1:10</span></div>
+		<div class="say">
+			<p>Thank you, Phone Sett Paing Kyaw. Besides the two models, we're also building something bigger: <b>RAG assistants</b>.</p>
+			<p>RAG means retrieval-augmented generation. When you ask a question, the assistant first searches its own documents for the passages that answer it. Then a small language model writes the reply using only those passages. So it answers from its documents, not from guessing.</p>
+			<p>Like everything else in the lab, it runs fully in the browser. It uses Qwen 2.5, a 1.5-billion-parameter language model, plus a small search model, on WebLLM.</p>
+			<p>We've built two assistants: one for a university, the University of Raffel Luo, and one for a district emergency office, Pathum Rai District.</p>
+			<p>We've tested them, but the work isn't complete yet. Right now we're measuring how well different defences protect them against tricky prompts, so we don't have final results to share today.</p>
+			<span class="press">SPACE</span>
+		</div>
+	</div>
+
+	<div class="slide">
+		<div class="head"><b>Slide 8 · What's coming</b><span class="time">about 0:50</span></div>
+		<div class="say">
+			<p>So, what's coming next?</p>
+			<p>First, we'll finish the <b>RAG testing</b>: we'll measure each defence on its own, on both assistants, and then all of them combined. After that, a private document assistant will be our next test target.</p>
+			<p>For the sea detector, we want to add the creatures it can't find yet, like octopus, manta ray, orca and lionfish. For the sound detective, a version 2 with better timing and more sounds.</p>
+			<p>And later, a speech translator and text models.</p>
+			<p>Now Saw Stephen Win will wrap up our presentation.</p>
+			<span class="press">SPACE</span>
+		</div>
+	</div>
+</section>
+
+<!-- Part 5 -->
+<section class="part">
+	<p class="kick mono">PART 5 · CONCLUSION</p>
+	<span class="who">Presenter E · Saw Stephen Win (6708566)</span>
+	<h2>Slide 9 and questions</h2>
+
+	<div class="slide">
+		<div class="head"><b>Slide 9 · What we built</b><span class="time">about 1:15</span></div>
+		<div class="say">
+			<p>Thank you, Han Phyo Htet. To sum up what we built:</p>
+			<p>We have <b>two working AI models</b>, the sea creature detector and the sound detective, and both run on your own device. We have also built <b>two RAG assistants</b>, which are still being tested.</p>
+			<p>What makes our lab different is honesty. Every number we showed you today is measured, and every model shows how it fails, not just how well it does.</p>
+			<p>Our references are on the screen. The data comes from Open Images, the Aquarium Combined dataset, FSD50K and Freesound. The models are YOLO26, EfficientAT, Qwen 2.5 and snowflake-arctic-embed. We used ONNX Runtime Web, WebLLM and Remotion for the videos, and the music is by Alex Morgan from Pixabay.</p>
+			<p>Everything is live right now. Please scan the QR code and try the models on your phone.</p>
+			<p>Thank you for listening. We're happy to answer your questions.</p>
+		</div>
+	</div>
+
+	<div class="slide qa">
+		<div class="head"><b>If you get questions</b><span class="time">anyone can answer</span></div>
+		<p><b>"Why run the models in the browser?"</b>Privacy and cost: the photo or sound never leaves the device, and we don't need a server to run the models.</p>
+		<p><b>"Why such small models?"</b>They have to download quickly and run on a phone. That's also why we compared the 20.5 MB and 6.5 MB sound models.</p>
+		<p><b>"How do you know the scores are fair?"</b>They come from a frozen test set the models never saw during training, and the thresholds were tuned on the validation set, not the test set.</p>
+		<p><b>"What are the RAG results?"</b>"We're still measuring the defences, so we don't have final results yet. We'll share them once the testing is complete."</p>
+		<p><b>Anything we haven't measured:</b>"We haven't measured that yet."</p>
+	</div>
+</section>
+
+</body>
+</html>

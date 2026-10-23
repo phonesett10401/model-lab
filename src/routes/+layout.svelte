@@ -17,7 +17,7 @@
 
 	let { children } = $props();
 	onNavigate(startMorph);
-	const bare = $derived(page.route.id === '/intro' || (page.route.id?.startsWith('/og-card') ?? false));
+	const bare = $derived(page.route.id === '/intro' || page.route.id === '/present' || (page.route.id?.startsWith('/og-card') ?? false));
 </script>
 
 <svelte:head>
@@ -32,6 +32,7 @@
 	<header class="topbar">
 		<a class="wordmark mono" href="/">AI MODEL LAB</a>
 		<nav class="tools">
+			<a class="intro-link mono" href="/present">Present</a>
 			<a class="intro-link mono" href="/intro"><span aria-hidden="true">▶</span> <span class="wide">Watch the </span>intro</a>
 			<ThemeToggle />
 		</nav>

@@ -7,6 +7,7 @@
 		"studio": "remotion studio src/index.ts",
 		"stills": "node scripts/stills.mjs",
 		"render": "node scripts/render.mjs",
+		"render:loops": "node scripts/render-loops.mjs",
 		"test": "node --test \"test/*.test.ts\"",
 		"check": "node --test test/renders.check.ts",
 		"typecheck": "tsc --noEmit"

@@ -1,0 +1,34 @@
+export type Action = 'next' | 'prev' | 'first' | 'last' | 'fullscreen' | null;
+
+const keys: Record<string, Action> = {
+	' ': 'next', ArrowDown: 'next', ArrowRight: 'next', PageDown: 'next', // PageUp/PageDown are what presentation clickers send
+	ArrowUp: 'prev', ArrowLeft: 'prev', PageUp: 'prev',
+	Home: 'first', End: 'last', f: 'fullscreen', F: 'fullscreen'
+};
+
+export const keyAction = (key: string): Action => keys[key] ?? null;
+
+/** Index 0 is the cover (project name and motto), 1..count are slides. */
+export function step(index: number, action: Action, count: number): number {
+	if (action === 'next') return Math.min(index + 1, count);
+	if (action === 'prev') return Math.max(index - 1, 0);
+	if (action === 'first') return 0;
+	if (action === 'last') return count;
+	return index;
+}
+
+export function indexFromHash(hash: string, count: number): number | null {
+	const m = /^#(\d+)$/.exec(hash);
+	const n = m ? Number(m[1]) : 0;
+	return n >= 1 && n <= count ? n : null;
+}
+
+export const hashFor = (index: number) => `#${index}`;
+
+const SWIPE = 50; // px: shorter moves are taps or wobbles
+
+/** Phones: finger moving up the screen = next slide, down = back (like scrolling a feed). dx, dy = end − start. */
+export function swipeAction(dx: number, dy: number): Action {
+	if (Math.abs(dy) < SWIPE || Math.abs(dy) < Math.abs(dx)) return null;
+	return dy < 0 ? 'next' : 'prev';
+}
