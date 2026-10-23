@@ -123,3 +123,62 @@ test('nothing leaves on load', async ({ page, baseURL }) => {
 	await page.waitForLoadState('networkidle');
 	expect(bad).toEqual([]);
 });
+
+/** Pixel facts computed inside the page (shipping ~2M values to the test is too slow). */
+const canvasHash = (page: import('@playwright/test').Page) =>
+	page.locator('[aria-label="Burmese page"] canvas').evaluate((c: HTMLCanvasElement) => {
+		const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+		let h = 0;
+		for (let i = 0; i < d.length; i++) h = (h * 31 + d[i]) | 0;
+		return h;
+	});
+
+async function translated(page: import('@playwright/test').Page) {
+	await fakeTranslate(page, { ok: true, lines: [{ n: 1, text: 'မင်္ဂလာပါ ခင်ဗျာ' }], model: 'gemini-3.5-flash' });
+	await setUp(page);
+	await page.getByRole('button', { name: 'Translate page' }).click();
+	await expect(page.locator('.stage[aria-label="Burmese page"]')).toHaveAttribute('data-rendered', 'true');
+}
+
+test('letters the Burmese in place', async ({ page }) => {
+	await translated(page);
+	const { inside, outside } = await page.evaluate(() => {
+		const get = (label: string) => {
+			const c = document.querySelector<HTMLCanvasElement>(`[aria-label="${label}"] canvas`)!;
+			return c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+		};
+		const before = get('Original page'), after = get('Burmese page');
+		let inside = 0, outside = 0;
+		for (let i = 0; i < before.length; i += 4) {
+			const x = (i / 4) % 600, y = Math.floor(i / 4 / 600);
+			const same = before[i] === after[i] && before[i + 1] === after[i + 1] && before[i + 2] === after[i + 2];
+			// The drawn box is about (102,104)-(396,248); allow a margin for a grown box.
+			const near = x > 60 && x < 440 && y > 60 && y < 290;
+			if (!near && !same) outside++;
+			if (x > 140 && x < 360 && y > 150 && y < 200 && !same) inside++;
+		}
+		return { inside, outside };
+	});
+	expect(outside).toBe(0);
+	expect(inside).toBeGreaterThan(100);
+});
+
+test('uses the Myanmar font', async ({ page }) => {
+	await translated(page);
+	expect(await page.evaluate(() => document.fonts.check('16px "Noto Sans Myanmar"', 'မ'))).toBe(true);
+});
+
+test('downloads a PNG', async ({ page }) => {
+	await translated(page);
+	const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Download PNG' }).click()]);
+	expect(download.suggestedFilename()).toBe('comic-page-1-my.png');
+	const png = readFileSync(await download.path());
+	expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([600, 800]);
+});
+
+test('edits redraw', async ({ page }) => {
+	await translated(page);
+	const first = await canvasHash(page);
+	await rows(page).nth(0).getByLabel('Burmese').fill('အိမ်ပြန်ကြစို့');
+	await expect.poll(() => canvasHash(page)).not.toBe(first);
+});

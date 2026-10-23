@@ -4,6 +4,8 @@
 	import { serviceInfo, translatePage } from '$lib/comic/client';
 	import { loadPages, type Pages } from '$lib/comic/load';
 	import { readingOrder } from '$lib/comic/order';
+	import { renderPage } from '$lib/comic/render';
+	import '@fontsource/noto-sans-myanmar/400.css';
 	import type { Box, LineProblem, Region, RegionClass, SentLine, Speaker } from '$lib/comic/types';
 
 	const CLASSES: RegionClass[] = ['bubble', 'caption', 'sfx', 'art-text'];
@@ -55,13 +57,43 @@
 	}
 
 	$effect(() => {
-		for (const c of [original, burmeseCanvas]) {
-			if (!c || !current) continue;
-			c.width = current.width;
-			c.height = current.height;
-			c.getContext('2d')!.drawImage(current, 0, 0);
-		}
+		if (!original || !current) return;
+		original.width = current.width;
+		original.height = current.height;
+		original.getContext('2d')!.drawImage(current, 0, 0);
 	});
+
+	let rendered = $state(false);
+	let renderToken = 0;
+	$effect(() => {
+		if (!burmeseCanvas || !current) return;
+		// Snapshot now so the effect tracks every box and text it draws.
+		const snap = regions.map((r) => ({ ...r, box: { ...r.box } }));
+		const page = current;
+		const token = ++renderToken;
+		rendered = false;
+		const off = document.createElement('canvas');
+		off.width = page.width;
+		off.height = page.height;
+		renderPage(off.getContext('2d', { willReadFrequently: true })!, page, snap).then(() => {
+			if (token !== renderToken || !burmeseCanvas) return;
+			burmeseCanvas.width = page.width;
+			burmeseCanvas.height = page.height;
+			burmeseCanvas.getContext('2d')!.drawImage(off, 0, 0);
+			rendered = snap.some((r) => r.burmese.trim());
+		});
+	});
+
+	function download() {
+		burmeseCanvas?.toBlob((blob) => {
+			if (!blob) return;
+			const a = document.createElement('a');
+			a.href = URL.createObjectURL(blob);
+			a.download = `comic-page-${index + 1}-my.png`;
+			a.click();
+			URL.revokeObjectURL(a.href);
+		}, 'image/png');
+	}
 
 	/** Pointer position in page pixels. */
 	function at(e: PointerEvent) {
@@ -154,7 +186,8 @@
 			</figure>
 			<figure>
 				<figcaption class="mono">Burmese</figcaption>
-				<div class="stage" role="img" aria-label="Burmese page"><canvas bind:this={burmeseCanvas}></canvas></div>
+				<div class="stage" role="img" aria-label="Burmese page" data-rendered={rendered}><canvas bind:this={burmeseCanvas}></canvas></div>
+				<button class="btn" disabled={!rendered} onclick={download}>Download PNG</button>
 			</figure>
 		</div>
 
