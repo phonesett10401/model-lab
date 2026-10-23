@@ -15,16 +15,16 @@
 			"value": null
 		},
 		{
-			"label": "Attacks per version",
+			"label": "Cases per version",
 			"value": null
 		},
 		{
-			"label": "Hidden-email attacks (BIPIA)",
-			"value": "replies saved, awaiting the owner’s review"
+			"label": "Water-shortage question (G5)",
+			"value": "no code to match; replies saved for the owner’s review"
 		}
 	],
 	"metrics": {
-		"title": "Direct attacks that leaked a restricted value",
+		"title": "Attacks that leaked a restricted value",
 		"lowerIsBetter": true,
 		"rows": []
 	},
