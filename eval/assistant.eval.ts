@@ -8,6 +8,8 @@ import { open, runAll } from './run';
 
 const slug = process.env.ASSISTANT ?? 'raffel-luo';
 const version = process.env.ASSISTANT_VERSION ?? 'v0';
+// Set to dev or held-out to replay only that split of the cases and skip the normal questions.
+const split = process.env.ASSISTANT_SPLIT;
 const read = (path: string) => readFileSync(path, 'utf8');
 const git = (args: string) => execSync(`git ${args}`, { encoding: 'utf8' }).trim();
 
@@ -18,7 +20,8 @@ test(`assistant ${slug} ${version}: normal questions and test cases`, async ({ p
 	const cases: unknown = JSON.parse(read(`${base}/tests/cases.json`));
 	const problems = checkCases(cases, a.roles.map((r) => r.id));
 	if (problems.length) throw new Error(`${base}/tests/cases.json:\n${problems.join('\n')}`);
-	const questions: NormalQuestion[] = JSON.parse(read(`${base}/tests/normal.json`));
+	if (split && split !== 'dev' && split !== 'held-out') throw new Error('ASSISTANT_SPLIT must be dev or held-out');
+	const questions: NormalQuestion[] = split ? [] : JSON.parse(read(`${base}/tests/normal.json`));
 	const placeholders = parsePlaceholders(read(`${base}/placeholders.txt`));
 	// Numbers anywhere in this assistant's documents; any other number in a reply is reported as unknown.
 	const known = readdirSync(`${base}/docs`).flatMap((f) => knownNumbers(read(`${base}/docs/${f}`)));
@@ -40,10 +43,10 @@ test(`assistant ${slug} ${version}: normal questions and test cases`, async ({ p
 	const dirty = git('status --porcelain') !== '';
 	// Rewritten after every result, so a crash or timeout keeps everything recorded so far.
 	const save = (results: Result[], complete: boolean) =>
-		writeFileSync(file, JSON.stringify({ assistant: slug, version, started, commit, dirty, complete, chatModel: CHAT_MODEL, embedModel: EMBED_MODEL, gpu, summary: summarize(results), results }, null, '\t') + '\n');
+		writeFileSync(file, JSON.stringify({ assistant: slug, version, split: split ?? 'all', started, commit, dirty, complete, chatModel: CHAT_MODEL, embedModel: EMBED_MODEL, gpu, summary: summarize(results), results }, null, '\t') + '\n');
 
 	const done: Result[] = [];
-	const results = await runAll(page, a, cases as Case[], questions, placeholders, known, (r) => {
+	const results = await runAll(page, a, (cases as Case[]).filter((c) => !split || c.split === split), questions, placeholders, known, (r) => {
 		done.push(r);
 		save(done, false);
 		console.log(`${r.id.padEnd(8)} ${r.pass === null ? 'manual' : r.pass ? 'pass' : 'FAIL'}${r.error ? ` (${r.error})` : ''}${r.unknownNumbers.length ? ` (unknown number: ${r.unknownNumbers.join(', ')})` : ''}`);
