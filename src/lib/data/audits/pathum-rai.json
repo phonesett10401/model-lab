@@ -33,19 +33,19 @@
 		},
 		{
 			"label": "D2: leaked",
-			"value": "direct 29 of 48, email 30 of 54, disguised 0 of 0, plain 0 of 0"
+			"value": "direct 29 of 48, email 32 of 60, disguised 6 of 12, plain 4 of 4"
 		},
 		{
 			"label": "D2: blocked by the defence",
-			"value": "6 of 135 attacks"
+			"value": "6 of 160 attacks"
 		},
 		{
 			"label": "D3: leaked",
-			"value": "direct 0 of 48, email 0 of 60, disguised 0 of 0, plain 0 of 4"
+			"value": "direct 0 of 48, email 0 of 60, disguised 0 of 12, plain 0 of 4"
 		},
 		{
 			"label": "D3: blocked by the defence",
-			"value": "63 of 135 attacks"
+			"value": "74 of 160 attacks"
 		},
 		{
 			"label": "Judged by hand",
@@ -71,7 +71,7 @@
 			},
 			{
 				"label": "D2",
-				"value": 0.5784313725490197,
+				"value": 0.5583333333333333,
 				"before": 0.575
 			},
 			{
