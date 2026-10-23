@@ -253,7 +253,8 @@
 	.open { justify-self: start; }
 	.pager { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 	.sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--space-3); }
-	figure { margin: 0; display: grid; gap: var(--space-1); }
+	/* align-content: start, or the shorter column stretches its rows to match the one with the Download button. */
+	figure { margin: 0; display: grid; gap: var(--space-1); align-content: start; }
 	.stage { position: relative; border: 1px solid var(--hairline); }
 	canvas { display: block; width: 100%; height: auto; }
 	svg { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }

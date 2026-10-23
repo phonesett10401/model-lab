@@ -236,3 +236,12 @@ test('busy says a minute', async ({ page }) => {
 	await page.getByRole('button', { name: 'Translate page' }).click();
 	await expect(page.getByRole('alert')).toHaveText('Busy right now. Try again in a minute.');
 });
+
+test('original and Burmese pages line up', async ({ page }) => {
+	await openFile(page, 'page.png', 'image/png', await comicPng(page));
+	const a = (await page.locator('[aria-label="Original page"] canvas').boundingBox())!;
+	const b = (await page.locator('[aria-label="Burmese page"] canvas').boundingBox())!;
+	expect(Math.abs(a.y - b.y)).toBeLessThan(2);
+	const stage = (await page.locator('.stage[aria-label="Original page"]').boundingBox())!;
+	expect(stage.height - a.height).toBeLessThan(4); // no empty strip under the page
+});
