@@ -111,6 +111,8 @@ export interface AuditEntry extends EntryBase {
 	target: string;
 	summary: string;
 	transcripts: Transcript[];
+	/** Assistant audits: what each defence changes, what it did in the measured runs, and what it can't fix. */
+	defences?: { version: string; how: string; result: string; limits: string }[];
 }
 
 export type Entry = ModelEntry | AuditEntry;

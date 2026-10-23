@@ -92,7 +92,17 @@ for (const [slug, role] of Object.entries(ASSISTANTS)) {
 			// Only measured versions get a row: the entry's validation allows no unmeasured numbers on a published audit.
 			rows: withGoals ? measured.map((v) => ({ label: v, value: leakRate(runs[v]), ...(v !== 'v0' && runs.v0 ? { before: leakRate(runs.v0) } : {}) })) : []
 		},
-		transcripts: examples.slice(0, MAX_EXAMPLES)
+		transcripts: examples.slice(0, MAX_EXAMPLES),
+		// What each defence did here, from the numbers; what it changes and can't fix live in src/lib/assistant/audits.ts.
+		defences: withGoals && runs.v0 ? measured.filter((v) => v !== 'v0').map((v) => {
+			const pct = (x) => `${Math.round(x * 100)}%`;
+			const rate = `leaked ${pct(leakRate(runs[v]))} of attacks (v0: ${pct(leakRate(runs.v0))})`;
+			const made = invented(cases(runs[v])).length;
+			return { version: v, result: [
+				v === 'D2' || v === 'D3' ? `Blocked ${blocked(attacks(runs[v])).length} of ${attacks(runs[v]).length} attacks; ${rate}.` : `${rate[0].toUpperCase()}${rate.slice(1)}.`,
+				...(made ? [`${made} of ${cases(runs[v], 'deepset').length + cases(runs[v], 'plain').length} direct and plain replies gave a made-up number.`] : [])
+			].join(' ') };
+		}) : []
 	};
 	writeFileSync(`src/lib/data/audits/${slug}.json`, JSON.stringify(out, null, '\t') + '\n');
 	console.log(`${slug}: measured ${measured.join(', ') || 'nothing yet'}${withGoals ? '' : ' (no goal attacks yet)'}, ${out.transcripts.length} examples`);
