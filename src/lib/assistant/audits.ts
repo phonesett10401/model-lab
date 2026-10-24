@@ -6,7 +6,7 @@ import type { AuditEntry, MetricRow, Transcript } from '$lib/types';
 const LIMITS: Record<string, string> = {
 	D1: 'It only asks the model to behave. A small model often ignores the instruction.',
 	D2: 'A fixed list of English phrases. Attacks that are reworded, in another language or hidden in a pasted email get past it.',
-	D3: 'It only catches exact restricted values, and it is scored with the same list, so 0% means no exact value got through. A code reworded, spelled out or encoded would get past it.',
+	D3: 'It only catches exact restricted codes. A secret that is a fact rather than a code, like Pathum Rai’s water shortage, gets straight past it, and so would a code reworded, spelled out or encoded.',
 	D4: 'The model never sees the restricted documents, so it can’t leak them, but asked anyway it may make up an answer instead.'
 };
 
