@@ -43,6 +43,11 @@
 	const publicRole = $derived(role === a.roles[0].id);
 	const leaked = $derived(publicRole && read.some((p) => p.access !== 'public'));
 
+	const MAIN: [Version, string][] = [['v1', 'Recommended'], ['v0', 'No defence']];
+	const EXPERIMENTS: Version[] = ['D1', 'D2', 'D3', 'D4', 'D5'];
+	// Each version's measured held-out leak rate, from this assistant's audit (only versions it measured).
+	const rates = $derived(new Map((auditFor(a.slug)?.report.metrics.rows ?? []).flatMap((r) => (typeof r.value === 'number' ? [[r.label, r.value] as const] : []))));
+
 	onMount(() => (version = versionFrom(new URLSearchParams(location.search).get('version'))));
 
 	/** A new version starts a new conversation and is kept in the address, so a shared link opens the same version. */
@@ -137,7 +142,7 @@
 
 <article class="assistant" data-assistant={a.slug} data-state={phase} data-version={version} style="--accent: light-dark({a.accent.light}, {a.accent.dark})">
 	<div class="strip mono">
-		<a class="back" href="/?entry={a.slug}">← AI Model Lab · RAG assistants · test exhibit</a>
+		<a class="back" href="/assistants">← AI Model Lab · RAG assistants · test exhibit</a>
 		<span class="faint">{version ?? 'v0'} · {a.kind}</span>
 	</div>
 	<div class="band mono" style="background: {a.band.bg}; color: {a.band.fg}; border-bottom-color: {a.band.line ?? a.band.bg}">
@@ -154,7 +159,7 @@
 	<div class="page">
 		<h1 class="serif">{a.name}</h1>
 		<p class="notice">{a.fiction} A research test system. Runs only on your device.</p>
-		{#if version}<p class="mono faint">Version {version}: {VERSIONS[version]} · {CHAT_MODEL}</p>{/if}
+		<p class="mono faint">Chat model: {CHAT_MODEL}</p>
 		<p class="mono faint">The documents are downloaded to your device so the assistant can run here; the test is whether the chatbot can be talked into revealing restricted ones.</p>
 		<p class="mono" data-audit>{#if auditFor(a.slug)}Attack results: <a href="/audits/{a.slug}">read the audit</a>{:else}<span class="faint">Attack results: being measured</span>{/if}</p>
 		{#if restricted.length}
@@ -178,11 +183,23 @@
 		</fieldset>
 		<p class="mono faint">Not a real sign-in. Switching starts a new conversation.</p>
 
-		<fieldset class="roles" disabled={phase === 'busy' || !version}>
+		<!-- One radio group (one name), shown as the two choices most visitors want, then the single-defence experiments. -->
+		<fieldset class="versions" disabled={phase === 'busy' || !version}>
 			<legend class="mono">Version</legend>
-			{#each Object.keys(VERSIONS) as v (v)}
-				<label><input type="radio" name="version" value={v} bind:group={version} onchange={() => pickVersion(v as Version)} /> {v}</label>
-			{/each}
+			<div class="main" data-main>
+				{#each MAIN as [v, tag] (v)}
+					<label class="opt"><input type="radio" name="version" value={v} bind:group={version} onchange={() => pickVersion(v)} aria-describedby="version-how" /> <b class="mono">{v}</b> <span class="faint">{tag}</span></label>
+				{/each}
+			</div>
+			<fieldset class="exp">
+				<legend class="mono faint">Experiments: one defence at a time</legend>
+				{#each EXPERIMENTS as v (v)}
+					<label class="opt"><input type="radio" name="version" value={v} bind:group={version} onchange={() => pickVersion(v)} aria-describedby="version-how" /> <b class="mono">{v}</b></label>
+				{/each}
+			</fieldset>
+			{#if version}
+				<p id="version-how" class="how">{VERSIONS[version]}{#if rates.has(version)}<span class="mono rate">Leaked {Math.round(rates.get(version)! * 100)}% of attacks in the audit</span>{/if}</p>
+			{/if}
 		</fieldset>
 
 		{#if phase === 'idle'}
@@ -266,6 +283,17 @@
 	.roles legend { padding: 0; margin-bottom: 0.25rem; }
 	.roles label { min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; }
 	.roles input { accent-color: var(--accent); }
+	.versions { display: grid; gap: var(--space-1); border: 0; padding: 0; margin: 0; min-width: 0; }
+	.versions legend { padding: 0; margin-bottom: 0.25rem; }
+	.main, .exp { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+	.exp { border: 0; padding: 0; margin: 0; min-width: 0; }
+	.exp legend { padding: 0; margin-bottom: 0.25rem; font-size: var(--step--1); }
+	.opt { min-height: 44px; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0 0.75rem; background: var(--plate); border: 1px solid var(--hairline); border-radius: var(--radius); cursor: pointer; }
+	.opt:has(input:checked) { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+	.opt input { accent-color: var(--accent); margin: 0; }
+	.opt b { font-weight: 500; }
+	.how .rate { display: block; font-size: var(--step--1); margin-top: 0.2rem; }
+	.how { margin: 0; max-width: 70ch; padding-left: var(--space-2); border-left: 3px solid var(--accent); }
 	.start { display: grid; gap: var(--space-1); justify-items: start; }
 	.btn:not(.ghost) { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 	progress { width: 100%; accent-color: var(--accent); }
