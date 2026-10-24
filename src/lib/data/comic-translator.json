@@ -1,0 +1,55 @@
+{
+ "run": "final2-dfine",
+ "data": [
+  {
+   "label": "Training pages: Black Jack ni Yoroshiku (Give My Regards to Black Jack)",
+   "value": 75
+  },
+  {
+   "label": "Training pages: Pepper&Carrot",
+   "value": 206
+  },
+  {
+   "label": "Training pages: Synthetic lettering on Pepper&Carrot art",
+   "value": 436
+  },
+  {
+   "label": "Test pages (real, never trained on)",
+   "value": 97
+  },
+  {
+   "label": "Test labels",
+   "value": "Made automatically (OCR + detector) and reviewed by Claude, not by a person; 20 pages dropped in review"
+  }
+ ],
+ "metrics": {
+  "bubble": 0.882,
+  "caption": 0.629,
+  "sfx": null,
+  "art-text": 0.012
+ },
+ "map50": 0.508,
+ "found": {
+  "of_labelled_text": 0.871,
+  "worst_case_of_all_text": 0.735,
+  "missed_count": {
+   "pages": 20,
+   "labelled": 70,
+   "missed": 13,
+   "missed_share": 0.1566,
+   "owner_checked": 4,
+   "owner_agreed": 4
+  }
+ },
+ "styles": {
+  "manga": {
+   "pages": 50,
+   "map50": 0.545
+  },
+  "modern-western": {
+   "pages": 47,
+   "map50": 0.336
+  },
+  "old-pd": null
+ }
+}

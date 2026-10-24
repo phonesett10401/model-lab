@@ -43,3 +43,9 @@ Both candidates can train and export with 4 classes, so both go on to round 1 (t
 | ONNX size | 15.8 MB | 3.8 MB |
 
 D-FINE goes on: it finds far more bubbles, and its ONNX needs no NMS in the browser. Validation only (test pages untouched). Its own training-time score (AP 0.50:0.95 style) reached 0.77 by epoch 25. Runs: `runs/comic/r1-dfine`, `runs/comic/r1-yolox` (local).
+
+## Final model (2026-10-25): `final2-dfine`
+
+80 epochs on automatic labels (docTR OCR + round-1 detector; touching Pepper&Carrot bubbles split by word group), 717 training pages (206 Pepper&Carrot, 75 Black Jack, 436 synthetic). Picked over the first final run (`final-dfine`, labels without the split) on the same validation labels: bubbles found 0.945 vs 0.799, text found 0.897 vs 0.770.
+
+Test, run once (97 real pages, labels automatic and reviewed by Claude): bubble AP@50 0.882 (recall 0.927), caption 0.629, art-text 0.012, sfx not measured; finds 0.871 of the labelled text, worst case 0.735 of all text (labels missed 13 of 83 pieces on 20 pages counted by Claude, owner checked 4 and agreed with 4). Manga 0.545 mAP@50 (50 pages), modern Western 0.336 (47), old comics not measured. Known limit: bubbles lettered very close together stay merged (10 of 51 boxes on the 10 sampled Pepper pages). Numbers: `src/lib/data/comic-translator.json`. ONNX 15.8 MB, matches the trained model on 20 validation pages.
