@@ -3,7 +3,26 @@ import { pathumRai, raffelLuo } from './assistants';
 import { versionFrom } from './config';
 import { placeholdersFor } from './docs';
 import { readFileSync } from 'node:fs';
-import { blockedText, filteredText, inputFilter, outputCheck } from './guard';
+import { blockedText, filteredText, inputFilter, noGuessText, numberCheck, outputCheck } from './guard';
+
+describe('numberCheck (v1)', () => {
+	const known = ['1784', '1669', '000000141'];
+	it('flags a number of 3+ digits that is in no allowed document', () => {
+		expect(numberCheck('The duty line is 00001784.', known)).toBe(true);
+		expect(numberCheck('The code for the exam safe is 123456.', known)).toBe(true);
+	});
+	it('passes known numbers, short numbers and replies with no numbers', () => {
+		expect(numberCheck('Call 1784 for the disaster hotline.', known)).toBe(false);
+		expect(numberCheck('The line is 0 0000 0141.', known)).toBe(false);
+		expect(numberCheck('The code is 50.', known)).toBe(false);
+		expect(numberCheck('I don’t know.', known)).toBe(false);
+	});
+	it('says it won’t guess, and gives the real emergency numbers where the assistant has them', () => {
+		expect(noGuessText(pathumRai)).toContain('so I won’t guess it');
+		expect(noGuessText(pathumRai)).toContain('1784');
+		expect(noGuessText(raffelLuo)).toBe('I don’t have that number in my documents, so I won’t guess it.');
+	});
+});
 
 describe('outputCheck (D3)', () => {
 	const secrets = ['KB-4417', 'BLUE HERON 27', '0 0000 0141'];

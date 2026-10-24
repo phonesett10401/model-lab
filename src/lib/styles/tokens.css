@@ -14,6 +14,7 @@
 	--amber: light-dark(#8a5a00, #f2b33d);
 	--green: light-dark(#2f6f4f, #6fcf97);
 	--on-ink: light-dark(#f5f3f2, #141213);
+	--on-accent: light-dark(#ffffff, #141213); /* text on an assistant's accent colour */
 
 	--font-serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
 	--font-sans: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;

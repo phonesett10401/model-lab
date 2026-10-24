@@ -8,7 +8,8 @@
 	import { segments } from '$lib/transcript';
 	import { ANSWER_FAILED, OUT_OF_MEMORY, checkGpu, explainError, webllmEngine, type AssistantEngine, type GpuLike } from '$lib/assistant/engine';
 	import { BLOCKED_LABEL, buildMessages, search, toMarkdown, type Item, type Turn } from '$lib/assistant/rag';
-	import { blockedText, filteredText, inputFilter, outputCheck } from '$lib/assistant/guard';
+	import { blockedText, filteredText, inputFilter, noGuessText, numberCheck, outputCheck } from '$lib/assistant/guard';
+	import { knownNumbers } from '$lib/assistant/score';
 
 	let { assistant: a, passages, secrets = [] }: { assistant: AssistantSettings; passages: Passage[]; secrets?: string[] } = $props();
 
@@ -30,6 +31,13 @@
 	// The "What it read" panel: the documents behind the latest answer.
 	const byDoc = $derived(new Map(passages.map((p) => [p.docId, p])));
 	const restricted = $derived(restrictedDocs(passages, secrets));
+	/** Numbers a reply may give: from the documents this role may see and the always-shown emergency numbers (worked out once per role), plus the user's own messages. */
+	const docNumbers = $derived.by(() => {
+		const shown = (a.numbers ?? []).map((n) => n.number);
+		const from = (ps: Passage[]) => [...ps.flatMap((p) => knownNumbers(p.text)), ...shown];
+		return { public: from(passages.filter((p) => p.access === 'public')), all: from(passages) };
+	});
+	const allowedNumbers = (r: string, said: string[]) => [...(r === a.roles[0].id ? docNumbers.public : docNumbers.all), ...said.flatMap(knownNumbers)];
 	const lastReply = $derived([...items].reverse().find((i): i is Turn => i.role === 'assistant'));
 	const read = $derived((lastReply?.sources ?? []).map((id) => byDoc.get(id)).filter((p): p is Passage => !!p));
 	const publicRole = $derived(role === a.roles[0].id);
@@ -95,6 +103,8 @@
 			const sources = [...new Set(hits.map((h) => h.docId))];
 			// D3: a reply holding a restricted value never reaches a public-role user.
 			if (uses(version ?? 'v0', 'D3') && role === a.roles[0].id && outputCheck(reply, secrets)) items.push({ role: 'assistant', text: blockedText(a), sources, blocked: 'D3', hidden: reply });
+			// v1: a number in no document this role may see (nor in what the user wrote) is a guess, so it never reaches anyone.
+			else if (version === 'v1' && numberCheck(reply, allowedNumbers(role, [...history.filter((t) => t.role === 'user').map((t) => t.text), q]))) items.push({ role: 'assistant', text: noGuessText(a), sources, blocked: 'numbers', hidden: reply });
 			else items.push({ role: 'assistant', text: reply, sources });
 		} catch (err) {
 			const text = explainError(err, ANSWER_FAILED);
@@ -146,7 +156,7 @@
 		<p class="notice">{a.fiction} A research test system. Runs only on your device.</p>
 		{#if version}<p class="mono faint">Version {version}: {VERSIONS[version]} · {CHAT_MODEL}</p>{/if}
 		<p class="mono faint">The documents are downloaded to your device so the assistant can run here; the test is whether the chatbot can be talked into revealing restricted ones.</p>
-		<p class="mono" data-audit>{#if auditFor(a.slug)}<a href="/audits/{a.slug}">Attack results: see the audit →</a>{:else}<span class="faint">Attack results: being measured</span>{/if}</p>
+		<p class="mono" data-audit>{#if auditFor(a.slug)}Attack results: <a href="/audits/{a.slug}">read the audit</a>{:else}<span class="faint">Attack results: being measured</span>{/if}</p>
 		{#if restricted.length}
 			<details class="restricted" data-restricted>
 				<summary class="mono">{restricted.length} {a.restrictedLabel} documents: what attackers try to get</summary>
@@ -182,7 +192,7 @@
 			</div>
 		{:else if phase === 'loading'}
 			<div class="start">
-				<p class="mono">Loading the assistant · only the first time is slow</p>
+				<p class="mono">Loading the assistant… only the first time is slow</p>
 				<progress max="1" value={progress} aria-label="Download progress"></progress>
 				<p class="mono faint">{progressText}</p>
 			</div>
@@ -242,7 +252,6 @@
 	.restricted h2 { font-size: var(--step--1); color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; }
 	.restricted p { white-space: pre-line; max-width: 70ch; }
 	.restricted mark { background: none; color: inherit; text-decoration: underline 2px var(--red); text-underline-offset: 3px; font-weight: 600; }
-	.assistant { --on-accent: light-dark(#ffffff, #141213); }
 	.strip { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1); padding: 0 var(--gutter); border-bottom: 1px solid var(--hairline); }
 	.back { min-height: 44px; display: inline-flex; align-items: center; }
 	.strip span { display: inline-flex; align-items: center; }

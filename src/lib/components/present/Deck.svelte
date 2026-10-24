@@ -86,7 +86,7 @@
 			<h1 class="serif">Project presentation</h1>
 			<button class="btn start" onclick={begin}>▶ Start the presentation</button>
 			<p class="mono hint">Space, arrows or a clicker · F for full screen</p>
-			<p class="mono hint" aria-live="polite">{loaded < count ? `Loading banners ${loaded} / ${count}` : 'Ready'}</p>
+			<p class="mono hint" aria-live="polite">{loaded < count ? `Loading banners… ${loaded} / ${count}` : 'Ready'}</p>
 		</div>
 	{/if}
 	<section class="cover" class:on={started && index === 0} aria-current={started && index === 0 ? 'step' : undefined} aria-hidden={!(started && index === 0)} aria-label="Cover">

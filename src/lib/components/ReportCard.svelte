@@ -7,8 +7,10 @@
 
 	type Section = 'data' | 'metrics' | 'fails';
 	let {
-		report, show, idPrefix, tabbed = false, onpick
-	}: { report: ReportCard; show: Section[]; idPrefix: string; tabbed?: boolean; onpick?: (sampleId: string) => void } = $props();
+		report, show, idPrefix, tabbed = false, onpick, level = 3
+	}: { report: ReportCard; show: Section[]; idPrefix: string; tabbed?: boolean; onpick?: (sampleId: string) => void; level?: 2 | 3 } = $props();
+	// Section headings sit one level under the entry's title: h2 on a page (title is h1), h3 on the home bench (title is h2).
+	const h = $derived(`h${level}`);
 
 	const rows = $derived(sortMetrics(report.metrics.rows, report.metrics.lowerIsBetter));
 	const role = $derived(tabbed ? 'tabpanel' : undefined);
@@ -16,7 +18,7 @@
 
 <div class="report">
 	<section id="{idPrefix}-data" {role} aria-labelledby="{idPrefix}-data-h" hidden={!show.includes('data')}>
-		<h3 id="{idPrefix}-data-h" class="mono">DATA</h3>
+		<svelte:element this={h} id="{idPrefix}-data-h" class="h mono">DATA</svelte:element>
 		<Rule />
 		<dl>
 			{#each report.data as d (d.label)}
@@ -26,7 +28,7 @@
 	</section>
 
 	<section id="{idPrefix}-metrics" {role} aria-labelledby="{idPrefix}-metrics-h" hidden={!show.includes('metrics')}>
-		<h3 id="{idPrefix}-metrics-h" class="mono">{report.metrics.title.toUpperCase()}</h3>
+		<svelte:element this={h} id="{idPrefix}-metrics-h" class="h mono">{report.metrics.title.toUpperCase()}</svelte:element>
 		<Rule />
 		<ol class="bars">
 			{#each rows as r (r.label)}
@@ -41,7 +43,7 @@
 	</section>
 
 	<section id="{idPrefix}-fails" {role} aria-labelledby="{idPrefix}-fails-h" hidden={!show.includes('fails')}>
-		<h3 id="{idPrefix}-fails-h" class="mono">HOW IT FAILS</h3>
+		<svelte:element this={h} id="{idPrefix}-fails-h" class="h mono">HOW IT FAILS</svelte:element>
 		<Rule />
 		{#if report.failures.length === 0}
 			<p class="mono faint">not yet measured</p>
@@ -66,7 +68,7 @@
 	.report { display: grid; gap: var(--space-4); }
 	section { display: grid; gap: var(--space-2); align-content: start; }
 	section[hidden] { display: none; }
-	h3 { color: var(--red); font-weight: 500; letter-spacing: 0.12em; }
+	.h { color: var(--red); font-weight: 500; letter-spacing: 0.12em; font-size: var(--step--1); }
 	dl { margin: 0; display: grid; }
 	dl div { display: flex; justify-content: space-between; gap: var(--space-2); padding: 0.4rem 0; border-bottom: 1px solid var(--hairline); }
 	dt { flex-shrink: 0; max-width: 45%; }

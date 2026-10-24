@@ -8,14 +8,17 @@
 	import EntryBench from '$lib/components/EntryBench.svelte';
 	import Sheet from '$lib/components/Sheet.svelte';
 	import Hero from '$lib/components/Hero.svelte';
-	import AssistantCard from '$lib/components/AssistantCard.svelte';
-	import { assistants, findAssistant, isAssistant } from '$lib/assistant/assistants';
+	import { findAssistant } from '$lib/assistant/assistants';
 
 	const phone = new MediaQuery('max-width: 639px', false);
 
 	// Query params can't be read while prerendering, so selection is client-side.
 	const requested = $derived(browser ? page.url.searchParams.get('entry') : null);
-	const selected = $derived((requested && (findEntry(requested) ?? findAssistant(requested))) || null);
+	const selected = $derived((requested && findEntry(requested)) || null);
+	// The assistants moved to their own section; old /?entry=<assistant> links follow them there.
+	$effect(() => {
+		if (requested && findAssistant(requested)) goto('/assistants', { replaceState: true });
+	});
 	const shown = $derived(selected ?? catalogue[0]);
 
 	function close() {
@@ -35,12 +38,10 @@
 
 <Hero />
 
-{#snippet bench(x: typeof shown)}
-	{#if isAssistant(x)}<AssistantCard assistant={x} />{:else}<EntryBench entry={x} />{/if}
-{/snippet}
+{#snippet bench(x: typeof shown)}<EntryBench entry={x} />{/snippet}
 
 <section class="lab" aria-label="Archive">
-	<EntryIndex entries={catalogue} {assistants} selected={phone.current ? (selected?.slug ?? null) : shown.slug} />
+	<EntryIndex entries={catalogue} selected={phone.current ? (selected?.slug ?? null) : shown.slug} />
 	{#if !phone.current}
 		<div class="bench-wrap">{@render bench(shown)}</div>
 	{/if}

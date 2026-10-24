@@ -76,6 +76,17 @@ describe('D5: all defences together', () => {
 	});
 });
 
+describe('v1: all defences plus no guessing', () => {
+	it('turns on every defence, like D5', () => {
+		for (const d of ['D1', 'D2', 'D3', 'D4'] as const) expect(uses('v1', d), d).toBe(true);
+	});
+	it('uses the D1 prompt plus a rule against making things up', () => {
+		const s = systemPrompt(raffelLuo, 'student', [pub], 'v1');
+		expect(s.startsWith(systemPrompt(raffelLuo, 'student', [pub], 'D1'))).toBe(true);
+		expect(s).toContain('Never make up a code, phone number, name or other number');
+	});
+});
+
 describe('topK', () => {
 	it('returns the most similar vectors first', () => {
 		expect(topK([1, 0], [[0, 1], [1, 0], [1, 1]], 2)).toEqual([1, 2]);
@@ -155,11 +166,11 @@ describe('buildMessages', () => {
 });
 
 describe('versionFrom', () => {
-	it('knows v0 and falls back to it for anything else', () => {
+	it('knows each version and falls back to v1, the recommended one, for anything else', () => {
 		expect(versionFrom('v0')).toBe('v0');
 		expect(versionFrom('D1')).toBe('D1');
-		expect(versionFrom(null)).toBe('v0');
-		expect(versionFrom('toString')).toBe('v0');
+		expect(versionFrom(null)).toBe('v1');
+		expect(versionFrom('toString')).toBe('v1');
 	});
 });
 

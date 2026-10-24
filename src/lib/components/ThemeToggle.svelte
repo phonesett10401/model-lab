@@ -21,5 +21,5 @@
 
 <style>
 	.toggle { min-height: 44px; padding: 0 var(--space-2); background: none; border: 1px solid var(--hairline); border-radius: var(--radius); cursor: pointer; }
-	.toggle:hover { border-color: var(--ink); }
+	@media (hover: hover) { .toggle:hover { border-color: var(--ink); } }
 </style>

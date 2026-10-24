@@ -30,7 +30,7 @@
 		</section>
 	{/if}
 	{#if data.entry.transcripts.length}<TranscriptViewer transcripts={data.entry.transcripts} />{/if}
-	<ReportCard report={data.entry.report} show={data.entry.transcripts.length && !data.entry.report.failures.length ? ['data', 'metrics'] : ['data', 'metrics', 'fails']} idPrefix="page" />
+	<ReportCard report={data.entry.report} show={data.entry.transcripts.length && !data.entry.report.failures.length ? ['data', 'metrics'] : ['data', 'metrics', 'fails']} idPrefix="page" level={2} />
 </article>
 
 <style>

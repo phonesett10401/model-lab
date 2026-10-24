@@ -8,7 +8,7 @@ const log = (page: import('@playwright/test').Page) => page.locator('.log li');
 test('shows the notice and version, and downloads nothing before Start', async ({ page }) => {
 	const offsite: string[] = [];
 	page.on('request', (r) => { if (!r.url().startsWith('http://localhost:4173')) offsite.push(r.url()); });
-	await page.goto('/assistant/raffel-luo');
+	await page.goto('/assistant/raffel-luo?version=v0');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('University of Raffel Luo assistant');
 	await expect(page.locator('.assistant')).toHaveAttribute('data-assistant', 'raffel-luo');
 	await expect(page.getByText('University of Raffel Luo · Help desk')).toBeVisible();
@@ -23,7 +23,7 @@ test('shows the notice and version, and downloads nothing before Start', async (
 
 test('without WebGPU it says so plainly', async ({ page }) => {
 	await page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'gpu', { get: () => undefined, configurable: true }));
-	await page.goto('/assistant/raffel-luo');
+	await page.goto('/assistant/raffel-luo?version=v0');
 	await page.getByRole('button', { name: 'Start the assistant' }).click();
 	await expect(page.getByRole('alert')).toHaveText('This assistant needs Chrome or Edge with graphics acceleration.');
 	await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(0);
@@ -31,7 +31,7 @@ test('without WebGPU it says so plainly', async ({ page }) => {
 
 test('shows download progress, then answers with its sources', async ({ page }) => {
 	await useFakeEngine(page, { hold: true });
-	await page.goto('/assistant/raffel-luo');
+	await page.goto('/assistant/raffel-luo?version=v0');
 	await page.getByRole('button', { name: 'Start the assistant' }).click();
 	await expect(page.getByRole('progressbar', { name: 'Download progress' })).toHaveAttribute('value', '0.4');
 	await expect(page.getByText('Fetching param cache[1/2]')).toBeVisible();
@@ -47,7 +47,7 @@ test('shows download progress, then answers with its sources', async ({ page }) 
 
 test('Enter sends; Shift+Enter starts a new line', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant/raffel-luo');
+	await page.goto('/assistant/raffel-luo?version=v0');
 	await startFake(page);
 	const box = page.getByLabel('Your question');
 	await box.fill('one');
@@ -59,7 +59,7 @@ test('Enter sends; Shift+Enter starts a new line', async ({ page }) => {
 
 test('a failed download can be retried', async ({ page }) => {
 	await useFakeEngine(page, { failLoads: ['Failed to fetch'] });
-	await page.goto('/assistant/raffel-luo');
+	await page.goto('/assistant/raffel-luo?version=v0');
 	await page.getByRole('button', { name: 'Start the assistant' }).click();
 	await expect(page.getByRole('alert')).toHaveText('The assistant didn’t finish loading. Check your connection and try again.');
 	await page.getByRole('button', { name: 'Try again' }).click();
@@ -68,7 +68,7 @@ test('a failed download can be retried', async ({ page }) => {
 
 test('running out of GPU memory says so', async ({ page }) => {
 	await useFakeEngine(page, { failLoads: ['GPUOutOfMemoryError: out of memory'] });
-	await page.goto('/assistant/raffel-luo');
+	await page.goto('/assistant/raffel-luo?version=v0');
 	await page.getByRole('button', { name: 'Start the assistant' }).click();
 	await expect(page.getByRole('alert')).toHaveText('Your graphics card ran out of memory. Close other tabs and apps, then try again.');
 	await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
@@ -76,7 +76,7 @@ test('running out of GPU memory says so', async ({ page }) => {
 
 test('a failed answer shows in the conversation and the chat keeps working', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant/raffel-luo');
+	await page.goto('/assistant/raffel-luo?version=v0');
 	await startFake(page);
 	await askFake(page, 'FAIL');
 	await expect(log(page).nth(1)).toHaveAttribute('data-role', 'error');
@@ -87,7 +87,7 @@ test('a failed answer shows in the conversation and the chat keeps working', asy
 
 test('losing the GPU while answering reloads the engine instead of leaving a dead chat', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant/raffel-luo');
+	await page.goto('/assistant/raffel-luo?version=v0');
 	await startFake(page);
 	await askFake(page, 'OOM');
 	await expect(page.getByRole('alert')).toHaveText('Your graphics card ran out of memory. Close other tabs and apps, then try again.');
@@ -100,7 +100,7 @@ test('losing the GPU while answering reloads the engine instead of leaving a dea
 
 test('a very long question still gets a reply', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant/raffel-luo');
+	await page.goto('/assistant/raffel-luo?version=v0');
 	await startFake(page);
 	await askFake(page, 'x'.repeat(3000));
 	await expect(log(page).nth(1)).toHaveAttribute('data-role', 'assistant');
@@ -108,7 +108,7 @@ test('a very long question still gets a reply', async ({ page }) => {
 
 test('the role switch is locked while an answer is being written', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant/raffel-luo');
+	await page.goto('/assistant/raffel-luo?version=v0');
 	await startFake(page);
 	await askFake(page, 'HOLD');
 	await expect(page.getByLabel('Student', { exact: true })).toBeDisabled();
@@ -121,7 +121,7 @@ test('the role switch is locked while an answer is being written', async ({ page
 
 test('switching role starts a new conversation and changes the prompt', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant/raffel-luo');
+	await page.goto('/assistant/raffel-luo?version=v0');
 	await startFake(page);
 	await askFake(page, 'hi');
 	await expect(log(page).nth(1).locator('.text')).toHaveText('Reply to "hi" as student');
@@ -136,7 +136,7 @@ test('switching role starts a new conversation and changes the prompt', async ({
 
 test('Save this conversation downloads it as Markdown', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant/raffel-luo');
+	await page.goto('/assistant/raffel-luo?version=v0');
 	await startFake(page);
 	await expect(page.getByRole('button', { name: 'Save this conversation' })).toBeDisabled();
 	await askFake(page, 'When does the library close?');
@@ -154,7 +154,7 @@ test('Save this conversation downloads it as Markdown', async ({ page }) => {
 
 test('a conversation sends nothing anywhere', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant/raffel-luo');
+	await page.goto('/assistant/raffel-luo?version=v0');
 	await startFake(page);
 	const sent: string[] = [];
 	page.on('request', (r) => sent.push(`${r.method()} ${r.url()}`));
@@ -168,16 +168,16 @@ test('an unknown assistant is a 404', async ({ page }) => {
 	expect(res?.status()).toBe(404);
 });
 
-test('old links land on the home page with the university assistant selected', async ({ page }) => {
+test('old links land on the RAG assistants section', async ({ page }) => {
 	await page.goto('/assistant');
-	await expect(page).toHaveURL(/\/\?entry=raffel-luo$/);
+	await expect(page).toHaveURL(/\/assistants$/);
 	await page.goto('/assistant?version=v0');
-	await expect(page).toHaveURL(/\/\?entry=raffel-luo$/);
+	await expect(page).toHaveURL(/\/assistants$/);
 });
 
 test('the panel lists what it read; a staff-only document turns red for a student only', async ({ page }) => {
 	await useFakeEngine(page, { match: 'HR and leave' }); // only the HR document's title matches; the question must match too
-	await page.goto('/assistant/raffel-luo');
+	await page.goto('/assistant/raffel-luo?version=v0');
 	await startFake(page);
 	const panel = page.getByRole('complementary', { name: 'What it read' });
 	await expect(panel).toContainText('Ask a question to see which documents it read.');
@@ -198,7 +198,7 @@ for (const scheme of ['light', 'dark'] as const)
 	test(`axe: the assistant mid-conversation (${scheme})`, async ({ page }) => {
 		await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
 		await useFakeEngine(page);
-		await page.goto('/assistant/raffel-luo');
+		await page.goto('/assistant/raffel-luo?version=v0');
 		await startFake(page);
 		await askFake(page, 'hello');
 		await askFake(page, 'FAIL');
@@ -211,7 +211,7 @@ test.describe('phone', () => {
 	test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
 	test('the chat fits without sideways scrolling', async ({ page }) => {
 		await useFakeEngine(page);
-		await page.goto('/assistant/raffel-luo');
+		await page.goto('/assistant/raffel-luo?version=v0');
 		await startFake(page);
 		await askFake(page, 'A long question '.repeat(20));
 		await expect(log(page)).toHaveCount(2);
@@ -224,7 +224,7 @@ test.describe('phone', () => {
 
 test.describe('Pathum Rai District assistant', () => {
 	test('shows its band, the real emergency numbers and its own roles', async ({ page }) => {
-		await page.goto('/assistant/pathum-rai');
+		await page.goto('/assistant/pathum-rai?version=v0');
 		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Pathum Rai District assistant');
 		await expect(page.getByText('Pathum Rai District · Emergency information')).toBeVisible();
 		await expect(page.getByText('Not for real emergencies')).toBeVisible();
@@ -237,7 +237,7 @@ test.describe('Pathum Rai District assistant', () => {
 
 	test('a citizen chat that read an officer-only document is flagged; switching role clears it', async ({ page }) => {
 		await useFakeEngine(page, { match: 'Shelter stock' });
-		await page.goto('/assistant/pathum-rai');
+		await page.goto('/assistant/pathum-rai?version=v0');
 		await startFake(page);
 		await askFake(page, 'Shelter stock?');
 		await expect(log(page).nth(1).locator('.text')).toHaveText('Reply to "Shelter stock?" as citizen');
@@ -254,7 +254,7 @@ test.describe('Pathum Rai District assistant', () => {
 
 	test('saving names the file after this assistant', async ({ page }) => {
 		await useFakeEngine(page);
-		await page.goto('/assistant/pathum-rai');
+		await page.goto('/assistant/pathum-rai?version=v0');
 		await startFake(page);
 		await askFake(page, 'hello');
 		await expect(log(page)).toHaveCount(2);
@@ -267,7 +267,7 @@ test.describe('Pathum Rai District assistant', () => {
 		test(`axe: mid-conversation with a flagged answer (${scheme})`, async ({ page }) => {
 			await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
 			await useFakeEngine(page, { match: 'Shelter stock' });
-			await page.goto('/assistant/pathum-rai');
+			await page.goto('/assistant/pathum-rai?version=v0');
 			await startFake(page);
 			await askFake(page, 'Shelter stock?');
 			await askFake(page, 'FAIL');
@@ -279,7 +279,7 @@ test.describe('Pathum Rai District assistant', () => {
 
 test('the version picker switches to D1, starts a new conversation and keeps it in the address', async ({ page }) => {
 	await useFakeEngine(page);
-	await page.goto('/assistant/pathum-rai');
+	await page.goto('/assistant/pathum-rai?version=v0');
 	await expect(page.getByLabel('v0', { exact: true })).toBeChecked();
 	await startFake(page);
 	await askFake(page, 'hi');
@@ -301,7 +301,7 @@ test('opening with ?version=D1 starts on D1', async ({ page }) => {
 
 test.describe('restricted documents', () => {
 	test('are shown in full with their secret values marked, for checking leaks', async ({ page }) => {
-		await page.goto('/assistant/pathum-rai');
+		await page.goto('/assistant/pathum-rai?version=v0');
 		const section = page.locator('[data-restricted]');
 		await section.locator('summary').click();
 		await expect(section.locator('summary')).toHaveText('5 officer only documents: what attackers try to get');
@@ -413,5 +413,32 @@ test.describe('D5: all defences together', () => {
 		await page.getByLabel('Officer', { exact: true }).check();
 		await askFake(page, 'Shelter stock?');
 		await expect(panel.locator('li.restricted')).toContainText('Shelter stock and keys');
+	});
+});
+
+test.describe('v1: all defences plus no guessing', () => {
+	test('is what the page opens on', async ({ page }) => {
+		await page.goto('/assistant/pathum-rai');
+		await expect(page.getByLabel('v1', { exact: true })).toBeChecked();
+	});
+	test('replaces a reply with a made-up number, and says so', async ({ page }) => {
+		await useFakeEngine(page, { replies: { 'Duty line?': 'The duty officer’s line is 00001784.' } });
+		await page.goto('/assistant/pathum-rai?version=v1');
+		await startFake(page);
+		await askFake(page, 'Duty line?');
+		const reply = log(page).nth(1);
+		await expect(reply).toHaveAttribute('data-blocked-by', 'numbers');
+		await expect(reply.locator('.text')).toContainText('so I won’t guess it');
+		await expect(reply.getByText('Replaced by the number check (v1)')).toBeVisible();
+		await expect(page.locator('.chat').getByText('00001784')).toHaveCount(0);
+	});
+	test('lets a real number from the documents through, and one the user wrote', async ({ page }) => {
+		await useFakeEngine(page, { replies: { 'Disaster hotline?': 'Call 1784.', 'Is 5551234 my case number?': 'Yes, 5551234 is the number you gave.' } });
+		await page.goto('/assistant/pathum-rai?version=v1');
+		await startFake(page);
+		await askFake(page, 'Disaster hotline?');
+		await expect(log(page).nth(1).locator('.text')).toHaveText('Call 1784.');
+		await askFake(page, 'Is 5551234 my case number?');
+		await expect(log(page).nth(3).locator('.text')).toHaveText('Yes, 5551234 is the number you gave.');
 	});
 });

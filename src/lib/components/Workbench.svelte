@@ -284,7 +284,7 @@
 		</section>
 
 		<div class="report">
-			<ReportCard report={entry.report} show={reportShows} idPrefix={id} tabbed={tabs.length > 0} onpick={live ? pick : undefined} />
+			<ReportCard report={entry.report} show={reportShows} idPrefix={id} level={header ? 3 : 2} tabbed={tabs.length > 0} onpick={live ? pick : undefined} />
 		</div>
 	</div>
 </article>
