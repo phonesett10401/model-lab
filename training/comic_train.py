@@ -32,9 +32,10 @@ def build_annotations() -> dict[str, int]:
                 {'bbox': a['bbox'], 'category': c.CLASSES[a['category_id']], **({'text': a['text']} if 'text' in a else {})}
                 for a in anns.get(im['id'], [])])
     counts = {}
+    gone = c.dropped()
     for split in ('train', 'val', 'test'):
         items = [(p.file, *labels[p.file]) for p in c.load_attribution()
-                 if p.split == split and p.file in labels and (split == 'train' or not p.source.startswith('Synthetic'))]
+                 if p.split == split and p.file in labels and p.file not in gone and (split == 'train' or not p.source.startswith('Synthetic'))]
         c.write_coco(c.DATA / 'annotations' / f'{split}.json', items)
         counts[split] = len(items)
     return counts

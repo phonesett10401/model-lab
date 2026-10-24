@@ -146,6 +146,8 @@
 
 ### Task 6: More sources, with drafts the owner corrects
 
+> **Changed 2026-10-24 (owner's decision):** no Label Studio. Labels come from `comic_autolabel.py` (docTR OCR words + round-1 detector boxes), Claude reviews every test/validation page by eye (`attribution/comic-v1-review.csv`), and the report card says the test labels are machine-made and Claude-reviewed. Black Jack comes from the Internet Archive copy of the official English edition (Manga on Web closed); old public-domain pages from Wikimedia Commons.
+
 **Files:**
 - Create: `training/comic_incoming.py`, `training/comic_draft.py`, `training/comic_labelstudio.md` (setup and steps for the owner)
 - Test: `training/test_comic_incoming.py`

@@ -152,7 +152,9 @@ def main() -> None:
     OUT.write_text(json.dumps({
         'run': run,
         'data': [{'label': f'Training pages: {s}', 'value': n} for s, n in sorted(used.items())]
-                + [{'label': 'Test pages (real, never trained on)', 'value': len(gt['images'])}],
+                + [{'label': 'Test pages (real, never trained on)', 'value': len(gt['images'])},
+                   {'label': 'Test labels', 'value': 'Made automatically (OCR + detector) and reviewed by Claude, not by a person'
+                    f'; {len(c.dropped())} pages dropped in review'}],
         'metrics': {n: (None if m is None else round(m['ap50'], 3)) for n, m in result['per_class'].items()},
         'map50': round(result['map50'], 3),
         'styles': {s: (None if r is None else {'pages': r['pages'], 'map50': round(r['map50'], 3)}) for s, r in styles.items()},

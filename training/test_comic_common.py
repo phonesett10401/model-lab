@@ -44,4 +44,10 @@ assert c.split_for('pepper-ep12') == 'train'
 other = subprocess.run([sys.executable, '-c', "import comic_common as c; print(c.split_for('pepper-ep12'))"],
                        capture_output=True, text=True, cwd=Path(__file__).parent).stdout.strip()
 assert other == 'train', other
+# pages dropped in Claude's review are left out
+with tempfile.TemporaryDirectory() as d:
+    review = Path(d) / 'review.csv'
+    assert c.dropped(review) == set(), 'no review yet'
+    review.write_text('file,verdict,note\na.jpg,ok,\nb.jpg,drop,labels miss two bubbles\n', encoding='utf8')
+    assert c.dropped(review) == {'b.jpg'}
 print('comic common checks passed')

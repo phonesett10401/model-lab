@@ -9,6 +9,8 @@ HERE = Path(__file__).parent
 DATA = HERE / 'data/comic'
 RUNS = HERE / 'runs/comic'
 ATTRIBUTION = HERE / 'attribution/comic-v1.csv'
+# Claude's by-eye review of the automatic labels on validation and test pages: file,verdict(ok|drop),note
+REVIEW = HERE / 'attribution/comic-v1-review.csv'
 
 CLASSES = ['bubble', 'caption', 'sfx', 'art-text']
 STYLES = ['manga', 'modern-western', 'old-pd']
@@ -55,6 +57,14 @@ def load_attribution(path: Path = ATTRIBUTION) -> list[Page]:
     for p in pages:
         _check(p)
     return pages
+
+
+def dropped(path: Path = REVIEW) -> set[str]:
+    """Pages whose automatic labels were judged clearly wrong in review: left out of every split."""
+    if not Path(path).exists():
+        return set()
+    with open(path, newline='', encoding='utf8') as f:
+        return {r['file'] for r in csv.DictReader(f) if r['verdict'] == 'drop'}
 
 
 def coco_dict(items: list[tuple[str, int, int, list[dict]]]) -> dict:
