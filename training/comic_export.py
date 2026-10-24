@@ -22,7 +22,7 @@ def load(run: str):
         from src.core import YAMLConfig
         ckpt = next(p for p in (d / 'best_stg2.pth', d / 'best_stg1.pth', d / 'last.pth') if p.exists())
         cfg = YAMLConfig(str(d / 'config.yml'))
-        state = torch.load(ckpt, map_location='cpu')
+        state = torch.load(ckpt, map_location='cpu', weights_only=False)
         cfg.model.load_state_dict(state['ema']['module'] if 'ema' in state else state['model'])
 
         class Model(torch.nn.Module):
@@ -38,7 +38,7 @@ def load(run: str):
     exp = get_exp(str(d / 'exp.py'), None)
     model = exp.get_model().eval()
     ckpt = next(p for p in (d / 'best_ckpt.pth', d / 'latest_ckpt.pth') if p.exists())
-    model.load_state_dict(torch.load(ckpt, map_location='cpu')['model'])
+    model.load_state_dict(torch.load(ckpt, map_location='cpu', weights_only=False)['model'])
     model.head.decode_in_inference = True
     return kind, model
 
