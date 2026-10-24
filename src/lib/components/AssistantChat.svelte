@@ -278,7 +278,10 @@
 	.blocked { color: var(--red); }
 	.text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 	.ask { display: grid; gap: var(--space-1); }
-	.ask textarea { width: 100%; min-width: 0; box-sizing: border-box; padding: var(--space-1); resize: vertical; }
+	.ask textarea {
+		width: 100%; min-width: 0; box-sizing: border-box; padding: var(--space-1); resize: vertical;
+		background: var(--plate); border: 1px solid var(--hairline); border-radius: var(--radius);
+	}
 	.ask button { justify-self: end; }
 	.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 	.read { display: grid; gap: var(--space-1); align-content: start; min-width: 0; border-top: 1px solid var(--hairline); padding-top: var(--space-2); }

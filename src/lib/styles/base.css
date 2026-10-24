@@ -15,6 +15,10 @@ a { color: inherit; }
 img, svg, video { max-width: 100%; display: block; }
 button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+/* Text fields show focus every time they're tapped; red there reads as an error, so they get a calm ring that hugs the box (an assistant's own colour where set). */
+textarea:focus-visible, select:focus-visible, input:not([type='radio'], [type='checkbox'], [type='file']):focus-visible {
+	outline: 2px solid var(--accent, var(--ink)); outline-offset: 0; border-color: transparent;
+}
 
 .serif { font-family: var(--font-serif); font-weight: 400; }
 .mono { font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.02em; }
