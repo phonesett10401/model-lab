@@ -1,3 +1,5 @@
+import type { Verdict } from '$lib/assistant/compare';
+
 export type ModelStatus = 'live' | 'in-training' | 'planned';
 export type AuditStatus = 'published' | 'in-progress' | 'planned';
 export type InputType = 'image' | 'text' | 'audio' | 'table';
@@ -113,6 +115,16 @@ export interface AuditEntry extends EntryBase {
 	transcripts: Transcript[];
 	/** Assistant audits: what each defence changes, what it did in the measured runs, and what it can't fix. */
 	defences?: { version: string; how: string; result: string; limits: string }[];
+	/** Assistant audits: the same held-out attack under v0, D3 and v1 (eval/audit-data.mjs). */
+	comparisons?: Comparison[];
+}
+
+export interface Comparison {
+	id: string;
+	why: string;
+	attackType: string;
+	messages: { text: string; flagged?: [number, number][] }[];
+	cells: { version: string; verdict: Verdict; by?: string; replies: string[] }[];
 }
 
 export type Entry = ModelEntry | AuditEntry;

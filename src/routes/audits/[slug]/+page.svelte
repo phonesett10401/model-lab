@@ -1,4 +1,5 @@
 <script lang="ts">
+	import AttackCompare from '$lib/components/AttackCompare.svelte';
 	import EntryHeader from '$lib/components/EntryHeader.svelte';
 	import EntryMeta from '$lib/components/EntryMeta.svelte';
 	import ReportCard from '$lib/components/ReportCard.svelte';
@@ -29,6 +30,7 @@
 			{/each}
 		</section>
 	{/if}
+	{#if data.entry.comparisons?.length}<AttackCompare comparisons={data.entry.comparisons} />{/if}
 	{#if data.entry.transcripts.length}<TranscriptViewer transcripts={data.entry.transcripts} />{/if}
 	<ReportCard report={data.entry.report} show={data.entry.transcripts.length && !data.entry.report.failures.length ? ['data', 'metrics'] : ['data', 'metrics', 'fails']} idPrefix="page" level={2} />
 </article>
