@@ -97,8 +97,9 @@ def by_style(pages: list[c.Page], gt: dict, pred: list[dict], min_pages: int = M
     return out
 
 
-def missed_text(path: Path = c.MISSED) -> dict | None:
-    """Totals of Claude's count of unlabelled English on sampled test pages, or None before the count exists."""
+def missed_text(path: Path = c.MISSED, gt: dict | None = None) -> dict | None:
+    """Totals of Claude's count of unlabelled English on sampled test pages, or None before the count exists.
+    With gt, each page's labelled count is taken from today's labels (the CSV's count can predate a re-labelling)."""
     import csv
     if not Path(path).exists():
         return None
@@ -106,6 +107,11 @@ def missed_text(path: Path = c.MISSED) -> dict | None:
         rows = list(csv.DictReader(f))
     # owner_check: empty (not checked), 'agree', or the owner's corrected count, which replaces Claude's.
     checks = [(r.get('owner_check') or '').strip() for r in rows]
+    if gt:
+        boxes = collections.Counter(a['image_id'] for a in gt['annotations'])
+        now = {i['file_name']: boxes[i['id']] for i in gt['images']}
+        for r in rows:
+            r['labelled'] = now.get(r['file'], r['labelled'])
     labelled = sum(int(r['labelled']) for r in rows)
     missed = sum(int(ch) if ch.isdigit() else int(r['missed']) for r, ch in zip(rows, checks))
     return {'pages': len(rows), 'labelled': labelled, 'missed': missed, 'missed_share': round(missed / (labelled + missed), 4),
@@ -162,6 +168,34 @@ def table(r: dict) -> str:
     return '\n'.join(rows + [f"mAP@50   {r['map50']:.3f}"])
 
 
+def build_report(run: str, gt: dict, result: dict, styles: dict, pages: list[c.Page], train_coco: dict,
+                 missed_path: Path = c.MISSED, review_path: Path = c.REVIEW) -> dict:
+    """The report-card numbers for the site. Every number comes from this run; nothing is typed by hand."""
+    split_of = {p.file: p.split for p in pages}
+    gone = c.dropped(review_path)
+    test_drops = sum(split_of.get(f) == 'test' for f in gone)
+    used = training_counts(pages, train_coco)
+    miss = missed_text(missed_path, gt)
+    per = lambda m: None if m is None else {k: round(m[k], 3) for k in ('ap50', 'precision', 'recall')}
+    return {
+        'run': run,
+        'data': [{'label': f'Training pages: {s}', 'value': n} for s, n in sorted(used.items())]
+                + [{'label': 'Test pages (real, never trained on)', 'value': len(gt['images'])},
+                   {'label': 'Test labels', 'value':
+                    'Made automatically and reviewed by Claude, not by a person: English found by OCR, box shapes and types from '
+                    'an earlier version of this detector, so scores measure agreement with that labelling. '
+                    f'{test_drops} test page{"" if test_drops == 1 else "s"} dropped in review ({len(gone)} pages in all)'}],
+        'metrics': {n: per(m) for n, m in result['per_class'].items()},
+        'map50': round(result['map50'], 3),
+        'found': {'of_labelled_text': round(result['recall_all'], 3),
+                  **({'worst_case_of_all_text': round(result['recall_all'] * (1 - miss['missed_share']), 3), 'missed_count': miss}
+                     if miss else {})},
+        'styles': {s: (None if r is None else {'pages': r['pages'], 'map50': round(r['map50'], 3),
+                                               'per_class': {n: per(m) for n, m in r['per_class'].items()}})
+                   for s, r in styles.items()},
+    }
+
+
 def main() -> None:
     run, split = sys.argv[1:3]
     gt = json.loads((c.DATA / 'annotations' / f'{split}.json').read_text(encoding='utf8'))
@@ -171,7 +205,7 @@ def main() -> None:
     styles = by_style(pages, gt, pred)
     print(f'{run} on {split}: {len(gt["images"])} pages\n{table(result)}')
     print(f"found {result['recall_all']:.3f} of the text the labelling found")
-    if split == 'test' and (miss := missed_text()):
+    if split == 'test' and (miss := missed_text(gt=gt)):
         print(f"worst case {result['recall_all'] * (1 - miss['missed_share']):.3f} of all text "
               f"(labels missed {miss['missed']} of {miss['labelled'] + miss['missed']} pieces on {miss['pages']} pages counted by Claude; "
               f"owner checked {miss['owner_checked']} and agreed with {miss['owner_agreed']})")
@@ -179,20 +213,8 @@ def main() -> None:
         print(f'-- {s}: ' + ('not yet measured (fewer than 10 pages)' if r is None else f"{r['pages']} pages, mAP@50 {r['map50']:.3f}"))
     if split != 'test':
         return
-    used = training_counts(pages, json.loads((c.DATA / 'annotations/train.json').read_text(encoding='utf8')))
-    OUT.write_text(json.dumps({
-        'run': run,
-        'data': [{'label': f'Training pages: {s}', 'value': n} for s, n in sorted(used.items())]
-                + [{'label': 'Test pages (real, never trained on)', 'value': len(gt['images'])},
-                   {'label': 'Test labels', 'value': 'Made automatically (OCR + detector) and reviewed by Claude, not by a person'
-                    f'; {len(c.dropped())} pages dropped in review'}],
-        'metrics': {n: (None if m is None else round(m['ap50'], 3)) for n, m in result['per_class'].items()},
-        'map50': round(result['map50'], 3),
-        'found': {'of_labelled_text': round(result['recall_all'], 3),
-                  **({'worst_case_of_all_text': round(result['recall_all'] * (1 - miss['missed_share']), 3), 'missed_count': miss}
-                     if (miss := missed_text()) else {})},
-        'styles': {s: (None if r is None else {'pages': r['pages'], 'map50': round(r['map50'], 3)}) for s, r in styles.items()},
-    }, indent=1, ensure_ascii=False) + '\n', encoding='utf8')
+    train = json.loads((c.DATA / 'annotations/train.json').read_text(encoding='utf8'))
+    OUT.write_text(json.dumps(build_report(run, gt, result, styles, pages, train), indent=1, ensure_ascii=False) + '\n', encoding='utf8')
     print('wrote', OUT)
 
 
