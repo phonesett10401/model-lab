@@ -11,6 +11,8 @@ RUNS = HERE / 'runs/comic'
 ATTRIBUTION = HERE / 'attribution/comic-v1.csv'
 # Claude's by-eye review of the automatic labels on validation and test pages: file,verdict(ok|drop),note
 REVIEW = HERE / 'attribution/comic-v1-review.csv'
+# Claude's by-eye count of English the automatic labels missed, on a sample of test pages: file,labelled,missed,note
+MISSED = HERE / 'attribution/comic-v1-missed.csv'
 
 CLASSES = ['bubble', 'caption', 'sfx', 'art-text']
 STYLES = ['manga', 'modern-western', 'old-pd']

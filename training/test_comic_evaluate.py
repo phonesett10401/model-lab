@@ -1,5 +1,6 @@
 """Scoring for the comic text detector. Run: python test_comic_evaluate.py"""
 import comic_common as c
+from pathlib import Path
 from comic_evaluate import by_style, evaluate
 
 
@@ -22,12 +23,14 @@ perfect = [{'image_id': a['image_id'], 'category_id': a['category_id'], 'bbox': 
 # perfect predictions score 1
 r = evaluate(gt, perfect)
 assert abs(r['map50'] - 1) < 1e-6, r
+assert r['recall_all'] == 1, 'every labelled box found'
 for cls in c.CLASSES:
     m = r['per_class'][cls]
     assert abs(m['ap50'] - 1) < 1e-6 and m['precision'] == 1 and m['recall'] == 1, (cls, m)
 
 # no predictions score 0 recall
 r = evaluate(gt, [])
+assert r['recall_all'] == 0
 assert r['map50'] == 0 and all(m['recall'] == 0 and m['ap50'] == 0 for m in r['per_class'].values()), r
 
 # a style with too few test pages is not measured
@@ -57,3 +60,14 @@ log = [c.Page('a.jpg', 'Pepper&Carrot', 'g', 'modern-western', 'train', 'A', 'CC
        c.Page('b.jpg', 'Wikimedia Commons', 'h', 'old-pd', 'train', 'A', 'Public domain', 'x', 'd')]
 assert training_counts(log, {'images': [{'file_name': 'a.jpg'}]}) == {'Pepper&Carrot': 1}
 print('comic training count checks passed')
+
+# Claude's count of English the automatic labels missed gives a worst-case "share of all text found"
+import tempfile  # noqa: E402
+from comic_evaluate import missed_text  # noqa: E402
+with tempfile.TemporaryDirectory() as d:
+    p = Path(d) / 'missed.csv'
+    assert missed_text(p) is None, 'no count yet'
+    p.write_text('file,labelled,missed,note\na.jpg,8,2,POOF\nb.jpg,10,0,\n', encoding='utf8')
+    m = missed_text(p)
+    assert m == {'pages': 2, 'labelled': 18, 'missed': 2, 'missed_share': 0.1}, m
+print('comic missed-text checks passed')

@@ -51,6 +51,7 @@ def evaluate(gt: dict, pred: list[dict]) -> dict:
             for k in range(len(c.CLASSES)):
                 p = e.eval['precision'][0, :, k, 0, -1]
                 ap[k] = float(p[p > -1].mean()) if (p > -1).any() else None
+    all_hits = all_truth = 0
     for k, name in enumerate(c.CLASSES):
         truth = collections.defaultdict(list)
         for a in gt['annotations']:
@@ -70,10 +71,14 @@ def evaluate(gt: dict, pred: list[dict]) -> dict:
                 if best is not None and _iou(best, p['bbox']) >= IOU:
                     hits += 1
                     free.remove(best)
+        all_hits += hits
+        all_truth += n_truth
         per_class[name] = {'precision': hits / n_pred if n_pred else 0.0, 'recall': hits / n_truth,
                            'ap50': ap.get(k) or 0.0}
     scored = [m['ap50'] for m in per_class.values() if m]
-    return {'per_class': per_class, 'map50': float(np.mean(scored)) if scored else 0.0}
+    # Share of labelled text found by a box of the right type: "of the text the labelling found", not of all text.
+    return {'per_class': per_class, 'map50': float(np.mean(scored)) if scored else 0.0,
+            'recall_all': all_hits / all_truth if all_truth else 0.0}
 
 
 def subset(gt: dict, image_ids: set) -> dict:
@@ -90,6 +95,18 @@ def by_style(pages: list[c.Page], gt: dict, pred: list[dict], min_pages: int = M
         out[style] = None if len(ids) < min_pages else {
             **evaluate(subset(gt, ids), [p for p in pred if p['image_id'] in ids]), 'pages': len(ids)}
     return out
+
+
+def missed_text(path: Path = c.MISSED) -> dict | None:
+    """Totals of Claude's count of unlabelled English on sampled test pages, or None before the count exists."""
+    import csv
+    if not Path(path).exists():
+        return None
+    with open(path, newline='', encoding='utf8') as f:
+        rows = list(csv.DictReader(f))
+    labelled = sum(int(r['labelled']) for r in rows)
+    missed = sum(int(r['missed']) for r in rows)
+    return {'pages': len(rows), 'labelled': labelled, 'missed': missed, 'missed_share': round(missed / (labelled + missed), 4)}
 
 
 def training_counts(pages: list[c.Page], train_coco: dict) -> dict[str, int]:
@@ -163,6 +180,9 @@ def main() -> None:
                     f'; {len(c.dropped())} pages dropped in review'}],
         'metrics': {n: (None if m is None else round(m['ap50'], 3)) for n, m in result['per_class'].items()},
         'map50': round(result['map50'], 3),
+        'found': {'of_labelled_text': round(result['recall_all'], 3),
+                  **({'worst_case_of_all_text': round(result['recall_all'] * (1 - miss['missed_share']), 3), 'missed_count': miss}
+                     if (miss := missed_text()) else {})},
         'styles': {s: (None if r is None else {'pages': r['pages'], 'map50': round(r['map50'], 3)}) for s, r in styles.items()},
     }, indent=1, ensure_ascii=False) + '\n', encoding='utf8')
     print('wrote', OUT)
