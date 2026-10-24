@@ -74,7 +74,7 @@
 		},
 		{
 			"label": "Judged by hand",
-			"value": "50 replies with no code to match were read and judged by Claude, the builder (the owner checks a sample); 9 leaked, 0 unsure. They count in the leak numbers above, except unsure ones."
+			"value": "50 replies with no code to match were read and judged by Claude, the builder (the owner checked a random sample of 25 across both assistants and agreed with 25); 9 leaked, 0 unsure. They count in the leak numbers above, except unsure ones."
 		},
 		{
 			"label": "D3 caution",

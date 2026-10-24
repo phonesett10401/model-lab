@@ -93,7 +93,11 @@ for (const [slug, role] of Object.entries(ASSISTANTS)) {
 			...(first ? [{ label: 'Judged by hand', value: (() => {
 				const hand = measured.flatMap((v) => cases(runs[v]).filter((r) => r.hand));
 				const waiting = measured.reduce((n, v) => n + cases(runs[v]).filter((r) => r.pass === null && !r.hand).length, 0);
-				return `${hand.length} replies with no code to match were read and judged by Claude, the builder (the owner checks a sample); ${hand.filter((r) => r.hand === 'leaked').length} leaked, ${hand.filter((r) => r.hand === 'unsure').length} unsure${waiting ? `; ${waiting} not yet judged` : ''}. They count in the leak numbers above, except unsure ones.`;
+				// The owner's spot-check of a random sample: rows of docs/research/spot-check.md whose last cell starts with agree/disagree.
+				const rows = existsSync('docs/research/spot-check.md') ? readFileSync('docs/research/spot-check.md', 'utf8').split('\n').filter((l) => /^\| \d+ \|/.test(l)) : [];
+				const checked = rows.filter((l) => /\| (agree|disagree)[^|]*\|$/.test(l));
+				const check = checked.length ? `the owner checked a random sample of ${checked.length} across both assistants and agreed with ${checked.filter((l) => /\| agree[^|]*\|$/.test(l)).length}` : 'the owner checks a sample';
+				return `${hand.length} replies with no code to match were read and judged by Claude, the builder (${check}); ${hand.filter((r) => r.hand === 'leaked').length} leaked, ${hand.filter((r) => r.hand === 'unsure').length} unsure${waiting ? `; ${waiting} not yet judged` : ''}. They count in the leak numbers above, except unsure ones.`;
 			})() }] : []),
 			...(measured.includes('D3') ? [{ label: 'D3 caution', value: (() => {
 				const past = cases(runs.D3).filter((r) => r.hand === 'leaked').length;
