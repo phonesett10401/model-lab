@@ -41,3 +41,12 @@ pages = [c.Page(f'p{i}.jpg', 'S', f'g{i}', 'manga', 'test', 'A', 'CC0', 'x', 'd'
 styles = by_style(pages, gt, [])
 assert styles['manga'] is not None and styles['manga']['map50'] == 0 and styles['manga']['pages'] == 12
 print('comic evaluate checks passed')
+
+# resuming continues from the last saved epoch
+from comic_train import train_command  # noqa: E402
+cmd, _ = train_command('dfine', 'r1-dfine', resume=True)
+assert cmd[cmd.index('-r') + 1].endswith('last.pth'), cmd
+cmd, _ = train_command('yolox', 'r1-yolox', resume=True)
+assert '--resume' in cmd and cmd[cmd.index('-c') + 1].endswith('latest_ckpt.pth'), cmd
+assert '-r' not in train_command('dfine', 'x', resume=False)[0]
+print('comic resume checks passed')

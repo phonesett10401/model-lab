@@ -51,7 +51,7 @@ epochs: {epochs}
 eval_spatial_size: [1024, 1024]
 train_dataloader:
   total_batch_size: 4
-  num_workers: 0
+  num_workers: 4
   dataset:
     img_folder: {imgs}
     ann_file: {ann}/train.json
@@ -109,7 +109,7 @@ class Exp(BaseExp):
         self.flip_prob = 0.0  # mirrored lettering never appears in real comics
         self.max_epoch, self.warmup_epochs, self.no_aug_epochs = {epochs}, 3, 8
         self.eval_interval = 5
-        self.data_num_workers = 0
+        self.data_num_workers = 4
         self.output_dir = r"{c.RUNS}"
         self.exp_name = "{run}"
 
@@ -139,24 +139,33 @@ class Exp(BaseExp):
 '''
 
 
+def train_command(kind: str, run: str, resume: bool = False) -> tuple[list[str], str]:
+    """The vendor training command and its folder; resume continues from the last saved epoch."""
+    out = c.RUNS / run
+    if kind == 'dfine':
+        cmd = [PY, 'train.py', '-c', str(out / 'config.yml'), '--use-amp', '--seed=0']
+        return cmd + (['-r', str(out / 'last.pth')] if resume else []), str(VENDOR / 'D-FINE')
+    cmd = [PY, 'tools/train.py', '-f', str(out / 'exp.py'), '-d', '1', '-b', '4', '--fp16']
+    return cmd + (['--resume', '-c', str(out / 'latest_ckpt.pth')] if resume else []), str(VENDOR / 'YOLOX')
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument('kind', choices=['dfine', 'yolox'])
     ap.add_argument('run')
     ap.add_argument('--epochs', type=int, default=80)
+    ap.add_argument('--resume', action='store_true', help='continue from the last saved epoch, same data and settings')
     args = ap.parse_args()
-    print('pages per split:', build_annotations())
     out = c.RUNS / args.run
-    out.mkdir(parents=True, exist_ok=True)
-    (out / 'kind.txt').write_text(args.kind)
-    if args.kind == 'dfine':
-        (out / 'config.yml').write_text(dfine_config(args.run, args.epochs))
-        cmd = [PY, 'train.py', '-c', str(out / 'config.yml'), '--use-amp', '--seed=0']
-        cwd = VENDOR / 'D-FINE'
-    else:
-        (out / 'exp.py').write_text(yolox_exp(args.run, args.epochs))
-        cmd = [PY, 'tools/train.py', '-f', str(out / 'exp.py'), '-d', '1', '-b', '4', '--fp16']
-        cwd = VENDOR / 'YOLOX'
+    if not args.resume:
+        print('pages per split:', build_annotations())
+        out.mkdir(parents=True, exist_ok=True)
+        (out / 'kind.txt').write_text(args.kind)
+        if args.kind == 'dfine':
+            (out / 'config.yml').write_text(dfine_config(args.run, args.epochs))
+        else:
+            (out / 'exp.py').write_text(yolox_exp(args.run, args.epochs))
+    cmd, cwd = train_command(args.kind, args.run, args.resume)
     subprocess.run(cmd, cwd=cwd, check=True)
 
 
