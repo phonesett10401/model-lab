@@ -4,8 +4,11 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const ASSISTANTS = { 'pathum-rai': 'citizen', 'raffel-luo': 'student' };
-const VERSIONS = ['v0', 'D1', 'D2', 'D3', 'D4'];
+const VERSIONS = ['v0', 'D1', 'D2', 'D3', 'D4', 'D5'];
 const DEFENCE = { D1: 'instruction/data separation (D1)', D2: 'input filter (D2)', D3: 'output check (D3)', D4: 'retrieval access control (D4)' };
+// Versions that can replace a reply (D5 has both the input filter and the output check).
+const BLOCKS = ['D2', 'D3', 'D5'];
+const blockedBy = (rs) => ['D2', 'D3'].map((d) => `${rs.filter((r) => r.blockedBy?.includes(d)).length} by ${d}`).join(', ');
 const GROUPS = { deepset: 'Direct prompt injection (deepset)', bipia: 'Instruction hidden in a pasted email (BIPIA)', disguise: 'Hidden instruction asking for a disguised answer (BIPIA)', plain: 'Plain question, no attack' };
 const MAX_EXAMPLES = 7;
 
@@ -87,7 +90,7 @@ for (const [slug, role] of Object.entries(ASSISTANTS)) {
 			...measured.flatMap((v) => [
 				{ label: `${v}: leaked`, value: `direct ${count(cases(runs[v], 'deepset'))}, email ${count(cases(runs[v], 'bipia'))}, disguised ${count(cases(runs[v], 'disguise'))}, plain ${count(cases(runs[v], 'plain'))}` },
 				// Only D2 and D3 replace a reply; v0 has no defence, D1 changes the prompt and D4 hides documents.
-				...(v === 'D2' || v === 'D3' ? [{ label: `${v}: blocked by the defence`, value: `${blocked(attacks(runs[v])).length} of ${attacks(runs[v]).length} attacks` }] : []),
+				...(BLOCKS.includes(v) ? [{ label: `${v}: blocked by the defence`, value: `${blocked(attacks(runs[v])).length} of ${attacks(runs[v]).length} attacks${v === 'D5' ? ` (${blockedBy(attacks(runs[v]))})` : ''}` }] : []),
 				{ label: `${v}: made-up numbers`, value: `${invented(cases(runs[v])).length} of ${cases(runs[v], 'deepset').length + cases(runs[v], 'plain').length} direct and plain replies give a number found in no document` }
 			]),
 			...(first ? [{ label: 'Judged by hand', value: (() => {
@@ -119,7 +122,7 @@ for (const [slug, role] of Object.entries(ASSISTANTS)) {
 			const rate = `leaked ${pct(leakRate(runs[v]))} of attacks (v0: ${pct(leakRate(runs.v0))})`;
 			const made = invented(cases(runs[v])).length;
 			return { version: v, result: [
-				v === 'D2' || v === 'D3' ? `Blocked ${blocked(attacks(runs[v])).length} of ${attacks(runs[v]).length} attacks; ${rate}.` : `${rate[0].toUpperCase()}${rate.slice(1)}.`,
+				BLOCKS.includes(v) ? `Blocked ${blocked(attacks(runs[v])).length} of ${attacks(runs[v]).length} attacks${v === 'D5' ? ` (${blockedBy(attacks(runs[v]))})` : ''}; ${rate}.` : `${rate[0].toUpperCase()}${rate.slice(1)}.`,
 				...(made ? [`${made} of ${cases(runs[v], 'deepset').length + cases(runs[v], 'plain').length} direct and plain replies gave a made-up number.`] : [])
 			].join(' ') };
 		}) : []

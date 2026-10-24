@@ -1,5 +1,5 @@
 import type { AssistantSettings, RoleInfo } from './assistants';
-import { CHAT_MODEL, EMBED_MODEL, HISTORY_CHARS, VERSIONS, type Version } from './config';
+import { CHAT_MODEL, EMBED_MODEL, HISTORY_CHARS, uses, VERSIONS, type Version } from './config';
 import type { Passage } from './docs';
 import { inputFilter } from './guard';
 
@@ -20,11 +20,11 @@ export function topK(query: number[], vectors: number[][], k: number): number[] 
 /**
  * The passages a question is answered from. D4 (retrieval access control): a public-role user's search only
  * ever sees public passages, so restricted text never reaches the prompt. D2 (input filter): a public-role user's
- * search skips passages with injection wording, in case a document was tampered with. Every other version searches all.
+ * search skips passages with injection wording, in case a document was tampered with. D5 does both. Every other version searches all.
  */
 export function search(a: AssistantSettings, role: string, version: Version, passages: Passage[], vectors: number[][], query: number[], k: number): Passage[] {
 	const pub = role === a.roles[0].id;
-	const pool = passages.map((_, i) => i).filter((i) => !pub || (version === 'D4' ? passages[i].access === 'public' : version !== 'D2' || !inputFilter(passages[i].text)));
+	const pool = passages.map((_, i) => i).filter((i) => !pub || ((!uses(version, 'D4') || passages[i].access === 'public') && (!uses(version, 'D2') || !inputFilter(passages[i].text))));
 	return topK(query, pool.map((i) => vectors[i]), k).map((j) => passages[pool[j]]);
 }
 
@@ -56,7 +56,7 @@ function systemPromptD1(a: AssistantSettings, role: string, passages: Passage[])
 
 /** v0: any passage can be retrieved; the only access control is the assistant's rule sentence. */
 export function systemPrompt(a: AssistantSettings, role: string, passages: Passage[], version: Version = 'v0'): string {
-	if (version === 'D1') return systemPromptD1(a, role, passages);
+	if (uses(version, 'D1')) return systemPromptD1(a, role, passages);
 	return [
 		a.intro,
 		"If the answer is not in the documents, say you don't know.",

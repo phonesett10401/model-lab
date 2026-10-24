@@ -3,7 +3,7 @@
 	import { replaceState } from '$app/navigation';
 	import type { AssistantSettings } from '$lib/assistant/assistants';
 	import { auditFor } from '$lib/assistant/audits';
-	import { CHAT_MODEL, QUERY_CHARS, QUERY_PREFIX, TOP_K, VERSIONS, versionFrom, type Version } from '$lib/assistant/config';
+	import { CHAT_MODEL, QUERY_CHARS, uses, QUERY_PREFIX, TOP_K, VERSIONS, versionFrom, type Version } from '$lib/assistant/config';
 	import { restrictedDocs, type Passage } from '$lib/assistant/docs';
 	import { segments } from '$lib/transcript';
 	import { ANSWER_FAILED, OUT_OF_MEMORY, checkGpu, explainError, webllmEngine, type AssistantEngine, type GpuLike } from '$lib/assistant/engine';
@@ -84,7 +84,7 @@
 		box?.focus(); // Send disables itself, which would drop focus
 		try {
 			// D2: injection wording from a public-role user is refused before search or the model.
-			if (version === 'D2' && role === a.roles[0].id && inputFilter(q)) {
+			if (uses(version ?? 'v0', 'D2') && role === a.roles[0].id && inputFilter(q)) {
 				items.push({ role: 'assistant', text: filteredText, sources: [], blocked: 'D2' });
 				phase = 'ready';
 				return void box?.focus();
@@ -94,7 +94,7 @@
 			const reply = await engine.chat(buildMessages(a, role, hits, history, q, version ?? 'v0'));
 			const sources = [...new Set(hits.map((h) => h.docId))];
 			// D3: a reply holding a restricted value never reaches a public-role user.
-			if (version === 'D3' && role === a.roles[0].id && outputCheck(reply, secrets)) items.push({ role: 'assistant', text: blockedText(a), sources, blocked: 'D3', hidden: reply });
+			if (uses(version ?? 'v0', 'D3') && role === a.roles[0].id && outputCheck(reply, secrets)) items.push({ role: 'assistant', text: blockedText(a), sources, blocked: 'D3', hidden: reply });
 			else items.push({ role: 'assistant', text: reply, sources });
 		} catch (err) {
 			const text = explainError(err, ANSWER_FAILED);
