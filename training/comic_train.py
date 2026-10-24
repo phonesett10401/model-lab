@@ -14,7 +14,8 @@ import comic_common as c
 VENDOR = c.HERE / 'vendor'
 PY = sys.executable
 # Label files in the order they are read; a later file for the same page replaces an earlier one.
-LABEL_FILES = ['synth.json', 'pepper_draft.json', 'pepper_labels.json', 'blackjack_labels.json', 'commons_labels.json', 'dcm_labels.json']
+# commons_labels.json is left out (2026-10-24): the Commons pages are mostly covers, not story pages.
+LABEL_FILES = ['synth.json', 'pepper_draft.json', 'pepper_labels.json', 'blackjack_labels.json', 'dcm_labels.json']
 
 
 def build_annotations() -> dict[str, int]:

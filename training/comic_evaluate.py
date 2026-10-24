@@ -92,6 +92,12 @@ def by_style(pages: list[c.Page], gt: dict, pred: list[dict], min_pages: int = M
     return out
 
 
+def training_counts(pages: list[c.Page], train_coco: dict) -> dict[str, int]:
+    """Pages actually in the training file, per source (the log also holds pages left out of training)."""
+    trained = {i['file_name'] for i in train_coco['images']}
+    return dict(collections.Counter(p.source for p in pages if p.file in trained))
+
+
 def predict(session, kind: str, im: Image.Image) -> list[tuple[int, float, list[float]]]:
     """(class, score, [x, y, w, h]) in page pixels, scores down to 0.01 so AP sees the whole curve."""
     W, H = im.size
@@ -148,7 +154,7 @@ def main() -> None:
         print(f'-- {s}: ' + ('not yet measured (fewer than 10 pages)' if r is None else f"{r['pages']} pages, mAP@50 {r['map50']:.3f}"))
     if split != 'test':
         return
-    used = collections.Counter(p.source for p in pages if p.split == 'train')
+    used = training_counts(pages, json.loads((c.DATA / 'annotations/train.json').read_text(encoding='utf8')))
     OUT.write_text(json.dumps({
         'run': run,
         'data': [{'label': f'Training pages: {s}', 'value': n} for s, n in sorted(used.items())]

@@ -50,3 +50,10 @@ cmd, _ = train_command('yolox', 'r1-yolox', resume=True)
 assert '--resume' in cmd and cmd[cmd.index('-c') + 1].endswith('latest_ckpt.pth'), cmd
 assert '-r' not in train_command('dfine', 'x', resume=False)[0]
 print('comic resume checks passed')
+
+# the report counts pages actually trained on, not every page in the log
+from comic_evaluate import training_counts  # noqa: E402
+log = [c.Page('a.jpg', 'Pepper&Carrot', 'g', 'modern-western', 'train', 'A', 'CC BY 4.0', 'x', 'd'),
+       c.Page('b.jpg', 'Wikimedia Commons', 'h', 'old-pd', 'train', 'A', 'Public domain', 'x', 'd')]
+assert training_counts(log, {'images': [{'file_name': 'a.jpg'}]}) == {'Pepper&Carrot': 1}
+print('comic training count checks passed')
