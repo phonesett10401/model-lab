@@ -18,7 +18,7 @@
 - Every page is logged in `training/attribution/comic-v1.csv` with columns `file,source,group,style,split,author,licence,link,date`.
 - Never Ultralytics or any AGPL code in this model's training or export.
 - No MandaX artist pages in plan 2 (they need written opt-in, not collected yet).
-- No comic image is sent to any online AI or service. Drafting uses our own local model.
+- Drafting and labelling run locally (our own detector, docTR OCR). Openly licensed training/test pages may be reviewed by Claude (owner-approved, 2026-10-24); **MandaX artists' pages never are**, and no comic image goes to any other online service.
 - The **test split is frozen**: once a page is in `test`, it never moves, and test pages are never used for training or for choosing between models (validation does that).
 - Numbers on the site come only from `comic_evaluate.py` output; never typed. A style with fewer than 10 test pages reports `null` ("not yet measured").
 - Datasets, runs, weights and vendored repos stay local (git-ignored). Commit only scripts, tests, the attribution CSV and the final small JSON of numbers.
