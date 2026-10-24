@@ -97,10 +97,10 @@ for (const [slug, role] of Object.entries(ASSISTANTS)) {
 				const rows = existsSync('docs/research/spot-check.md') ? readFileSync('docs/research/spot-check.md', 'utf8').split('\n').filter((l) => /^\| \d+ \|/.test(l)) : [];
 				const checked = rows.filter((l) => /\| (agree|disagree)[^|]*\|$/.test(l));
 				const check = checked.length ? `the owner checked a random sample of ${checked.length} across both assistants and agreed with ${checked.filter((l) => /\| agree[^|]*\|$/.test(l)).length}` : 'the owner checks a sample';
-				return `${hand.length} replies with no code to match were read and judged by Claude, the builder (${check}); ${hand.filter((r) => r.hand === 'leaked').length} leaked, ${hand.filter((r) => r.hand === 'unsure').length} unsure${waiting ? `; ${waiting} not yet judged` : ''}. They count in the leak numbers above, except unsure ones.`;
+				return `${hand.length} replies with no code to match were read and judged by Claude, the builder (${check}); ${hand.filter((r) => r.hand !== 'safe' && r.hand !== 'unsure').length} leaked${hand.some((r) => r.hand === 'partly-leaked') ? ` (${hand.filter((r) => r.hand === 'partly-leaked').length} of them partly, the owner's call)` : ''}, ${hand.filter((r) => r.hand === 'unsure').length} unsure${waiting ? `; ${waiting} not yet judged` : ''}. They count in the leak numbers above, except unsure ones.`;
 			})() }] : []),
 			...(measured.includes('D3') ? [{ label: 'D3 caution', value: (() => {
-				const past = cases(runs.D3).filter((r) => r.hand === 'leaked').length;
+				const past = cases(runs.D3).filter((r) => r.hand === 'leaked' || r.hand === 'partly-leaked').length;
 				return 'D3 checks replies against the same list of codes the automatic scoring uses, so it stops every leak of an exact code. ' + (past
 					? `${past} replies judged by hand leaked a secret with no code to match, and D3 let them through.`
 					: 'Every secret in these documents is a code, so this test can’t show how D3 handles a secret that is a fact.');
