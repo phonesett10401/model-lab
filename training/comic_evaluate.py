@@ -104,9 +104,12 @@ def missed_text(path: Path = c.MISSED) -> dict | None:
         return None
     with open(path, newline='', encoding='utf8') as f:
         rows = list(csv.DictReader(f))
+    # owner_check: empty (not checked), 'agree', or the owner's corrected count, which replaces Claude's.
+    checks = [(r.get('owner_check') or '').strip() for r in rows]
     labelled = sum(int(r['labelled']) for r in rows)
-    missed = sum(int(r['missed']) for r in rows)
-    return {'pages': len(rows), 'labelled': labelled, 'missed': missed, 'missed_share': round(missed / (labelled + missed), 4)}
+    missed = sum(int(ch) if ch.isdigit() else int(r['missed']) for r, ch in zip(rows, checks))
+    return {'pages': len(rows), 'labelled': labelled, 'missed': missed, 'missed_share': round(missed / (labelled + missed), 4),
+            'owner_checked': sum(bool(ch) for ch in checks), 'owner_agreed': sum(ch == 'agree' for ch in checks)}
 
 
 def training_counts(pages: list[c.Page], train_coco: dict) -> dict[str, int]:
@@ -170,7 +173,8 @@ def main() -> None:
     print(f"found {result['recall_all']:.3f} of the text the labelling found")
     if split == 'test' and (miss := missed_text()):
         print(f"worst case {result['recall_all'] * (1 - miss['missed_share']):.3f} of all text "
-              f"(labels missed {miss['missed']} of {miss['labelled'] + miss['missed']} pieces on {miss['pages']} checked pages)")
+              f"(labels missed {miss['missed']} of {miss['labelled'] + miss['missed']} pieces on {miss['pages']} pages counted by Claude; "
+              f"owner checked {miss['owner_checked']} and agreed with {miss['owner_agreed']})")
     for s, r in styles.items():
         print(f'-- {s}: ' + ('not yet measured (fewer than 10 pages)' if r is None else f"{r['pages']} pages, mAP@50 {r['map50']:.3f}"))
     if split != 'test':

@@ -69,5 +69,14 @@ with tempfile.TemporaryDirectory() as d:
     assert missed_text(p) is None, 'no count yet'
     p.write_text('file,labelled,missed,note\na.jpg,8,2,POOF\nb.jpg,10,0,\n', encoding='utf8')
     m = missed_text(p)
-    assert m == {'pages': 2, 'labelled': 18, 'missed': 2, 'missed_share': 0.1}, m
+    assert m == {'pages': 2, 'labelled': 18, 'missed': 2, 'missed_share': 0.1, 'owner_checked': 0, 'owner_agreed': 0}, m
 print('comic missed-text checks passed')
+
+# the owner's spot-check of Claude's miss counts is reported with the totals
+with tempfile.TemporaryDirectory() as d:
+    p = Path(d) / 'missed.csv'
+    p.write_text('file,labelled,missed,note,owner_check\na.jpg,8,2,x,agree\nb.jpg,10,0,,1\nc.jpg,5,0,,\n', encoding='utf8')
+    m = missed_text(p)
+    assert m['owner_checked'] == 2 and m['owner_agreed'] == 1, m
+    assert m['missed'] == 3, 'an owner correction replaces Claude count'
+print('comic owner-check checks passed')
