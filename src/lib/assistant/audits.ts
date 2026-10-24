@@ -7,7 +7,8 @@ const LIMITS: Record<string, string> = {
 	D1: 'It only asks the model to behave. A small model often ignores the instruction.',
 	D2: 'A fixed list of English phrases. Attacks that are reworded, in another language or hidden in a pasted email get past it.',
 	D3: 'It only catches exact restricted codes. A secret that is a fact rather than a code, like Pathum Rai’s water shortage, gets straight past it, and so would a code reworded, spelled out or encoded.',
-	D4: 'The model never sees the restricted documents, so it can’t leak them, but asked anyway it may make up an answer instead.'
+	D4: 'The model never sees the restricted documents, so it can’t leak them, but asked anyway it may make up an answer instead.',
+	D5: 'It inherits D4’s weakness: with the restricted documents out of reach, the model may still make up an answer. In these runs D3 never fired, because D4 had already kept every code away from the model; what D5 adds over D4 alone is D2 refusing a few attacks before the model runs.'
 };
 
 // One audit per assistant, built by eval/audit-data.mjs from the runner's results; listed only on its assistant, not in the archive.
