@@ -1,21 +1,21 @@
-file,labelled,missed,merged,note,owner_check,owner_note
-pepper_E04P01.jpg,3,0,1,,,
-pepper_E08P01.jpg,1,0,0,,,
-pepper_E08P06.jpg,4,1,1,FIN (sfx-style end mark),,
-pepper_E14P05.jpg,3,1,1,COCK-a-doodle-doooooo!!! (sfx),,
-pepper_E16P05.jpg,7,0,0,,,
-pepper_E30P05.jpg,0,0,0,"only drawn snore/music squiggles, no English",,
-pepper_E39P06.jpg,7,6,1,CLAP! x6 (sfx; 3 of 9 labelled),agree,agrees 6 CLAP! missed; also notes some bubbles merged into one box
-pepper_E39P11.jpg,4,1,2,- FIN - (end mark),,
-pepper_E40P05.jpg,8,1,2,"For Pepper, from Saffron / Saffron Corp. (writing on a drawn gift box)",,
-pepper_E40P10.jpg,7,0,3,,agree,"agrees 0 missed; 2 bubble pairs merged into one box each, and TO BE CONTINUED merged into the last bubble box"
-blackjack_v02_003.jpg,2,1,0,MR. (left outside its caption box),,
-blackjack_v02_043.jpg,3,0,0,,,
-blackjack_v02_091.jpg,1,0,0,,,
-blackjack_v02_132.jpg,0,0,0,blank heartbeat page,,
-blackjack_v02_180.jpg,6,1,1,THROB (top-right panel; 6 of 7 labelled),,
-blackjack_v06_021.jpg,2,0,0,,agree,agrees 0 missed
-blackjack_v06_075.jpg,4,0,0,,agree,agrees 0 missed
-blackjack_v06_119.jpg,2,0,0,,,
-blackjack_v06_173.jpg,1,1,0,"DRIP (sfx; second Gemzar label is mirrored, not counted)",,
-blackjack_v06_218.jpg,5,0,0,,,
+file,labelled,missed,merged,merged_after_split,note,owner_check,owner_note
+pepper_E04P01.jpg,3,0,1,0,,,
+pepper_E08P01.jpg,1,0,0,0,,,
+pepper_E08P06.jpg,4,1,1,1,FIN (sfx-style end mark),,
+pepper_E14P05.jpg,3,1,1,0,COCK-a-doodle-doooooo!!! (sfx),,
+pepper_E16P05.jpg,7,0,0,0,,,
+pepper_E30P05.jpg,0,0,0,0,"only drawn snore/music squiggles, no English",,
+pepper_E39P06.jpg,7,6,5,4,CLAP! x6 (sfx; 3 of 9 labelled); merged recounted: song bubbles are overlapping pairs,agree,agrees 6 CLAP! missed; also notes some bubbles merged into one box
+pepper_E39P11.jpg,4,1,2,1,- FIN - (end mark),,
+pepper_E40P05.jpg,8,1,2,1,"For Pepper, from Saffron / Saffron Corp. (writing on a drawn gift box)",,
+pepper_E40P10.jpg,7,0,3,3,,agree,"agrees 0 missed; 2 bubble pairs merged into one box each, and TO BE CONTINUED merged into the last bubble box"
+blackjack_v02_003.jpg,2,1,0,0,MR. (left outside its caption box),,
+blackjack_v02_043.jpg,3,0,0,0,,,
+blackjack_v02_091.jpg,1,0,0,0,,,
+blackjack_v02_132.jpg,0,0,0,0,blank heartbeat page,,
+blackjack_v02_180.jpg,6,1,1,1,THROB (top-right panel; 6 of 7 labelled),,
+blackjack_v06_021.jpg,2,0,0,0,,agree,agrees 0 missed
+blackjack_v06_075.jpg,4,0,0,0,,agree,agrees 0 missed
+blackjack_v06_119.jpg,2,0,0,0,,,
+blackjack_v06_173.jpg,1,1,0,0,"DRIP (sfx; second Gemzar label is mirrored, not counted)",,
+blackjack_v06_218.jpg,5,0,0,0,,,
