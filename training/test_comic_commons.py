@@ -9,4 +9,7 @@ assert not keep({**ok, 'categories': ok['categories'] + ['AI-generated comics il
 assert not keep({**ok, 'title': 'File:x.pdf', 'mime': 'application/pdf'}), 'images only'
 assert not keep({**ok, 'width': 500, 'height': 700}), 'too small to read lettering'
 assert keep({**ok, 'licence': 'PD-US-not renewed'}), 'PD tags count as public domain'
+from comic_commons import ext_of  # noqa: E402
+assert ext_of('https://upload.wikimedia.org/a/b/Fl065.jpg/1600px-Fl065.jpg?utm_source=commons.wikimedia.org&utm_content=thumbnail') == '.jpg'
+assert ext_of('https://upload.wikimedia.org/a/b/Page.PNG') == '.png'
 print('comic commons checks passed')

@@ -24,6 +24,11 @@ INCOMING = c.HERE / 'incoming/comic/commons'
 MIN_SIDE = 800
 
 
+def ext_of(url: str) -> str:
+    """File extension from a download link, ignoring its query string (Commons links carry tracking parameters)."""
+    return Path(urllib.parse.urlparse(url).path).suffix.lower()
+
+
 def keep(f: dict) -> bool:
     """f: title, mime, width, height, licence (LicenseShortName), categories."""
     return (f['mime'] in ('image/jpeg', 'image/png')
@@ -87,7 +92,7 @@ def main() -> None:
         folder = INCOMING / re.sub(r'[^A-Za-z0-9]+', '-', cat.removeprefix('Category:')).strip('-')[:60]
         for f in files_in(cat, a.per_category):
             stem = re.sub(r'[^A-Za-z0-9]+', '-', Path(f['title'].removeprefix('File:')).stem).strip('-')[:80]
-            dest = folder / f'{stem}{Path(f["url"]).suffix.lower()}'
+            dest = folder / f'{stem}{ext_of(f["url"])}'
             if not dest.exists():
                 folder.mkdir(parents=True, exist_ok=True)
                 dest.write_bytes(fetch(f['url']))
