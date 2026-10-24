@@ -103,7 +103,7 @@ def main() -> None:
     from doctr.models import ocr_predictor
     from PIL import Image
 
-    from comic_diff import text_boxes
+    from comic_diff import split_blob, text_boxes
     from comic_evaluate import predict
 
     ocr = ocr_predictor(det_arch='db_resnet50', reco_arch='crnn_vgg16_bn', pretrained=True).cuda()
@@ -129,7 +129,11 @@ def main() -> None:
         detected = [{'bbox': b, 'category': c.CLASSES[k], 'score': s} for k, s, b in predict(session, kind, im) if s >= 0.3]
         if a.source == 'pepper':  # exact bubble outlines from the text-vs-art comparison come first
             art = Image.open(c.DATA / 'art' / p.file).convert('RGB')
-            exact = [{'bbox': list(b), 'category': 'bubble', 'score': 1.0} for b in text_boxes(im, art)]
+            # Touching bubbles form one blob: split it into one box per separate word group (owner's request, 2026-10-24).
+            regions = merge_words(words)
+            exact = [{'bbox': list(part), 'category': 'bubble', 'score': 1.0}
+                     for b in text_boxes(im, art)
+                     for part in split_blob(im, art, b, [r['bbox'] for r in regions if _inside_share(r['bbox'], list(b)) >= INSIDE])]
             detected = exact + [d for d in detected if all(_inside_share(d['bbox'], e['bbox']) < 0.3 for e in exact)]
         items.append((p.file, W, H, label_page(words, detected)))
         if n % 25 == 0:

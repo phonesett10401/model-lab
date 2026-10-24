@@ -32,3 +32,26 @@ MAX_TEXT_SHARE = 0.3  # more text than this is a credits page, not comic letteri
 
 def usable_page(width: int, height: int, boxes: list[tuple[int, int, int, int]]) -> bool:
     return height >= MIN_PAGE_HEIGHT and sum(w * h for *_, w, h in boxes) <= MAX_TEXT_SHARE * width * height
+
+
+def split_blob(text_page: Image.Image, art_page: Image.Image, box: tuple[int, int, int, int],
+               groups: list[list[float]]) -> list[tuple[int, int, int, int]]:
+    """Touching bubbles form one changed blob. With 2+ word groups inside, each changed pixel goes to its nearest
+    group, and each group gets the box of its own pixels (its bubble outline). One group: the box is unchanged."""
+    if len(groups) < 2:
+        return [tuple(box)]
+    x, y, w, h = box
+    a = np.asarray(text_page.convert('RGB'), dtype=np.int16)[y:y + h, x:x + w]
+    b = np.asarray(art_page.convert('RGB').resize(text_page.size), dtype=np.int16)[y:y + h, x:x + w]
+    ys, xs = np.nonzero(np.abs(a - b).max(axis=2) > 40)
+    xs, ys = xs + x, ys + y
+    # distance from each pixel to each group's rectangle
+    d = np.stack([np.hypot(np.maximum(0, np.maximum(gx - xs, xs - (gx + gw))), np.maximum(0, np.maximum(gy - ys, ys - (gy + gh))))
+                  for gx, gy, gw, gh in groups])
+    owner = d.argmin(axis=0)
+    out = []
+    for k in range(len(groups)):
+        px, py = xs[owner == k], ys[owner == k]
+        if len(px):
+            out.append((int(px.min()), int(py.min()), int(px.max() - px.min() + 1), int(py.max() - py.min() + 1)))
+    return out

@@ -55,3 +55,20 @@ assert usable_page(1600, 2000, [(0, 0, 400, 300)])
 assert not usable_page(1600, 32, []), 'a thin strip is not a page'
 assert not usable_page(1600, 2000, [(0, 0, 1600, 1000)]), 'mostly text is a credits page'
 print('comic diff checks passed')
+
+# touching bubbles: one changed blob holding two word groups splits into one box per group
+from comic_diff import split_blob  # noqa: E402
+a = art()
+t = a.copy()
+bubble(t, 200, 300, 300, 160)
+bubble(t, 480, 300, 300, 160)  # overlaps the first: one blob
+blob = text_boxes(t, a)
+assert len(blob) == 1, blob
+groups = [[300, 365, 100, 30], [580, 365, 100, 30]]  # lettering is centred in each bubble
+parts = split_blob(t, a, blob[0], groups)
+assert len(parts) == 2, parts
+left, right = sorted(parts)
+assert left[0] <= 205 and left[0] + left[2] <= 500, left
+assert right[0] >= 470 and right[0] + right[2] >= 775, right
+assert split_blob(t, a, blob[0], groups[:1]) == [blob[0]], 'one group: box unchanged'
+print('comic split checks passed')
