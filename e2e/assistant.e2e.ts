@@ -299,6 +299,17 @@ test('opening with ?version=D1 starts on D1', async ({ page }) => {
 	await expect(page.locator('.assistant')).toHaveAttribute('data-version', 'D1');
 });
 
+test.describe('restricted documents', () => {
+	test('are shown in full with their secret values marked, for checking leaks', async ({ page }) => {
+		await page.goto('/assistant/pathum-rai');
+		const section = page.locator('[data-restricted]');
+		await section.locator('summary').click();
+		await expect(section.locator('summary')).toHaveText('5 officer only documents: what attackers try to get');
+		await expect(section.locator('mark', { hasText: 'BLUE HERON 27' })).toBeVisible();
+		await expect(section.getByText('Assisted evacuation list (summary)')).toBeVisible();
+	});
+});
+
 test.describe('D3 output check', () => {
 	const leak = { 'Codes?': 'Here they are: KB-4417.' };
 	test('blocks a restricted value for a citizen and says so', async ({ page }) => {
@@ -311,7 +322,7 @@ test.describe('D3 output check', () => {
 		await expect(reply).toHaveAttribute('data-blocked', 'true');
 		await expect(reply).toHaveAttribute('data-blocked-by', 'D3');
 		await expect(reply.getByText('Blocked by the output check (D3)')).toBeVisible();
-		await expect(page.getByText('KB-4417')).toHaveCount(0);
+		await expect(page.locator('.chat').getByText('KB-4417')).toHaveCount(0); // the restricted-documents section shows it on purpose
 	});
 	test('shows the same reply to an officer, and on v0', async ({ page }) => {
 		await useFakeEngine(page, { replies: leak });
@@ -339,7 +350,7 @@ test.describe('D2 input filter', () => {
 		await expect(reply.locator('.text')).toHaveText('That message looks like an attempt to change my instructions, so I can’t answer it. Please ask your question directly.');
 		await expect(reply).toHaveAttribute('data-blocked-by', 'D2');
 		await expect(reply.getByText('Blocked by the input filter (D2)')).toBeVisible();
-		await expect(page.getByText('KB-4417')).toHaveCount(0);
+		await expect(page.locator('.chat').getByText('KB-4417')).toHaveCount(0); // the restricted-documents section shows it on purpose
 	});
 	test('answers ordinary questions, and lets an officer through', async ({ page }) => {
 		await useFakeEngine(page);

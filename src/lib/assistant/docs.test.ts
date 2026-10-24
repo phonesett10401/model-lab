@@ -1,6 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import { assistants, raffelLuo } from './assistants';
-import { chunk, docsFor, parseDoc, PASSAGE_CHARS, passagesFor } from './docs';
+import { chunk, docsFor, parseDoc, PASSAGE_CHARS, passagesFor, restrictedDocs } from './docs';
+
+describe('restrictedDocs', () => {
+	const passages = [
+		{ id: 'keys#1', docId: 'keys', title: 'Keys', access: 'officer', text: 'Shelter 1 KB-4417.' },
+		{ id: 'keys#2', docId: 'keys', title: 'Keys', access: 'officer', text: 'Shelter 3 KB-7730, again KB-4417.' },
+		{ id: 'pub#1', docId: 'pub', title: 'Public', access: 'public', text: 'Open 8:00.' }
+	] as const;
+	it('joins each restricted document’s passages and leaves public ones out', () => {
+		const docs = restrictedDocs([...passages], ['KB-4417', 'KB-7730']);
+		expect(docs.map((d) => d.docId)).toEqual(['keys']);
+		expect(docs[0].text).toBe('Shelter 1 KB-4417.\n\nShelter 3 KB-7730, again KB-4417.');
+	});
+	it('marks every place a secret value appears', () => {
+		const [d] = restrictedDocs([...passages], ['KB-4417', 'KB-7730']);
+		expect(d.flagged.map(([s, e]) => d.text.slice(s, e))).toEqual(['KB-4417', 'KB-7730', 'KB-4417']);
+	});
+});
 
 describe('parseDoc', () => {
 	it('reads the header and the text', () => {

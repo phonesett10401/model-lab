@@ -4,7 +4,8 @@
 	import type { AssistantSettings } from '$lib/assistant/assistants';
 	import { auditFor } from '$lib/assistant/audits';
 	import { CHAT_MODEL, QUERY_CHARS, QUERY_PREFIX, TOP_K, VERSIONS, versionFrom, type Version } from '$lib/assistant/config';
-	import type { Passage } from '$lib/assistant/docs';
+	import { restrictedDocs, type Passage } from '$lib/assistant/docs';
+	import { segments } from '$lib/transcript';
 	import { ANSWER_FAILED, OUT_OF_MEMORY, checkGpu, explainError, webllmEngine, type AssistantEngine, type GpuLike } from '$lib/assistant/engine';
 	import { BLOCKED_LABEL, buildMessages, search, toMarkdown, type Item, type Turn } from '$lib/assistant/rag';
 	import { blockedText, filteredText, inputFilter, outputCheck } from '$lib/assistant/guard';
@@ -28,6 +29,7 @@
 
 	// The "What it read" panel: the documents behind the latest answer.
 	const byDoc = $derived(new Map(passages.map((p) => [p.docId, p])));
+	const restricted = $derived(restrictedDocs(passages, secrets));
 	const lastReply = $derived([...items].reverse().find((i): i is Turn => i.role === 'assistant'));
 	const read = $derived((lastReply?.sources ?? []).map((id) => byDoc.get(id)).filter((p): p is Passage => !!p));
 	const publicRole = $derived(role === a.roles[0].id);
@@ -145,6 +147,18 @@
 		{#if version}<p class="mono faint">Version {version}: {VERSIONS[version]} · {CHAT_MODEL}</p>{/if}
 		<p class="mono faint">The documents are downloaded to your device so the assistant can run here; the test is whether the chatbot can be talked into revealing restricted ones.</p>
 		<p class="mono" data-audit>{#if auditFor(a.slug)}<a href="/audits/{a.slug}">Attack results: see the audit →</a>{:else}<span class="faint">Attack results: being measured</span>{/if}</p>
+		{#if restricted.length}
+			<details class="restricted" data-restricted>
+				<summary class="mono">{restricted.length} {a.restrictedLabel} documents: what attackers try to get</summary>
+				<p class="mono faint">Fictional data. Shown so you can check a leak against the original; the highlighted values are the ones the tests look for. The assistant reads its own copy, never this page.</p>
+				{#each restricted as d (d.docId)}
+					<article>
+						<h2 class="mono">{d.title}</h2>
+						<p>{#each segments(d.text, d.flagged) as s, k (k)}{#if s.flagged}<mark>{s.text}</mark>{:else}{s.text}{/if}{/each}</p>
+					</article>
+				{/each}
+			</details>
+		{/if}
 
 		<fieldset class="roles" disabled={phase === 'busy'}>
 			<legend class="mono">Signed in as</legend>
@@ -222,6 +236,12 @@
 </article>
 
 <style>
+	.restricted { border: 1px solid var(--hairline); background: var(--plate); padding: 0.6rem 0.8rem; }
+	.restricted summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+	.restricted article { display: grid; gap: 0.3rem; padding-top: var(--space-1); border-top: 1px solid var(--hairline); margin-top: var(--space-1); }
+	.restricted h2 { font-size: var(--step--1); color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; }
+	.restricted p { white-space: pre-line; max-width: 70ch; }
+	.restricted mark { background: none; color: inherit; text-decoration: underline 2px var(--red); text-underline-offset: 3px; font-weight: 600; }
 	.assistant { --on-accent: light-dark(#ffffff, #141213); }
 	.strip { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1); padding: 0 var(--gutter); border-bottom: 1px solid var(--hairline); }
 	.back { min-height: 44px; display: inline-flex; align-items: center; }
