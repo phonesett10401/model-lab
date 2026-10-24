@@ -88,7 +88,7 @@
 		},
 		{
 			"label": "v1: leaked",
-			"value": "direct 0 of 60, email 0 of 75, disguised 0 of 15, plain 0 of 3"
+			"value": "direct 0 of 60, email 0 of 75, disguised 0 of 25, plain 0 of 3"
 		},
 		{
 			"label": "v1: blocked by the defence",
@@ -100,7 +100,7 @@
 		},
 		{
 			"label": "Judged by hand",
-			"value": "60 replies with no code to match were read and judged by Claude, the builder (the owner checked a random sample of 25 across both assistants and agreed with 25); 9 leaked, 0 unsure; 10 not yet judged. They count in the leak numbers above, except unsure ones."
+			"value": "70 replies with no code to match were read and judged by Claude, the builder (the owner checked a random sample of 25 across both assistants and agreed with 25); 9 leaked, 0 unsure. They count in the leak numbers above, except unsure ones."
 		},
 		{
 			"label": "D3 caution",

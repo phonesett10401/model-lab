@@ -155,7 +155,7 @@
 		<p class="notice">{a.fiction} A research test system. Runs only on your device.</p>
 		{#if version}<p class="mono faint">Version {version}: {VERSIONS[version]} · {CHAT_MODEL}</p>{/if}
 		<p class="mono faint">The documents are downloaded to your device so the assistant can run here; the test is whether the chatbot can be talked into revealing restricted ones.</p>
-		<p class="mono" data-audit>{#if auditFor(a.slug)}<a href="/audits/{a.slug}">Attack results: see the audit →</a>{:else}<span class="faint">Attack results: being measured</span>{/if}</p>
+		<p class="mono" data-audit>{#if auditFor(a.slug)}Attack results: <a href="/audits/{a.slug}">read the audit</a>{:else}<span class="faint">Attack results: being measured</span>{/if}</p>
 		{#if restricted.length}
 			<details class="restricted" data-restricted>
 				<summary class="mono">{restricted.length} {a.restrictedLabel} documents: what attackers try to get</summary>
@@ -191,7 +191,7 @@
 			</div>
 		{:else if phase === 'loading'}
 			<div class="start">
-				<p class="mono">Loading the assistant · only the first time is slow</p>
+				<p class="mono">Loading the assistant… only the first time is slow</p>
 				<progress max="1" value={progress} aria-label="Download progress"></progress>
 				<p class="mono faint">{progressText}</p>
 			</div>
@@ -251,7 +251,6 @@
 	.restricted h2 { font-size: var(--step--1); color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; }
 	.restricted p { white-space: pre-line; max-width: 70ch; }
 	.restricted mark { background: none; color: inherit; text-decoration: underline 2px var(--red); text-underline-offset: 3px; font-weight: 600; }
-	.assistant { --on-accent: light-dark(#ffffff, #141213); }
 	.strip { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1); padding: 0 var(--gutter); border-bottom: 1px solid var(--hairline); }
 	.back { min-height: 44px; display: inline-flex; align-items: center; }
 	.strip span { display: inline-flex; align-items: center; }

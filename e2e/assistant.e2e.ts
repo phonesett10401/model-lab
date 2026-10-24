@@ -168,11 +168,11 @@ test('an unknown assistant is a 404', async ({ page }) => {
 	expect(res?.status()).toBe(404);
 });
 
-test('old links land on the home page with the university assistant selected', async ({ page }) => {
+test('old links land on the RAG assistants section', async ({ page }) => {
 	await page.goto('/assistant');
-	await expect(page).toHaveURL(/\/\?entry=raffel-luo$/);
+	await expect(page).toHaveURL(/\/assistants$/);
 	await page.goto('/assistant?version=v0');
-	await expect(page).toHaveURL(/\/\?entry=raffel-luo$/);
+	await expect(page).toHaveURL(/\/assistants$/);
 });
 
 test('the panel lists what it read; a staff-only document turns red for a student only', async ({ page }) => {

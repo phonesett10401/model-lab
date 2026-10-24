@@ -1,11 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import Plate from './Plate.svelte';
-	import AssistantPlate from './AssistantPlate.svelte';
-	import type { AssistantSettings } from '$lib/assistant/assistants';
 	import type { Entry } from '$lib/types';
 
-	let { entries, assistants, selected }: { entries: Entry[]; assistants: AssistantSettings[]; selected: string | null } = $props();
+	let { entries, selected }: { entries: Entry[]; selected: string | null } = $props();
 
 	const models = $derived(entries.filter((e) => e.kind === 'model'));
 	const audits = $derived(entries.filter((e) => e.kind === 'audit'));
@@ -32,10 +30,6 @@
 	{#if models.length}
 		<h2 class="group mono">Models</h2>
 		<ul>{#each models as e (e.slug)}<li><Plate entry={e} selected={e.slug === selected} /></li>{/each}</ul>
-	{/if}
-	{#if assistants.length}
-		<h2 class="group mono">RAG assistants</h2>
-		<ul>{#each assistants as a (a.slug)}<li><AssistantPlate assistant={a} selected={a.slug === selected} /></li>{/each}</ul>
 	{/if}
 	{#if audits.length}
 		<h2 class="group mono">Audits</h2>

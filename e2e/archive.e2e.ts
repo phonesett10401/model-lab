@@ -58,37 +58,46 @@ test('on a short laptop screen every plate in the index stays reachable without 
 	expect(clipped).toBeLessThanOrEqual(0);
 });
 
-test('RAG assistants have their own group, a card, and open their page', async ({ page }) => {
+test('the home page is the models section; the assistants have their own section', async ({ page }) => {
 	await page.goto('/');
 	await page.waitForLoadState('networkidle');
-	await expect(page.getByRole('heading', { name: 'RAG assistants' })).toBeVisible();
 	const headings = await page.locator('#archive h2').allInnerTexts();
-	expect(headings.map((h) => h.trim().toUpperCase())).toEqual(['MODELS', 'RAG ASSISTANTS', 'AUDITS']);
-	await page.locator('a.plate', { hasText: 'Pathum Rai District assistant' }).click();
-	await expect(page).toHaveURL(/\?entry=pathum-rai/);
-	await expect(page.locator('[data-bench-title]')).toHaveText('Pathum Rai District assistant');
-	await expect(page.getByText('Citizen / Officer')).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Open the assistant' })).toHaveAttribute('href', '/assistant/pathum-rai');
-	await page.locator('a.plate[aria-current="true"]').focus();
-	await page.keyboard.press('Enter');
+	expect(headings.map((h) => h.trim().toUpperCase())).toEqual(['MODELS', 'AUDITS']);
+	const tabs = page.getByRole('navigation', { name: 'Sections' });
+	await expect(tabs.getByRole('link', { name: 'Models' })).toHaveAttribute('aria-current', 'page');
+	await tabs.getByRole('link', { name: 'RAG assistants' }).click();
+	await expect(page).toHaveURL(/\/assistants$/);
+	await expect(tabs.getByRole('link', { name: 'RAG assistants' })).toHaveAttribute('aria-current', 'page');
+	await expect(page.getByRole('heading', { level: 1 })).toContainText('Ask it. Attack it.');
+	await expect(page.locator('[data-bench-title]')).toHaveText(['University of Raffel Luo assistant', 'Pathum Rai District assistant']);
+	await page.getByRole('link', { name: 'Open the assistant' }).nth(1).click();
 	await expect(page).toHaveURL(/\/assistant\/pathum-rai$/);
+	await expect(tabs.getByRole('link', { name: 'RAG assistants' })).toHaveAttribute('aria-current', 'page');
 });
 
-test('a shared link opens an assistant card; nothing downloads from the home page', async ({ page }) => {
+test('the assistants banner shows each audit’s measured leak rates and links to it', async ({ page }) => {
+	await page.goto('/assistants');
+	const board = page.getByRole('figure', { name: /ATTACKS THAT LEAKED/ });
+	await expect(board.getByRole('heading', { name: 'Pathum Rai District' })).toBeVisible();
+	await expect(board.locator('li[aria-label^="v0,"]').first()).toBeVisible();
+	await expect(board.getByRole('link', { name: 'Read the full audit' }).first()).toHaveAttribute('href', /\/audits\//);
+});
+
+test('an old shared link to an assistant forwards to its section; nothing downloads there', async ({ page }) => {
 	const offsite: string[] = [];
 	page.on('request', (r) => { if (!r.url().startsWith('http://localhost:4173')) offsite.push(r.url()); });
 	await page.goto('/?entry=raffel-luo');
-	await expect(page.locator('[data-bench-title]')).toHaveText('University of Raffel Luo assistant');
+	await expect(page).toHaveURL(/\/assistants$/);
 	await page.waitForLoadState('networkidle');
 	expect(offsite).toEqual([]);
 });
 
 test.describe('phone', () => {
 	test.use({ viewport: { width: 390, height: 844 } });
-	test('an assistant opens in the sheet', async ({ page }) => {
-		await page.goto('/');
-		await page.waitForLoadState('networkidle');
-		await page.locator('a.plate', { hasText: 'Pathum Rai District assistant' }).click();
-		await expect(page.getByRole('link', { name: 'Open the assistant' })).toBeVisible();
+	test('the section tabs fit and the assistant cards stack', async ({ page }) => {
+		await page.goto('/assistants');
+		await expect(page.getByRole('link', { name: 'Open the assistant' })).toHaveCount(2);
+		const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+		expect(overflow).toBeLessThanOrEqual(0);
 	});
 });

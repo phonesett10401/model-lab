@@ -29,7 +29,7 @@
 		background: var(--plate); border: 1px solid var(--hairline); text-decoration: none;
 		transition: box-shadow 0.2s, border-color 0.2s;
 	}
-	.plate:hover { border-color: var(--ink-faint); }
+	@media (hover: hover) { .plate:hover { border-color: var(--ink-faint); } }
 	.plate[aria-current='true'] { box-shadow: inset 3px 0 var(--red); border-color: var(--ink-faint); }
 	.meta { color: var(--ink-faint); letter-spacing: 0.1em; }
 	.name { font-size: var(--step-1); line-height: 1.1; }
