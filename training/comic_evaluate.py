@@ -167,6 +167,10 @@ def main() -> None:
     result = evaluate(gt, pred)
     styles = by_style(pages, gt, pred)
     print(f'{run} on {split}: {len(gt["images"])} pages\n{table(result)}')
+    print(f"found {result['recall_all']:.3f} of the text the labelling found")
+    if split == 'test' and (miss := missed_text()):
+        print(f"worst case {result['recall_all'] * (1 - miss['missed_share']):.3f} of all text "
+              f"(labels missed {miss['missed']} of {miss['labelled'] + miss['missed']} pieces on {miss['pages']} checked pages)")
     for s, r in styles.items():
         print(f'-- {s}: ' + ('not yet measured (fewer than 10 pages)' if r is None else f"{r['pages']} pages, mAP@50 {r['map50']:.3f}"))
     if split != 'test':
