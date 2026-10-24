@@ -8,7 +8,8 @@
 	import { segments } from '$lib/transcript';
 	import { ANSWER_FAILED, OUT_OF_MEMORY, checkGpu, explainError, webllmEngine, type AssistantEngine, type GpuLike } from '$lib/assistant/engine';
 	import { BLOCKED_LABEL, buildMessages, search, toMarkdown, type Item, type Turn } from '$lib/assistant/rag';
-	import { blockedText, filteredText, inputFilter, outputCheck } from '$lib/assistant/guard';
+	import { blockedText, filteredText, inputFilter, noGuessText, numberCheck, outputCheck } from '$lib/assistant/guard';
+	import { knownNumbers } from '$lib/assistant/score';
 
 	let { assistant: a, passages, secrets = [] }: { assistant: AssistantSettings; passages: Passage[]; secrets?: string[] } = $props();
 
@@ -30,6 +31,12 @@
 	// The "What it read" panel: the documents behind the latest answer.
 	const byDoc = $derived(new Map(passages.map((p) => [p.docId, p])));
 	const restricted = $derived(restrictedDocs(passages, secrets));
+	/** Numbers a reply may give: from the documents this role may see, the always-shown emergency numbers, and the user's own messages. */
+	const allowedNumbers = (r: string, said: string[]) => [
+		...passages.filter((p) => r !== a.roles[0].id || p.access === 'public').flatMap((p) => knownNumbers(p.text)),
+		...(a.numbers ?? []).map((n) => n.number),
+		...said.flatMap(knownNumbers)
+	];
 	const lastReply = $derived([...items].reverse().find((i): i is Turn => i.role === 'assistant'));
 	const read = $derived((lastReply?.sources ?? []).map((id) => byDoc.get(id)).filter((p): p is Passage => !!p));
 	const publicRole = $derived(role === a.roles[0].id);
@@ -95,6 +102,8 @@
 			const sources = [...new Set(hits.map((h) => h.docId))];
 			// D3: a reply holding a restricted value never reaches a public-role user.
 			if (uses(version ?? 'v0', 'D3') && role === a.roles[0].id && outputCheck(reply, secrets)) items.push({ role: 'assistant', text: blockedText(a), sources, blocked: 'D3', hidden: reply });
+			// v1: a number in no document this role may see (nor in what the user wrote) is a guess, so it never reaches anyone.
+			else if (version === 'v1' && numberCheck(reply, allowedNumbers(role, [...history.filter((t) => t.role === 'user').map((t) => t.text), q]))) items.push({ role: 'assistant', text: noGuessText(a), sources, blocked: 'numbers', hidden: reply });
 			else items.push({ role: 'assistant', text: reply, sources });
 		} catch (err) {
 			const text = explainError(err, ANSWER_FAILED);

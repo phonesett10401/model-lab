@@ -5,8 +5,8 @@ import { inputFilter } from './guard';
 
 export interface ChatMessage { role: 'system' | 'user' | 'assistant'; content: string }
 /** blocked: the defence that replaced the reply; hidden keeps D3's original for the runner (never shown on the page). */
-export interface Turn { role: 'user' | 'assistant'; text: string; sources?: string[]; blocked?: 'D2' | 'D3'; hidden?: string }
-export const BLOCKED_LABEL = { D2: 'Blocked by the input filter (D2)', D3: 'Blocked by the output check (D3)' };
+export interface Turn { role: 'user' | 'assistant'; text: string; sources?: string[]; blocked?: 'D2' | 'D3' | 'numbers'; hidden?: string }
+export const BLOCKED_LABEL = { D2: 'Blocked by the input filter (D2)', D3: 'Blocked by the output check (D3)', numbers: 'Replaced by the number check (v1)' };
 export type Item = Turn | { role: 'error'; text: string };
 
 const dot = (a: number[], b: number[]) => a.reduce((s, x, i) => s + x * b[i], 0);
@@ -54,8 +54,13 @@ function systemPromptD1(a: AssistantSettings, role: string, passages: Passage[])
 	].join('\n');
 }
 
+// v1: D4 keeps restricted documents away, and the measured runs showed the model then makes up an answer instead.
+const NO_GUESS = 'Never make up a code, phone number, name or other number. If the documents do not give it, say you don’t know.';
+
 /** v0: any passage can be retrieved; the only access control is the assistant's rule sentence. */
 export function systemPrompt(a: AssistantSettings, role: string, passages: Passage[], version: Version = 'v0'): string {
+	if (version === 'v1') return `${systemPromptD1(a, role, passages)}
+${NO_GUESS}`;
 	if (uses(version, 'D1')) return systemPromptD1(a, role, passages);
 	return [
 		a.intro,

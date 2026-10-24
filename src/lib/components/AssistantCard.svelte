@@ -17,7 +17,7 @@
 	</header>
 	<dl class="facts">
 		<dt class="mono">Roles</dt><dd>{a.roles.map((r) => r.label).join(' / ')}</dd>
-		<dt class="mono">Version</dt><dd>v0: {VERSIONS.v0}</dd>
+		<dt class="mono">Version</dt><dd>v1: {VERSIONS.v1}</dd>
 		<dt class="mono">Model</dt><dd class="mono">{CHAT_MODEL}</dd>
 		<dt class="mono">Download</dt><dd>About 1 GB the first time, then kept on your device</dd>
 		<dt class="mono">Needs</dt><dd>Chrome or Edge with graphics acceleration</dd>
