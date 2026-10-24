@@ -49,5 +49,5 @@
 	.tools { display: flex; align-items: center; gap: var(--space-2); }
 	.intro-link { min-height: 44px; display: inline-flex; align-items: center; gap: 0.3em; color: var(--ink-soft); }
 	@media (max-width: 479px) { .wide { display: none; } }
-	.wordmark { text-decoration: none; letter-spacing: 0.14em; color: var(--red); }
+	.wordmark { min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; letter-spacing: 0.14em; color: var(--red); }
 </style>

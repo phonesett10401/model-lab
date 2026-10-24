@@ -47,3 +47,13 @@ test('unknown entries are 404s', async ({ page }) => {
 	const res = await page.goto('/models/nope');
 	expect(res?.status()).toBe(404);
 });
+
+test('headings never skip a level, and the home link is a full-size tap target', async ({ page }) => {
+	for (const path of ['/models/sea-creature-detector', '/audits/pathum-rai', '/']) {
+		await page.goto(path);
+		const levels = await page.locator('h1, h2, h3, h4, h5, h6').evaluateAll((hs) => hs.filter((h) => h.getClientRects().length).map((h) => +h.tagName[1]));
+		expect(levels.filter((l, i) => i > 0 && l > levels[i - 1] + 1), `${path}: ${levels.join(' ')}`).toEqual([]);
+		const box = await page.getByRole('link', { name: 'AI MODEL LAB' }).boundingBox();
+		expect(box!.height, path).toBeGreaterThanOrEqual(44);
+	}
+});
