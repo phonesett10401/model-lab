@@ -56,5 +56,52 @@ def export(run: str) -> None:
     print(f'{out} ({out.stat().st_size / 1e6:.1f} MB)')
 
 
+def boxes_match(torch_boxes, onnx_boxes, min_score=0.3) -> bool:
+    """(class, score, [x, y, w, h]) lists agree: every box at or above min_score has a twin, same class, IoU >= 0.98,
+    score within 0.01."""
+    from comic_evaluate import _iou
+    a = [b for b in torch_boxes if b[1] >= min_score]
+    b = [x for x in onnx_boxes if x[1] >= min_score]
+    if len(a) != len(b):
+        return False
+    free = list(b)
+    for k, s, box in a:
+        twin = next((x for x in free if x[0] == k and abs(x[1] - s) <= 0.01 and _iou(x[2], box) >= 0.98), None)
+        if twin is None:
+            return False
+        free.remove(twin)
+    return True
+
+
+def check(run: str, pages: int = 20) -> None:
+    """Runs validation pages through the trained model and the ONNX file; any disagreement fails."""
+    import json
+
+    import numpy as np
+    import onnxruntime as ort
+    from PIL import Image
+
+    from comic_evaluate import predict
+    kind, model = load(run)
+    session = ort.InferenceSession(str(c.RUNS / run / 'model.onnx'), providers=['CPUExecutionProvider'])
+    val = json.loads((c.DATA / 'annotations/val.json').read_text(encoding='utf8'))
+    for img in val['images'][:pages]:
+        im = Image.open(c.DATA / 'images' / img['file_name']).convert('RGB')
+        W, H = im.size
+        with torch.no_grad():
+            if kind == 'dfine':
+                x = torch.from_numpy(np.asarray(im.resize((SIZE, SIZE), Image.BILINEAR), np.float32).transpose(2, 0, 1)[None] / 255)
+                labels, boxes, scores = model(x, torch.tensor([[W, H]]))
+                ours = [(int(l), float(s), [float(b[0]), float(b[1]), float(b[2] - b[0]), float(b[3] - b[1])])
+                        for l, b, s in zip(labels[0], boxes[0], scores[0])]
+            else:
+                raise SystemExit('check is written for D-FINE (the picked detector)')
+        if not boxes_match(ours, predict(session, kind, im)):
+            raise SystemExit(f'ONNX disagrees with the trained model on {img["file_name"]}')
+    print('onnx matches torch on', min(pages, len(val['images'])), 'validation pages')
+
+
 if __name__ == '__main__':
     export(sys.argv[1])
+    if '--check' in sys.argv:
+        check(sys.argv[1])
