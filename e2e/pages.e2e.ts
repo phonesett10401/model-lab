@@ -57,3 +57,15 @@ test('headings never skip a level, and the home link is a full-size tap target',
 		expect(box!.height, path).toBeGreaterThanOrEqual(44);
 	}
 });
+
+test('the phone browser bar colour follows the Light / Dark switch', async ({ page }) => {
+	await page.emulateMedia({ colorScheme: 'light' });
+	await page.goto('/');
+	await page.getByRole('button', { name: /dark/i }).click();
+	const [meta, bg] = await page.evaluate(() => [
+		[...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')].map((m) => m.content),
+		getComputedStyle(document.body).backgroundColor
+	]);
+	expect(meta).toEqual([bg, bg]);
+	expect(bg).not.toBe('rgb(245, 243, 242)');
+});

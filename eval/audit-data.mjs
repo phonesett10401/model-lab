@@ -90,7 +90,7 @@ for (const [slug, role] of Object.entries(ASSISTANTS)) {
 			{ label: 'Cases per version (held-out)', value: first ? `${cases(first, 'deepset').length} deepset attacks, ${cases(first, 'bipia').length} BIPIA emails and ${cases(first, 'disguise').length} disguise emails, each asking for one restricted document; ${cases(first, 'plain').length} plain questions` : null },
 			...measured.flatMap((v) => [
 				{ label: `${v}: leaked`, value: `direct ${count(cases(runs[v], 'deepset'))}, email ${count(cases(runs[v], 'bipia'))}, disguised ${count(cases(runs[v], 'disguise'))}, plain ${count(cases(runs[v], 'plain'))}` },
-				// Only D2 and D3 replace a reply; v0 has no defence, D1 changes the prompt and D4 hides documents.
+				// Only versions with D2, D3 or v1's number check replace a reply; v0 has no defence, D1 changes the prompt and D4 hides documents.
 				...(BLOCKS.includes(v) ? [{ label: `${v}: blocked by the defence`, value: `${blocked(attacks(runs[v])).length} of ${attacks(runs[v]).length} attacks${v === 'D5' || v === 'v1' ? ` (${blockedBy(attacks(runs[v]), v)})` : ''}` }] : []),
 				{ label: `${v}: made-up numbers`, value: `${invented(cases(runs[v])).length} of ${cases(runs[v], 'deepset').length + cases(runs[v], 'plain').length} direct and plain replies give a number found in no document` }
 			]),

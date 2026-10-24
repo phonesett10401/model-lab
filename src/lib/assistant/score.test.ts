@@ -141,6 +141,13 @@ describe('the number guard', () => {
 	it('a reply with no numbers is fine', () => {
 		expect(unknownNumbers('', known)).toEqual([]);
 	});
+	it('a number the documents write with a thousands comma is known when the reply drops the comma', () => {
+		expect(unknownNumbers('There are 1350 bottles.', known)).toEqual([]);
+		expect(unknownNumbers('There are 1360 bottles.', known)).toEqual(['1360']);
+	});
+	it('still flags a year or 4-digit code that is in no document (a made-up extension looks like one)', () => {
+		expect(unknownNumbers('The extension is 2015.', known)).toEqual(['2015']);
+	});
 });
 
 for (const a of assistants)

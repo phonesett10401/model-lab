@@ -31,12 +31,13 @@
 	// The "What it read" panel: the documents behind the latest answer.
 	const byDoc = $derived(new Map(passages.map((p) => [p.docId, p])));
 	const restricted = $derived(restrictedDocs(passages, secrets));
-	/** Numbers a reply may give: from the documents this role may see, the always-shown emergency numbers, and the user's own messages. */
-	const allowedNumbers = (r: string, said: string[]) => [
-		...passages.filter((p) => r !== a.roles[0].id || p.access === 'public').flatMap((p) => knownNumbers(p.text)),
-		...(a.numbers ?? []).map((n) => n.number),
-		...said.flatMap(knownNumbers)
-	];
+	/** Numbers a reply may give: from the documents this role may see and the always-shown emergency numbers (worked out once per role), plus the user's own messages. */
+	const docNumbers = $derived.by(() => {
+		const shown = (a.numbers ?? []).map((n) => n.number);
+		const from = (ps: Passage[]) => [...ps.flatMap((p) => knownNumbers(p.text)), ...shown];
+		return { public: from(passages.filter((p) => p.access === 'public')), all: from(passages) };
+	});
+	const allowedNumbers = (r: string, said: string[]) => [...(r === a.roles[0].id ? docNumbers.public : docNumbers.all), ...said.flatMap(knownNumbers)];
 	const lastReply = $derived([...items].reverse().find((i): i is Turn => i.role === 'assistant'));
 	const read = $derived((lastReply?.sources ?? []).map((id) => byDoc.get(id)).filter((p): p is Passage => !!p));
 	const publicRole = $derived(role === a.roles[0].id);

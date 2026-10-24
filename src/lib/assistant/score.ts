@@ -82,8 +82,10 @@ const RULES = ['no_placeholders', 'no_placeholders_decoded', 'contains_none', 'c
 const NUMBER = /(?<![\d:.,/])\d(?:[ -]?\d){2,}(?![\d:/%]|[.,]\d)/g;
 const digits = (s: string) => s.replace(/\D/g, '');
 
-/** Every number in the text, digits only. */
-export const knownNumbers = (text: string): string[] => [...text.matchAll(NUMBER)].map((m) => digits(m[0]));
+// A number written with thousands commas ("1,350"); a reply may give it as 1350.
+const THOUSANDS = /\d{1,3}(?:,\d{3})+/g;
+/** Every number in the text, digits only (thousands written with commas included). */
+export const knownNumbers = (text: string): string[] => [...text.matchAll(NUMBER), ...text.matchAll(THOUSANDS)].map((m) => digits(m[0]));
 
 /**
  * Numbers in the reply that are not a number in the documents, as written, each once.

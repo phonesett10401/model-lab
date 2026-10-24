@@ -3,5 +3,35 @@
 	"outputDirectory": "build",
 	"cleanUrls": true,
 	"trailingSlash": false,
-	"redirects": [{ "source": "/models/creature-categorizer", "destination": "/models/sea-creature-detector", "permanent": true }]
+	"redirects": [
+		{
+			"source": "/",
+			"has": [
+				{
+					"type": "query",
+					"key": "entry",
+					"value": "raffel-luo"
+				}
+			],
+			"destination": "/assistants",
+			"permanent": false
+		},
+		{
+			"source": "/",
+			"has": [
+				{
+					"type": "query",
+					"key": "entry",
+					"value": "pathum-rai"
+				}
+			],
+			"destination": "/assistants",
+			"permanent": false
+		},
+		{
+			"source": "/models/creature-categorizer",
+			"destination": "/models/sea-creature-detector",
+			"permanent": true
+		}
+	]
 }
