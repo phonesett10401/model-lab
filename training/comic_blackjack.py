@@ -6,7 +6,7 @@ to Black Jack", not scans of printed books); every use must credit "Give My Rega
 Manga on Web / http://mangaonweb.com"; uses are to be reported afterwards to Sato Manga Works.
 Manga on Web closed (its domain is for sale), so the files come from the Internet Archive copy of that data.
 
-Run: python comic_blackjack.py [--volumes 1 4 8 12] [--pages 25]
+Run: python comic_blackjack.py [--volumes 1 2 4 6 8 12] [--pages 25]
 """
 import argparse
 import io
@@ -42,7 +42,7 @@ def safe_name(name: str) -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument('--volumes', type=int, nargs='*', default=[1, 4, 8, 12])
+    ap.add_argument('--volumes', type=int, nargs='*', default=[1, 2, 4, 6, 8, 12])  # 2 and 6 fall in the test split
     ap.add_argument('--pages', type=int, default=25)
     a = ap.parse_args()
     for v in a.volumes:
