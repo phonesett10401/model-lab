@@ -31,3 +31,15 @@ PyTorch stays 2.11 + cu128 (RTX 5060).
 - Both export fine with plain `torch.onnx.export(..., opset_version=17, dynamo=False)` at 1024 (D-FINE: wrap `cfg.model.deploy()` + `cfg.postprocessor.deploy()`; YOLOX: `model.head.decode_in_inference = True`). This becomes `training/comic_export.py` in task 7.
 
 Both candidates can train and export with 4 classes, so both go on to round 1 (task 5).
+
+## Round 1 (2026-10-24): D-FINE picked
+
+30 epochs each on 654 training pages (Pepper&Carrot drafts + synthetic), scored as exported ONNX on CPU against the 37 real validation pages (Pepper&Carrot; only `bubble` labels exist there until the owner's Label Studio pass):
+
+| | D-FINE nano | YOLOX nano |
+|---|---|---|
+| bubble AP@50 | **0.872** | 0.656 |
+| precision / recall at 0.3 | 0.664 / **0.892** | 0.795 / 0.647 |
+| ONNX size | 15.8 MB | 3.8 MB |
+
+D-FINE goes on: it finds far more bubbles, and its ONNX needs no NMS in the browser. Validation only (test pages untouched). Its own training-time score (AP 0.50:0.95 style) reached 0.77 by epoch 25. Runs: `runs/comic/r1-dfine`, `runs/comic/r1-yolox` (local).
