@@ -33,6 +33,7 @@ video/out/
 training/data/
 training/runs/
 training/vendor/
+training/incoming/
 *.pt
 training/*.log
 __pycache__/

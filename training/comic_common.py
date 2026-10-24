@@ -57,7 +57,7 @@ def load_attribution(path: Path = ATTRIBUTION) -> list[Page]:
     return pages
 
 
-def write_coco(path: Path, items: list[tuple[str, int, int, list[dict]]]) -> None:
+def coco_dict(items: list[tuple[str, int, int, list[dict]]]) -> dict:
     """items: (file, width, height, [{'bbox': [x, y, w, h], 'category': name, 'text'?: str}])."""
     coco = {'images': [], 'annotations': [], 'categories': [{'id': i, 'name': n} for i, n in enumerate(CLASSES)]}
     # ids start at 1: pycocotools reads annotation id 0 as "unmatched".
@@ -67,8 +67,12 @@ def write_coco(path: Path, items: list[tuple[str, int, int, list[dict]]]) -> Non
             x, y, bw, bh = a['bbox']
             coco['annotations'].append({'id': len(coco['annotations']) + 1, 'image_id': image_id, 'category_id': CLASSES.index(a['category']),
                                         'bbox': [x, y, bw, bh], 'area': bw * bh, 'iscrowd': 0, **({'text': a['text']} if 'text' in a else {})})
+    return coco
+
+
+def write_coco(path: Path, items: list[tuple[str, int, int, list[dict]]]) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    Path(path).write_text(json.dumps(coco), encoding='utf8')
+    Path(path).write_text(json.dumps(coco_dict(items)), encoding='utf8')
 
 
 def add_pages(path: Path, pages: list[Page]) -> None:
