@@ -127,6 +127,14 @@ describe('handleTranslate', () => {
 		}
 	});
 
+	it('a refused request says so, without retrying', async () => {
+		let calls = 0;
+		const fetchImpl = (async () => { calls++; return new Response(JSON.stringify({ promptFeedback: { blockReason: 'PROHIBITED_CONTENT' } })); }) as unknown as typeof fetch;
+		const res = await handleTranslate(req({ lines: [line] }), env, fetchImpl);
+		expect(await res.json()).toEqual({ ok: false, error: 'blocked' });
+		expect(calls).toBe(1);
+	});
+
 	it('a per-minute limit is busy, not used up', async () => {
 		for (const f of [limited('GenerateRequestsPerMinutePerProjectPerModel-FreeTier'), fakeGemini(429, '').fetchImpl]) {
 			const res = await handleTranslate(req({ lines: [line] }), env, f);

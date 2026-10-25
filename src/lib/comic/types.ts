@@ -11,9 +11,9 @@ export interface GotLine { n: number; text: string; english?: string }
 
 export type TranslateReply =
 	| { ok: true; lines: GotLine[]; model: string }
-	| { ok: false; error: 'bad-request' | 'forbidden' | 'quota' | 'busy' | 'upstream' };
+	| { ok: false; error: 'bad-request' | 'forbidden' | 'quota' | 'busy' | 'upstream' | 'blocked' };
 
-export type LineProblem = 'missing' | 'not-burmese' | 'zawgyi' | 'length' | 'unread';
+export type LineProblem = 'missing' | 'not-burmese' | 'zawgyi' | 'length' | 'unread' | 'blocked';
 
 /** One text area the visitor marked on a page. */
 export interface Region {

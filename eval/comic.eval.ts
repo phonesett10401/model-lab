@@ -49,6 +49,7 @@ async function runPage(page: Page, file: string): Promise<Done | { stop: string 
 			if (outcome === 'ok') break;
 			if (outcome.includes('used up')) return { stop: `Gemini's daily limit reached at ${file}; rerun tomorrow, it continues from here` };
 			if (outcome.includes('Busy') && attempt === 0) { await page.waitForTimeout(60_000); continue; }
+			if (outcome.includes('wouldn’t translate')) break; // Gemini refused every line: a real result, recorded as not replaced
 			// Never record a failed request as an untranslated page: stop, so a rerun tries this page again.
 			return { stop: `translation failed at ${file} (${outcome.trim()}); rerun to continue from here` };
 		}

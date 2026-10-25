@@ -118,6 +118,9 @@ export async function handleTranslate(req: Request, env: ServerEnv, fetchImpl: t
 				return reply({ ok: false, error: daily ? 'quota' : 'busy' }, 429);
 			}
 			const json = res.ok ? await res.json().catch(() => null) : null;
+			// Gemini's safety filter can refuse harmless comic lines ("GET IN TOUCH WITH MR. MIYAMURA." was refused as
+			// PROHIBITED_CONTENT); a refusal won't change on a retry, so say so and let the page send lines one by one.
+			if ((json as { promptFeedback?: { blockReason?: string } })?.promptFeedback?.blockReason) return reply({ ok: false, error: 'blocked' }, 422);
 			const got = parseGemini(json);
 			if (!got) {
 				if (attempt === 0) continue;

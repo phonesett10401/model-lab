@@ -102,6 +102,23 @@ test('fills Burmese and flags problems', async ({ page }) => {
 	await expect(rows(page).nth(0).getByLabel('Burmese')).toHaveValue('မင်္ဂလာပါ ခင်ဗျာ');
 });
 
+test('a refused page is sent line by line; only the refused line is flagged', async ({ page }) => {
+	const bodies: string[] = [];
+	await page.route('**/api/translate', async (route) => {
+		if (route.request().method() === 'GET') return route.fulfill({ json: { model: 'gemini-3.5-flash-lite', tier: 'free' } });
+		const { lines } = JSON.parse(route.request().postData()!);
+		bodies.push(route.request().postData()!);
+		// Gemini's safety filter refuses any request holding "HELLO THERE" (as it refused a harmless line in the tests).
+		if (lines.some((l: { text: string }) => l.text === 'HELLO THERE')) return route.fulfill({ json: { ok: false, error: 'blocked' } });
+		await route.fulfill({ json: { ok: true, model: 'gemini-3.5-flash-lite', lines: lines.map((l: { n: number }) => ({ n: l.n, text: 'အိမ်ပြန်' })) } });
+	});
+	await setUp(page, true);
+	await page.getByRole('button', { name: 'Translate page' }).click();
+	await expect(rows(page).nth(0).locator('.problem')).toHaveText('Gemini wouldn’t translate this line. Type the Burmese.');
+	await expect(rows(page).nth(1).getByLabel('Burmese')).toHaveValue('အိမ်ပြန်');
+	expect(bodies).toHaveLength(3); // the page, then each line alone
+});
+
 test('quota keeps work', async ({ page }) => {
 	await fakeTranslate(page, 'quota');
 	await setUp(page);

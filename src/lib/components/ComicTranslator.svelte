@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { applyRepair, checkLines } from '$lib/comic/check';
-	import { serviceInfo, translatePage } from '$lib/comic/client';
+	import { serviceInfo, translateLines } from '$lib/comic/client';
 	import { latestOnly, loadFiles, type Pages } from '$lib/comic/load';
 	import { readingOrder } from '$lib/comic/order';
 	import { renderPage } from '$lib/comic/render';
@@ -18,7 +18,8 @@
 		'not-burmese': 'Didn’t come back in Burmese. Retry or type your own.',
 		zawgyi: 'Came back in Zawgyi, not Unicode. Retry or type your own.',
 		length: 'The length looks off. Check it, retry or type your own.',
-		unread: 'Couldn’t read this. Type the English.'
+		unread: 'Couldn’t read this. Type the English.',
+		blocked: 'Gemini wouldn’t translate this line. Type the Burmese.'
 	};
 	const AUTO_MB = Math.round(MODEL_MB + ENGINE_MB + OCR_MB);
 
@@ -309,15 +310,17 @@
 		error = '';
 		const lines = sent;
 		const order = regions, at = index;
-		const reply = await translatePage(lines);
+		const reply = await translateLines(lines);
 		busy = false;
 		if (!reply.ok) {
 			error = reply.error === 'quota' ? 'Today’s translations are used up. Try again tomorrow.'
 				: reply.error === 'busy' ? 'Busy right now. Try again in a minute.'
+				: reply.error === 'blocked' ? 'Gemini wouldn’t translate this page. Type the Burmese.'
 				: 'Translation failed. Try again in a moment.';
 			return false;
 		}
-		models[at] = reply.model;
+		if (reply.model) models[at] = reply.model;
+		const refused = new Set(reply.blocked ?? []);
 		const { byN } = checkLines(lines, reply.lines);
 		const english = new Map(reply.lines.map((g) => [g.n, g]));
 		for (const l of lines) {
@@ -325,7 +328,7 @@
 			if (onlyFlagged && !r.problem) continue;
 			const got = byN.get(l.n)!;
 			r.burmese = got.text || r.burmese;
-			r.problem = got.problem;
+			r.problem = refused.has(l.n) ? 'blocked' : got.problem;
 			const fixed = english.get(l.n);
 			if (fixed) r.english = applyRepair(r, fixed).english;
 		}

@@ -1,4 +1,4 @@
-import type { SentLine, TranslateReply } from './types';
+import type { GotLine, SentLine, TranslateReply } from './types';
 
 /** Waits before each retry of a passing failure: Gemini's "high demand" spikes last seconds, not milliseconds. */
 const RETRY_MS = [3000, 10000];
@@ -24,6 +24,21 @@ export async function translatePage(lines: SentLine[], fetchImpl: typeof fetch =
 		reply = await once();
 	}
 	return reply;
+}
+
+/** A refused page is sent again line by line, so one refused line doesn't sink the rest; `blocked` names the refused. */
+export async function translateLines(lines: SentLine[], fetchImpl: typeof fetch = fetch, waits = RETRY_MS): Promise<TranslateReply & { blocked?: number[] }> {
+	const reply = await translatePage(lines, fetchImpl, waits);
+	if (reply.ok || reply.error !== 'blocked' || lines.length < 2) return reply;
+	const got: GotLine[] = [], blocked: number[] = [];
+	let model = '';
+	for (const l of lines) {
+		const one = await translatePage([l], fetchImpl, waits);
+		if (one.ok) { got.push(...one.lines); model = one.model; }
+		else if (one.error === 'blocked') blocked.push(l.n);
+		else return one;
+	}
+	return { ok: true, lines: got, model, blocked };
 }
 
 export async function serviceInfo(): Promise<{ model: string; fallback?: string; tier: 'free' | 'paid' } | null> {
