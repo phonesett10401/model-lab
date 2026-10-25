@@ -41,12 +41,19 @@ async function runPage(page: Page, file: string): Promise<Done | { stop: string 
 	const hasText = await page.locator('.regions > li label.wide input').evaluateAll((els) => els.some((e) => (e as HTMLInputElement).value.trim()));
 	if (hasText) {
 		for (let attempt = 0; attempt < 2; attempt++) {
-			if (attempt) await page.getByRole('button', { name: 'Translate page' }).click();
-			const outcome = await Promise.race([
-				page.locator('.stage[aria-label="Burmese page"][data-rendered="true"]').waitFor({ timeout: 180_000 }).then(() => 'ok'),
-				page.getByRole('alert').waitFor({ timeout: 180_000 }).then(async () => (await page.getByRole('alert').textContent()) ?? '')
-			]);
-			if (outcome === 'ok') break;
+			if (attempt) {
+				const button = page.getByRole('button', { name: 'Translate page' });
+				await button.click();
+				await expect(button).toBeEnabled({ timeout: 180_000 }); // the request is over
+			}
+			// The automatic run has already translated by the time it says "done": read what happened. No error means
+			// a result, even when every line came back empty on purpose (sound effects, junk) and nothing is drawn.
+			const outcome = (await page.getByRole('alert').count()) ? ((await page.getByRole('alert').first().textContent()) ?? '') : 'ok';
+			if (outcome === 'ok') {
+				const drawn = await page.locator('.regions > li label.wide input.my').evaluateAll((els) => els.some((e) => (e as HTMLInputElement).value.trim()));
+				if (drawn) await page.locator('.stage[aria-label="Burmese page"][data-rendered="true"]').waitFor({ timeout: 60_000 });
+				break;
+			}
 			if (outcome.includes('used up')) return { stop: `Gemini's daily limit reached at ${file}; rerun tomorrow, it continues from here` };
 			if (outcome.includes('Busy') && attempt === 0) { await page.waitForTimeout(60_000); continue; }
 			if (outcome.includes('wouldn’t translate')) break; // Gemini refused every line: a real result, recorded as not replaced
