@@ -43,9 +43,9 @@ function grow(box: Box, by: number, page: Box): Box {
 /** Fit order: shrink the font, then grow the box a little, and only then cover the art with a bigger box. */
 export function fitText(
 	text: string, box: Box, page: Box, measure: (s: string, size: number) => number,
-	opts: { maxSize?: number; minSize?: number; lineHeight?: number } = {}
+	opts: { maxSize?: number; minSize?: number; lineHeight?: number; floor?: number } = {}
 ): { size: number; lines: string[]; box: Box; mode: 'fit' | 'grown' | 'cover' } {
-	const { maxSize = 28, minSize = 12, lineHeight = 1.7 } = opts;
+	const { maxSize = 28, minSize = 12, lineHeight = 1.7, floor } = opts;
 	const lay = (b: Box, size: number) => {
 		const lines = wrapBurmese(text, b.w, (s) => measure(s, size));
 		const ok = lines.every((l) => measure(l, size) <= b.w) && lines.length * size * lineHeight <= b.h;
@@ -61,6 +61,12 @@ export function fitText(
 
 	const fit = best(box);
 	if (fit) return { ...fit, box, mode: 'fit' };
+	// Inside a bubble the text may go smaller than usual (down to `floor`) rather than spread over the art.
+	if (floor !== undefined)
+		for (let size = minSize - 1; size >= floor; size--) {
+			const r = lay(box, size);
+			if (r.ok) return { size, lines: r.lines, box, mode: 'fit' };
+		}
 	for (const by of [0.05, 0.1, 0.15]) {
 		const b = grow(box, by, page);
 		const r = best(b);
@@ -70,9 +76,9 @@ export function fitText(
 	// Small steps, so the covering box is only as big as the text needs and hides as little art as possible.
 	for (let by = 0.3; ; by += 0.15) {
 		const next = grow(box, by, page);
-		const r = lay(next, minSize);
+		const r = lay(next, floor ?? minSize);
 		const stuck = next.w === b.w && next.h === b.h;
 		b = next;
-		if (r.ok || stuck) return { size: minSize, lines: r.lines, box: b, mode: 'cover' };
+		if (r.ok || stuck) return { size: floor ?? minSize, lines: r.lines, box: b, mode: 'cover' };
 	}
 }

@@ -76,8 +76,12 @@ export function joinStacked(dets: Detection[]): Detection[] {
 	const out = dets.map((d) => ({ ...d, box: { ...d.box } }));
 	for (let i = 0; i < out.length; i++)
 		for (let j = i + 1; j < out.length; j++) {
-			if (overlapOfSmaller(out[i].box, out[j].box) < 0.15) continue;
 			const [a, b] = [out[i].box, out[j].box];
+			if (overlapOfSmaller(a, b) < 0.15) continue;
+			// Lines of one bubble sit one above the other, about as wide as each other and sharing a column; a small
+			// bubble tucked under a big one, or a bubble beside it, is a neighbour and stays apart.
+			const shared = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+			if (shared < 0.6 * Math.min(a.w, b.w) || Math.min(a.w, b.w) < 0.6 * Math.max(a.w, b.w)) continue;
 			const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
 			out[i].box = { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
 			if (out[j].score > out[i].score) { out[i].cls = out[j].cls; out[i].score = out[j].score; }
