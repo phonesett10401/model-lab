@@ -54,6 +54,7 @@ export async function fakeTranslateAll(page: Page, text: string): Promise<string
 
 /** Drags a box on the original page; corners are fractions of the page. */
 export async function drawBox(page: Page, x1: number, y1: number, x2: number, y2: number) {
+	await page.getByTestId('draw-layer').scrollIntoViewIfNeeded(); // a drag below the fold would miss the page
 	const r = (await page.getByTestId('draw-layer').boundingBox())!;
 	await page.mouse.move(r.x + r.width * x1, r.y + r.height * y1);
 	await page.mouse.down();

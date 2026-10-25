@@ -427,7 +427,7 @@ test('download fails', async ({ page }) => {
 
 test('unread boxes are not sent', async ({ page }) => {
 	test.setTimeout(180_000);
-	const bodies = await fakeTranslate(page, { ok: true, lines: [], model: 'gemini-3.5-flash' });
+	const bodies = await fakeTranslateAll(page, 'မင်္ဂလာပါ'); // answers every line, so no retry follows
 	await openFile(page, 'p.jpg', 'image/jpeg', pepper());
 	await page.getByRole('button', { name: 'Find the text for me' }).click();
 	await expect(page.locator('.comic')).toHaveAttribute('data-auto', 'done', { timeout: 150_000 });
