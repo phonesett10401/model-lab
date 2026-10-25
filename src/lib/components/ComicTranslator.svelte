@@ -68,11 +68,18 @@
 		}
 		book?.destroy();
 		book = pages;
+		resetAuto();
 		byPage = Array.from({ length: pages.count }, () => []);
 		await show(0);
 	}
 
 	/** Only the newest page request wins, so fast clicks can't put one page's boxes on another page's art. */
+	function resetAuto() {
+		if (auto !== 'loading' && auto !== 'reading') auto = 'idle';
+		autoStatus = '';
+		autoError = '';
+	}
+
 	async function show(i: number) {
 		if (!book) return;
 		try {
@@ -81,6 +88,7 @@
 			current?.close();
 			index = i;
 			current = bmp;
+			resetAuto();
 		} catch {
 			error = OPEN_FAILED;
 		}
@@ -94,6 +102,8 @@
 	});
 
 	let rendered = $state(false);
+	/** How each box's Burmese was lettered: fitted, grown inside the page, or on a covering box. */
+	let modes = $state<Record<number, 'fit' | 'grown' | 'cover'>>({});
 	let renderToken = 0;
 	$effect(() => {
 		if (!burmeseCanvas || !current) return;
@@ -105,12 +115,13 @@
 		const off = document.createElement('canvas');
 		off.width = page.width;
 		off.height = page.height;
-		renderPage(off.getContext('2d', { willReadFrequently: true })!, page, snap).then(() => {
+		renderPage(off.getContext('2d', { willReadFrequently: true })!, page, snap).then((done) => {
 			if (token !== renderToken || !burmeseCanvas) return;
 			burmeseCanvas.width = page.width;
 			burmeseCanvas.height = page.height;
 			burmeseCanvas.getContext('2d')!.drawImage(off, 0, 0);
 			rendered = snap.some((r) => r.burmese.trim());
+			modes = done.modes;
 		}).catch(() => {
 			// A stale render can hit a page bitmap that was just closed; only the current one matters.
 			if (token === renderToken) error = 'Couldn’t draw the Burmese page. Try again.';
@@ -183,22 +194,38 @@
 		auto = 'reading';
 		autoStatus = 'Looking for English…';
 		const page = current, at = index;
-		const found = await detector.detect(page);
-		if (!found.length) {
+		/** The visitor moved to another page: stop quietly and leave the finder ready again. */
+		const gone = () => {
+			if (page === current) return false;
+			auto = 'idle';
+			autoStatus = '';
+			return true;
+		};
+		try {
+			const found = await detector.detect(page);
+			if (gone()) return;
+			if (!found.length) {
+				auto = 'done';
+				autoStatus = 'No English found. Draw boxes by hand.';
+				return;
+			}
+			const ids = found.map(() => nextId++);
+			byPage[at] = [...byPage[at], ...found.map((d, i) => ({ id: ids[i], box: d.box, cls: d.cls, speaker: 'unknown' as Speaker,
+				english: '', burmese: '', problem: null, ocr: '', edited: false }))];
+			for (const [i, id] of ids.entries()) {
+				if (gone()) return;
+				autoStatus = `Reading box ${i + 1} of ${ids.length}…`;
+				const r = byPage[at].find((x) => x.id === id);
+				if (r) await read(r, page);
+			}
 			auto = 'done';
-			autoStatus = 'No English found. Draw boxes by hand.';
-			return;
+			autoStatus = `Found ${ids.length} pieces of English. Check them below.`;
+		} catch {
+			if (gone()) return; // a page released mid-read: nothing to report
+			auto = 'idle';
+			autoStatus = '';
+			autoError = 'Couldn’t read this page. Try again.';
 		}
-		const ids = found.map(() => nextId++);
-		byPage[at] = [...byPage[at], ...found.map((d, i) => ({ id: ids[i], box: d.box, cls: d.cls, speaker: 'unknown' as Speaker,
-			english: '', burmese: '', problem: null, ocr: '', edited: false }))];
-		for (const [i, id] of ids.entries()) {
-			autoStatus = `Reading box ${i + 1} of ${ids.length}…`;
-			const r = byPage[at].find((x) => x.id === id);
-			if (r) await read(r, page);
-		}
-		auto = 'done';
-		autoStatus = `Found ${ids.length} pieces of English. Check them below.`;
 	}
 	function remove(id: number) {
 		byPage[index] = byPage[index].filter((r) => r.id !== id);
@@ -297,7 +324,8 @@
 				{#if !regions.length}<p class="soft">No boxes yet. Drag over each piece of English on the original.</p>{/if}
 				<ol class="regions">
 					{#each regions as r, i (r.id)}
-						<li class:flagged={r.problem} data-x={Math.round(r.box.x)}>
+						<li class:flagged={r.problem} data-x={Math.round(r.box.x)} data-box={[r.box.x, r.box.y, r.box.w, r.box.h].map(Math.round).join(',')}
+							data-ocr={r.ocr} data-mode={modes[r.id] ?? ''}>
 							<span class="num mono">{i + 1}</span>
 							<label>Kind <select bind:value={r.cls}>{#each CLASSES as c (c)}<option value={c}>{c}</option>{/each}</select></label>
 							<label>Speaker <select bind:value={r.speaker}>{#each SPEAKERS as s (s)}<option value={s}>{s}</option>{/each}</select></label>

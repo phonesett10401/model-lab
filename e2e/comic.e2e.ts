@@ -317,3 +317,14 @@ test('manga order', async ({ page }) => {
 	const x = await rows(page).nth(0).getAttribute('data-x');
 	expect(Number(x)).toBeGreaterThan(300);
 });
+
+test('a new file starts fresh', async ({ page }) => {
+	test.setTimeout(180_000);
+	const blank = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 800; c.height = 1000; const g = c.getContext('2d')!; g.fillStyle = '#fff'; g.fillRect(0, 0, 800, 1000); return c.toDataURL('image/png'); });
+	await openFile(page, 'b.png', 'image/png', Buffer.from(blank.split(',')[1], 'base64'));
+	await page.getByRole('button', { name: 'Find the text for me' }).click();
+	await expect(page.locator('.comic')).toHaveAttribute('data-auto', 'done', { timeout: 150_000 });
+	await openFile(page, 'p.jpg', 'image/jpeg', pepper());
+	await expect(page.locator('.comic')).toHaveAttribute('data-auto', 'idle');
+	await expect(page.getByRole('status')).toHaveText('');
+});

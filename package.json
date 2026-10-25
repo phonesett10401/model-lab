@@ -14,6 +14,7 @@
 		"test": "npm run test:unit -- --run && npm run test:e2e",
 		"test:e2e": "playwright test",
 		"eval:assistant": "playwright test -c playwright.eval.config.ts",
+		"eval:comic": "playwright test -c playwright.comic.config.ts",
 		"og": "node scripts/og.mjs",
 		"capture:present": "node scripts/capture-present.mjs"
 	},

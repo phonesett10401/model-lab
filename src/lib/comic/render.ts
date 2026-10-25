@@ -9,9 +9,10 @@ const LINE_HEIGHT = 1.7;
 /** Draws the page, erases each translated box and letters its Burmese in. Counts are kept for the fitting score. */
 export async function renderPage(
 	ctx: CanvasRenderingContext2D, page: ImageBitmap, regions: Region[]
-): Promise<{ fit: number; grown: number; cover: number }> {
+): Promise<{ fit: number; grown: number; cover: number; modes: Record<number, 'fit' | 'grown' | 'cover'> }> {
 	await document.fonts.load(`16px ${FONT}`, 'မ');
 	const counts = { fit: 0, grown: 0, cover: 0 };
+	const modes: Record<number, 'fit' | 'grown' | 'cover'> = {};
 	const full = { x: 0, y: 0, w: page.width, h: page.height };
 	ctx.drawImage(page, 0, 0);
 
@@ -27,6 +28,7 @@ export async function renderPage(
 		};
 		const fit = fitText(text, inner, full, measure, { ...fontRange(page.width), lineHeight: LINE_HEIGHT });
 		counts[fit.mode]++;
+		modes[r.id] = fit.mode;
 
 		if (erase.mode === 'fill' && fit.mode !== 'cover') {
 			ctx.fillStyle = erase.color;
@@ -49,5 +51,5 @@ export async function renderPage(
 		const top = fit.box.y + (fit.box.h - fit.lines.length * step) / 2 + step / 2;
 		fit.lines.forEach((line, i) => ctx.fillText(line.trim(), fit.box.x + fit.box.w / 2, top + i * step));
 	}
-	return counts;
+	return { ...counts, modes };
 }
