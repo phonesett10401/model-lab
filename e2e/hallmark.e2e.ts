@@ -21,7 +21,7 @@ test('the skip link is hidden without being parked off screen, and shows on focu
 	await page.goto('/');
 	const skip = page.getByRole('link', { name: 'Skip to content' });
 	expect((await skip.boundingBox())!.x).toBeGreaterThanOrEqual(0);
-	await page.keyboard.press('Tab');
+	await skip.focus(); // WebKit doesn't Tab to links by default
 	await expect(skip).toBeFocused();
 	expect((await skip.boundingBox())!.width).toBeGreaterThan(40);
 });

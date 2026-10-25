@@ -36,7 +36,7 @@
 {#if bare}
 	{@render children()}
 {:else}
-	<a class="skip" href="#main">Skip to content</a>
+	<a class="skip-link" href="#main">Skip to content</a>
 	<header class="topbar">
 		<a class="wordmark mono" href="/">AI MODEL LAB</a>
 		<nav class="tools">
@@ -56,9 +56,9 @@
 <style>
 	.topbar {
 		max-width: var(--max); margin: 0 auto; padding: var(--space-2) var(--gutter);
-		display: flex; justify-content: space-between; align-items: center; gap: var(--space-2);
+		display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2);
 	}
-	.tools { display: flex; align-items: center; gap: var(--space-2); }
+	.tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 	.intro-link { white-space: nowrap; min-height: 44px; display: inline-flex; align-items: center; gap: 0.3em; color: var(--ink-soft); }
 	.play { width: 0.7em; height: 0.7em; }
 	@media (max-width: 479px) { .wide { display: none; } }

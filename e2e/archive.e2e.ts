@@ -47,8 +47,8 @@ test('back button returns to the previous selection', async ({ page }) => {
 test('audits are grouped separately', async ({ page }) => {
 	await page.goto('/');
 	await expect(page.getByRole('heading', { name: 'Audits' })).toBeVisible();
-	await expect(page.locator('a.plate', { hasText: 'Document assistant audit' })).toContainText('AUDIT');
-	await expect(page.locator('a.plate', { hasText: 'Gender classifier' })).toContainText('IMAGE'); // a model now
+	await expect(page.locator('a.plate', { hasText: 'Document assistant audit' })).toContainText('Audit');
+	await expect(page.locator('a.plate', { hasText: 'Gender classifier' })).toContainText('Image'); // a model now
 });
 
 test('on a short laptop screen every plate in the index stays reachable without an inner scroll', async ({ page }) => {
@@ -77,7 +77,7 @@ test('the home page is the models section; the assistants have their own section
 
 test('the assistants banner shows each audit’s measured leak rates and links to it', async ({ page }) => {
 	await page.goto('/assistants');
-	const board = page.getByRole('figure', { name: /ATTACKS THAT LEAKED/ });
+	const board = page.getByRole('figure', { name: /Attacks that leaked/ });
 	await expect(board.getByRole('heading', { name: 'Pathum Rai District' })).toBeVisible();
 	await expect(board.locator('li[aria-label^="v0,"]').first()).toBeVisible();
 	await expect(board.getByRole('link', { name: 'Read the full audit' }).first()).toHaveAttribute('href', /\/audits\//);

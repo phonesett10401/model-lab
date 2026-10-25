@@ -142,8 +142,8 @@
 
 <article class="assistant" data-assistant={a.slug} data-state={phase} data-version={version} style="--accent: light-dark({a.accent.light}, {a.accent.dark})">
 	<div class="strip mono">
-		<a class="back" href="/assistants">← AI Model Lab · RAG assistants · test exhibit</a>
-		<span class="faint">{version ?? 'v0'} · {a.kind}</span>
+		<a class="back" href="/assistants">All RAG assistants</a>
+		<span class="faint"><span>{version ?? 'v0'}</span><span>{a.kind}</span></span>
 	</div>
 	<div class="band mono" style="background: {a.band.bg}; color: {a.band.fg}; border-bottom-color: {a.band.line ?? a.band.bg}">
 		<span>{a.band.text}</span><span>{a.band.aside}</span>
@@ -266,12 +266,12 @@
 	.restricted { border: 1px solid var(--hairline); background: var(--plate); padding: 0.6rem 0.8rem; }
 	.restricted summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
 	.restricted article { display: grid; gap: 0.3rem; padding-top: var(--space-1); border-top: 1px solid var(--hairline); margin-top: var(--space-1); }
-	.restricted h2 { font-size: var(--step--1); color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; }
+	.restricted h2 { font-size: var(--step--1); color: var(--accent); }
 	.restricted p { white-space: pre-line; max-width: 70ch; }
 	.restricted mark { background: none; color: inherit; text-decoration: underline 2px var(--red); text-underline-offset: 3px; font-weight: 600; }
 	.strip { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1); padding: 0 var(--gutter); border-bottom: 1px solid var(--hairline); }
 	.back { min-height: 44px; display: inline-flex; align-items: center; }
-	.strip span { display: inline-flex; align-items: center; }
+	.strip span { display: inline-flex; align-items: center; gap: 0.75em; }
 	.band { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1); padding: var(--space-1) var(--gutter); border-bottom: 2px solid; letter-spacing: 0.08em; text-transform: uppercase; }
 	.numbers { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid var(--hairline); }
 	.numbers li + li { border-left: 1px solid var(--hairline); }
@@ -313,10 +313,10 @@
 	.ask button { justify-self: end; }
 	.actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 	.read { display: grid; gap: var(--space-1); align-content: start; min-width: 0; border-top: 1px solid var(--hairline); padding-top: var(--space-2); }
-	.read h2 { margin: 0; color: var(--ink-faint); font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; }
+	.read h2 { margin: 0; color: var(--ink-faint); font-weight: 500; }
 	.read ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
 	.read li { display: grid; gap: 0.1rem; padding: var(--space-1); border: 1px solid var(--hairline); overflow-wrap: anywhere; }
-	.read li .mono { color: var(--ink-faint); text-transform: uppercase; }
+	.read li .mono { color: var(--ink-faint); }
 	.read li.leak { border-color: var(--red); }
 	.read li.leak .mono, .warn { color: var(--red); }
 	@media (min-width: 900px) {
