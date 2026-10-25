@@ -182,6 +182,35 @@ test('keeps the bubble outline and the art around it', async ({ page }) => {
 	expect(px.outline.every((v) => v < 60)).toBe(true); // the outline is still drawn
 });
 
+test('a bubble the finder calls a caption keeps its outline too', async ({ page }) => {
+	await fakeTranslate(page, { ok: true, lines: [{ n: 1, text: 'မင်္ဂလာပါ' }], model: 'gemini-3.5-flash' });
+	await openFile(page, 'page.png', 'image/png', await comicPng(page));
+	await drawBox(page, 0.15, 0.11, 0.69, 0.33);
+	await rows(page).nth(0).getByLabel('Kind').selectOption('caption');
+	await rows(page).nth(0).getByLabel('English').fill('HELLO THERE');
+	await page.getByRole('button', { name: 'Translate page' }).click();
+	await expect(page.locator('.stage[aria-label="Burmese page"]')).toHaveAttribute('data-rendered', 'true');
+	const outline = await page.evaluate(() => {
+		const g = document.querySelector<HTMLCanvasElement>('[aria-label="Burmese page"] canvas')!.getContext('2d')!;
+		return [...g.getImageData(100, 120, 1, 1).data.slice(0, 3)];
+	});
+	expect(outline.every((v) => v < 60)).toBe(true);
+});
+
+test('a long translation keeps the bubble outline', async ({ page }) => {
+	await fakeTranslate(page, { ok: true, lines: [{ n: 1, text: Array(60).fill('မင်္ဂလာပါ').join(' ') }], model: 'gemini-3.5-flash' });
+	await openFile(page, 'page.png', 'image/png', await comicPng(page));
+	await drawBox(page, 0.15, 0.11, 0.69, 0.33); // mostly paper, as the detector boxes a bubble
+	await rows(page).nth(0).getByLabel('English').fill('HELLO THERE');
+	await page.getByRole('button', { name: 'Translate page' }).click();
+	await expect(page.locator('.stage[aria-label="Burmese page"]')).toHaveAttribute('data-rendered', 'true');
+	const outline = await page.evaluate(() => {
+		const g = document.querySelector<HTMLCanvasElement>('[aria-label="Burmese page"] canvas')!.getContext('2d')!;
+		return [...g.getImageData(100, 120, 1, 1).data.slice(0, 3)];
+	});
+	expect(outline.every((v) => v < 60)).toBe(true);
+});
+
 test('uses the Myanmar font', async ({ page }) => {
 	await translated(page);
 	expect(await page.evaluate(() => document.fonts.check('16px "Noto Sans Myanmar"', 'မ'))).toBe(true);

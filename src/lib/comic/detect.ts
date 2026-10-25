@@ -51,6 +51,18 @@ export function dropContainers(dets: Detection[]): Detection[] {
 		&& o.box.w * o.box.h < d.box.w * d.box.h).length < 2);
 }
 
+/** The detector has no overlap removal of its own and often boxes one piece of text twice (as a bubble and as a
+ * caption, or twice as a bubble). Keeps the more confident of any two boxes that overlap by IoU >= 0.5. */
+export function dropTwins(dets: Detection[]): Detection[] {
+	const iou = (a: Box, b: Box) => {
+		const i = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+		return i / (a.w * a.h + b.w * b.h - i);
+	};
+	const kept: Detection[] = [];
+	for (const d of [...dets].sort((a, b) => b.score - a.score)) if (kept.every((k) => iou(k.box, d.box) < 0.5)) kept.push(d);
+	return kept;
+}
+
 function tensorOf(bmp: ImageBitmap, t: Box): Float32Array {
 	const canvas = document.createElement('canvas');
 	canvas.width = canvas.height = SIZE;
@@ -91,7 +103,7 @@ function create() {
 					found.push({ box: { x: t.x + x0, y: t.y + y0, w: x1 - x0, h: y1 - y0 }, cls: CLASSES[Number(labels[i])], score: scores[i], tile });
 				}
 			}
-			return dropContainers(mergeBoxes(found));
+			return dropTwins(dropContainers(mergeBoxes(found)));
 		}
 	};
 }

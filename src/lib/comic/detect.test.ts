@@ -49,3 +49,16 @@ it('drops a box that only wraps two others of the same kind', async () => {
 	expect(dropContainers([a, wrap]), 'one box inside is a big bubble with a small one, not a wrapper').toHaveLength(2);
 	expect(dropContainers([a, b, { ...wrap, cls: 'caption' as const }]), 'different kind stays').toHaveLength(3);
 });
+
+it('keeps one box when two sit on the same text, of any kind', async () => {
+	const { dropTwins } = await import('./detect');
+	const b = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
+	const kept = dropTwins([
+		{ box: b(0, 0, 100, 100), cls: 'caption', score: 0.5 },
+		{ box: b(5, 5, 100, 95), cls: 'bubble', score: 0.8 },
+		{ box: b(2, 0, 98, 100), cls: 'bubble', score: 0.4 },
+		{ box: b(200, 0, 100, 100), cls: 'bubble', score: 0.6 }, // a neighbour, kept
+		{ box: b(80, 80, 100, 100), cls: 'bubble', score: 0.7 } // overlaps a little, kept
+	]);
+	expect(kept.map((d) => d.score)).toEqual([0.8, 0.7, 0.6]);
+});

@@ -51,6 +51,7 @@ describe('buildPrompt', () => {
 		expect(p.system).toContain('OCR');
 		expect(p.system).toContain('"english"');
 		expect(p.system).toContain('short');
+		expect(p.system).toContain('never add words');
 	});
 });
 

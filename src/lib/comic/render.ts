@@ -32,21 +32,27 @@ export async function renderPage(
 		const opts = { ...fontRange(page.width), lineHeight: LINE_HEIGHT };
 		// A speech bubble keeps its shape: only the paper inside the outline (and the letters on it) is painted over,
 		// and the Burmese goes in the oval. If it doesn't fit there, the plain box below takes over.
-		const shape = r.cls === 'bubble' ? bubbleShape(img.data, rw, rh) : null;
-		// The oval's text area, then a looser one, before the plain box.
-		const inOval = (a: { x: number; y: number; w: number; h: number }) => fitText(text, { x: rx + a.x, y: ry + a.y, w: a.w, h: a.h }, full, measure, opts);
-		let oval = shape && inOval(shape.inner);
-		if (shape && oval?.mode !== 'fit') oval = inOval(shape.loose);
-		const fit = oval?.mode === 'fit' ? oval : fitText(text, inner, full, measure, opts);
+		// Captions too: the finder often can't tell a boxed bubble from a caption, and both are paper inside an outline.
+		const shape = r.cls === 'bubble' || r.cls === 'caption' ? bubbleShape(img.data, rw, rh) : null;
+		// Once a bubble is found its outline always stays: the Burmese tries the oval's text area, a looser one, then a
+		// smaller font; only if all fail does it get a paper-coloured patch behind the text (never the whole box).
+		const inOval = (a: { x: number; y: number; w: number; h: number }, o = opts) => fitText(text, { x: rx + a.x, y: ry + a.y, w: a.w, h: a.h }, full, measure, o);
+		const small = { ...opts, minSize: Math.max(9, Math.round(opts.minSize * 0.8)) };
+		const tries = shape ? [inOval(shape.inner), inOval(shape.loose), inOval(shape.loose, small)] : [];
+		const fit = shape ? (tries.find((t) => t.mode === 'fit') ?? tries[2]) : fitText(text, inner, full, measure, opts);
 		counts[fit.mode]++;
 		modes[r.id] = fit.mode;
 
 		let ink = '#000';
-		if (shape && fit === oval) {
+		if (shape) {
 			const [pr, pg, pb] = shape.color.match(/\d+/g)!.map(Number);
 			for (let i = 0; i < shape.mask.length; i++)
 				if (shape.mask[i]) img.data.set([pr, pg, pb, 255], i * 4);
 			ctx.putImageData(img, rx, ry);
+			if (fit.mode !== 'fit') {
+				ctx.fillStyle = shape.color;
+				ctx.fillRect(fit.box.x - PAD, fit.box.y - PAD, fit.box.w + 2 * PAD, fit.box.h + 2 * PAD);
+			}
 		} else if (erase.mode === 'fill' && fit.mode !== 'cover') {
 			ctx.fillStyle = erase.color;
 			ctx.fillRect(x, y, w, h);

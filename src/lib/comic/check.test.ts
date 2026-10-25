@@ -22,6 +22,13 @@ describe('checkLines', () => {
 		expect(checkLines([sent(1, 'HELLO THERE')], [{ n: 1, text: 'Hello' }]).byN.get(1)?.problem).toBe('not-burmese');
 	});
 
+	it('flags letters from other scripts mixed into the Burmese, but allows English names', () => {
+		const got = (text: string) => checkLines([sent(1, 'GO TO SAITO NOW')], [{ n: 1, text }]).byN.get(1)?.problem;
+		expect(got('ဆိုက်တိုဆီ အခုသွားපා')).toBe('not-burmese'); // Sinhala slipped in
+		expect(got('ဆိုက်တိုဆီ அခုသွား')).toBe('not-burmese'); // Tamil
+		expect(got('Saito ဆီ အခုချက်ချင်းသွား')).toBeNull();
+	});
+
 	it('flags Zawgyi', () => {
 		expect(isZawgyiLikely('ေမာင္')).toBe(true);
 		expect(isZawgyiLikely('မောင်')).toBe(false);
