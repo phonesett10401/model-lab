@@ -16,6 +16,9 @@ export async function renderPage(
 	const modes: Record<number, 'fit' | 'grown' | 'cover'> = {};
 	const full = { x: 0, y: 0, w: page.width, h: page.height };
 	ctx.drawImage(page, 0, 0);
+	// Two passes: every box is cleared first, then all the text is written, so a box that overlaps another can never
+	// paint over its neighbour's Burmese.
+	const texts: { fit: ReturnType<typeof fitText>; ink: string }[] = [];
 
 	for (const r of regions) {
 		const text = r.burmese.trim();
@@ -67,6 +70,9 @@ export async function renderPage(
 			ctx.strokeRect(b.x + 1, b.y + 1, b.w - 2, b.h - 2);
 		}
 
+		texts.push({ fit, ink });
+	}
+	for (const { fit, ink } of texts) {
 		ctx.font = `${fit.size}px ${FONT}`;
 		ctx.fillStyle = ink;
 		ctx.textAlign = 'center';

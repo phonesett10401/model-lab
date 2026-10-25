@@ -73,3 +73,15 @@ it('skips sound effects, even when one sits on a bubble', async () => {
 	]);
 	expect(kept.map((d) => d.cls)).toEqual(['bubble']);
 });
+
+it('joins boxes stacked in one bubble (two lines boxed apart) but keeps neighbours apart', async () => {
+	const { cleanUp } = await import('./detect');
+	const kept = cleanUp([
+		{ box: { x: 330, y: 97, w: 248, h: 78 }, cls: 'bubble', score: 0.8, tile: 0 }, // line 1 of a verse
+		{ box: { x: 343, y: 157, w: 273, h: 90 }, cls: 'bubble', score: 0.7, tile: 0 }, // line 2, overlapping it
+		{ box: { x: 100, y: 400, w: 200, h: 100 }, cls: 'bubble', score: 0.6, tile: 0 },
+		{ box: { x: 295, y: 495, w: 200, h: 100 }, cls: 'bubble', score: 0.6, tile: 0 } // a neighbour touching a corner
+	]);
+	expect(kept).toHaveLength(3);
+	expect(kept[0].box).toEqual({ x: 330, y: 97, w: 286, h: 150 });
+});

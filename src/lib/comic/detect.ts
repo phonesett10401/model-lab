@@ -66,7 +66,25 @@ export function dropTwins(dets: Detection[]): Detection[] {
 /** Everything after the model: merge across tiles, drop wrappers, skip sound effects (the owner leaves them in the
  * art), then keep one box per piece of text. Sound effects go before the twins, so one can't win over a bubble. */
 export function cleanUp(found: (Detection & { tile: number })[]): Detection[] {
-	return dropTwins(dropContainers(mergeBoxes(found)).filter((d) => d.cls !== 'sfx'));
+	return joinStacked(dropTwins(dropContainers(mergeBoxes(found)).filter((d) => d.cls !== 'sfx')));
+}
+
+/** Lines of one bubble are sometimes boxed apart (a song verse split in two): boxes overlapping by at least 15% of
+ * the smaller become one, so the bubble is read, translated and lettered once, as a whole sentence. Separate
+ * bubbles' boxes barely touch. */
+export function joinStacked(dets: Detection[]): Detection[] {
+	const out = dets.map((d) => ({ ...d, box: { ...d.box } }));
+	for (let i = 0; i < out.length; i++)
+		for (let j = i + 1; j < out.length; j++) {
+			if (overlapOfSmaller(out[i].box, out[j].box) < 0.15) continue;
+			const [a, b] = [out[i].box, out[j].box];
+			const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
+			out[i].box = { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
+			if (out[j].score > out[i].score) { out[i].cls = out[j].cls; out[i].score = out[j].score; }
+			out.splice(j, 1);
+			j = i; // the grown box may now overlap one already passed
+		}
+	return out;
 }
 
 function tensorOf(bmp: ImageBitmap, t: Box): Float32Array {

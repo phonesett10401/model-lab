@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { comicPdf, comicPng, drawBox, fakeTranslate, openFile, openFiles } from './comic-fake';
+import { comicPdf, comicPng, drawBox, fakeTranslate, fakeTranslateAll, openFile, openFiles } from './comic-fake';
 
 // Tall enough that the whole test page is on screen for mouse drags.
 test.use({ viewport: { width: 1280, height: 1600 } });
@@ -117,6 +117,30 @@ test('a refused page is sent line by line; only the refused line is flagged', as
 	await expect(rows(page).nth(0).locator('.problem')).toHaveText('Gemini wouldn’t translate this line. Type the Burmese.');
 	await expect(rows(page).nth(1).getByLabel('Burmese')).toHaveValue('အိမ်ပြန်');
 	expect(bodies).toHaveLength(3); // the page, then each line alone
+});
+
+test('a line in the wrong script is retried once by itself, and never drawn while wrong', async ({ page }) => {
+	const bodies: string[] = [];
+	let answer = 'သွားကြတော့ 戰士တို့'; // Chinese slipped into the Burmese, as Flash Lite once did
+	await page.route('**/api/translate', async (route) => {
+		if (route.request().method() === 'GET') return route.fulfill({ json: { model: 'gemini-3.5-flash-lite', tier: 'free' } });
+		bodies.push(route.request().postData()!);
+		await route.fulfill({ json: { ok: true, model: 'gemini-3.5-flash-lite', lines: [{ n: 1, text: answer }] } });
+	});
+	await setUp(page);
+	await page.getByRole('button', { name: 'Translate page' }).click();
+	await expect.poll(() => bodies.length).toBe(2); // the page, then the flagged line again
+	await expect(rows(page).nth(0).locator('.problem')).toHaveText('Didn’t come back in Burmese. Retry or type your own.');
+	// Still wrong after the retry: the art is left as drawn.
+	const changed = await page.evaluate(() => {
+		const get = (l: string) => document.querySelector<HTMLCanvasElement>(`[aria-label="${l}"] canvas`)!.getContext('2d')!.getImageData(150, 160, 200, 40).data;
+		const a = get('Original page'), b = get('Burmese page');
+		return a.some((v, i) => v !== b[i]);
+	});
+	expect(changed).toBe(false);
+	answer = 'သွားကြတော့ စစ်သည်တို့';
+	await page.getByRole('button', { name: 'Retry flagged lines' }).click();
+	await expect(rows(page).nth(0).getByLabel('Burmese')).toHaveValue('သွားကြတော့ စစ်သည်တို့');
 });
 
 test('quota keeps work', async ({ page }) => {
@@ -338,7 +362,7 @@ test('nothing downloads with the automatic run off', async ({ page }) => {
 
 test('finds and translates the text as soon as a page is chosen', async ({ page, baseURL }) => {
 	test.setTimeout(180_000);
-	const bodies = await fakeTranslate(page, { ok: true, lines: [{ n: 1, text: 'မင်္ဂလာပါ' }], model: 'gemini-3.5-flash' });
+	const bodies = await fakeTranslateAll(page, 'မင်္ဂလာပါ');
 	const offsite: string[] = [];
 	page.on('request', (r) => { if (!r.url().startsWith(baseURL!)) offsite.push(r.url()); });
 	await openFile(page, 'p.jpg', 'image/jpeg', pepper(), true);
@@ -357,7 +381,7 @@ test('finds and translates the text as soon as a page is chosen', async ({ page,
 
 test('translates every chosen file, one request per page', async ({ page }) => {
 	test.setTimeout(300_000);
-	const bodies = await fakeTranslate(page, { ok: true, lines: [], model: 'gemini-3.5-flash' });
+	const bodies = await fakeTranslateAll(page, 'မင်္ဂလာပါ');
 	await openFiles(page, [
 		{ name: 'page10.jpg', mimeType: 'image/jpeg', buffer: pepper() },
 		{ name: 'page2.png', mimeType: 'image/png', buffer: await blankPng(page) }

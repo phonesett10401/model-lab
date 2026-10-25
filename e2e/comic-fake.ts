@@ -39,6 +39,19 @@ export async function fakeTranslate(page: Page, reply: TranslateReply | 'quota')
 	return bodies;
 }
 
+/** A translator that answers every line it is sent with `text` (so nothing comes back missing). Records POST bodies. */
+export async function fakeTranslateAll(page: Page, text: string): Promise<string[]> {
+	const bodies: string[] = [];
+	await page.route('**/api/translate', async (route) => {
+		const req = route.request();
+		if (req.method() === 'GET') return route.fulfill({ json: { model: 'gemini-3.5-flash', tier: 'free' } });
+		bodies.push(req.postData() ?? '');
+		const { lines } = JSON.parse(req.postData()!);
+		return route.fulfill({ json: { ok: true, model: 'gemini-3.5-flash', lines: lines.map((l: { n: number }) => ({ n: l.n, text })) } });
+	});
+	return bodies;
+}
+
 /** Drags a box on the original page; corners are fractions of the page. */
 export async function drawBox(page: Page, x1: number, y1: number, x2: number, y2: number) {
 	const r = (await page.getByTestId('draw-layer').boundingBox())!;

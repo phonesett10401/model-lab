@@ -22,6 +22,10 @@
 		blocked: 'Gemini wouldn’t translate this line. Type the Burmese.'
 	};
 	const AUTO_MB = Math.round(MODEL_MB + ENGINE_MB + OCR_MB);
+	/** Problems a second request usually fixes. */
+	const SLIPS = new Set<LineProblem>(['missing', 'not-burmese', 'zawgyi']);
+	/** Never letter text in the wrong script or encoding onto the page; it stays flagged until fixed. */
+	const drawable = (r: Region) => r.problem !== 'not-burmese' && r.problem !== 'zawgyi';
 
 	let error = $state('');
 	let info = $state<{ model: string; fallback?: string; tier: 'free' | 'paid' } | null>(null);
@@ -169,7 +173,7 @@
 	$effect(() => {
 		if (!burmeseCanvas || !current) return;
 		// Snapshot now so the effect tracks every box and text it draws.
-		const snap = regions.map((r) => ({ ...r, box: { ...r.box } }));
+		const snap = regions.filter(drawable).map((r) => ({ ...r, box: { ...r.box } }));
 		const page = current;
 		const token = ++renderToken;
 		rendered = false;
@@ -332,6 +336,8 @@
 			const fixed = english.get(l.n);
 			if (fixed) r.english = applyRepair(r, fixed).english;
 		}
+		// A slip (another script, Zawgyi, a dropped line) usually comes right on a second try: retry those once.
+		if (!onlyFlagged && order.some((r) => r.problem && SLIPS.has(r.problem))) return translate(true);
 		return true;
 	}
 </script>

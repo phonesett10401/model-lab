@@ -156,7 +156,8 @@ function writeReport() {
 			credit: pepper ? 'David Revoy' : 'Shuho Sato (Sato Manga Works)',
 			creditUrl: pepper ? 'https://www.peppercarrot.com' : 'http://mangaonweb.com',
 			license: pepper ? 'CC BY 4.0' : 'Free reuse (Give My Regards to Black Jack / Shuho Sato / Manga on Web)',
-			licenseUrl: pepper ? 'https://creativecommons.org/licenses/by/4.0/' : p.link
+			// Black Jack's `link` column is its required credit line ("… / Manga on Web / http://mangaonweb.com"): link its address.
+			licenseUrl: pepper ? 'https://creativecommons.org/licenses/by/4.0/' : (p.link.match(/https?:\/\/\S+/)?.[0] ?? 'http://mangaonweb.com')
 		};
 	});
 	writeFileSync(join(SAMPLES, 'examples.json'), JSON.stringify(examples, null, 1) + '\n');
