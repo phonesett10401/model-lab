@@ -17,7 +17,7 @@ const OUT = FAKE ? join(RUN, 'pipeline.json') : 'src/lib/data/comic-translator-p
 const SAMPLES = FAKE ? join(RUN, 'samples') : 'static/samples/comic';
 
 type Row = { box: number[]; cls: string; ocr: string; english: string; burmese: string; mode: string };
-type Done = { file: string; rows: Row[] };
+type Done = { file: string; rows: Row[]; model?: string };
 const WHY: Record<string, string> = {
 	bubble: 'A speech bubble the text finder missed or boxed with its neighbour.',
 	caption: 'A narration box the text finder missed.',
@@ -75,7 +75,7 @@ async function runPage(page: Page, file: string): Promise<Done | { stop: string 
 	const stem = file.replace(/\.jpg$/, '');
 	writeFileSync(join(RUN, `${stem}-en.jpg`), Buffer.from(shots[0], 'base64'));
 	writeFileSync(join(RUN, `${stem}-my.jpg`), Buffer.from(shots[1], 'base64'));
-	return { file, rows };
+	return { file, rows, model: (await page.locator('.comic').getAttribute('data-model')) || undefined };
 }
 
 test('comic pipeline on the test pages', async ({ page }) => {
@@ -161,7 +161,9 @@ function writeReport() {
 		ocrBefore: r3(before.total ? before.found / before.total : null),
 		ocrAfter: r3(after.total ? after.found / after.total : null),
 		failures,
-		examples
+		examples,
+		// Pages per translating model (Flash first, Flash Lite once Flash's free daily quota is used up).
+		models: results.reduce<Record<string, number>>((m, r) => (r.model ? { ...m, [r.model]: (m[r.model] ?? 0) + 1 } : m), {})
 	}, null, 1) + '\n');
 	console.log('wrote', OUT);
 }

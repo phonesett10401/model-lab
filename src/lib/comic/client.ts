@@ -14,7 +14,7 @@ export async function translatePage(lines: SentLine[], fetchImpl: typeof fetch =
 	}
 }
 
-export async function serviceInfo(): Promise<{ model: string; tier: 'free' | 'paid' } | null> {
+export async function serviceInfo(): Promise<{ model: string; fallback?: string; tier: 'free' | 'paid' } | null> {
 	try {
 		const res = await fetch('/api/translate');
 		return res.ok ? await res.json() : null;

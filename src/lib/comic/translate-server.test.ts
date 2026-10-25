@@ -123,6 +123,50 @@ describe('handleTranslate', () => {
 		}
 	});
 
+	describe('Flash first, Flash Lite after its daily quota', () => {
+		const both: ServerEnv = { ...env, fallback: 'gemini-3.5-flash-lite' };
+		/** Answers by model: `daily` models say their daily quota is used up, `minute` ones are busy. */
+		const byModel = (daily: string[], minute: string[] = []) => {
+			const called: string[] = [];
+			const fetchImpl = (async (url: string) => {
+				const model = url.match(/models\/([^:]+):/)![1];
+				called.push(model);
+				const quotaId = daily.includes(model) ? 'GenerateRequestsPerDayPerProjectPerModel-FreeTier'
+					: minute.includes(model) ? 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier' : '';
+				if (quotaId) return new Response(JSON.stringify({ error: { code: 429, details: [{ violations: [{ quotaId }] }] } }), { status: 429 });
+				return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: burmeseReply }] } }], modelVersion: `${model}-v` }));
+			}) as unknown as typeof fetch;
+			return { called, fetchImpl };
+		};
+
+		it('uses Flash while it has quota, and says which model answered', async () => {
+			const g = byModel([]);
+			const res = await handleTranslate(req({ lines: [line] }), both, g.fetchImpl);
+			expect(g.called).toEqual(['gemini-3.5-flash']);
+			expect((await res.json()).model).toBe('gemini-3.5-flash-v');
+		});
+
+		it('switches to Flash Lite when Flash is used up for the day', async () => {
+			const g = byModel(['gemini-3.5-flash']);
+			const res = await handleTranslate(req({ lines: [line] }), both, g.fetchImpl);
+			expect(g.called).toEqual(['gemini-3.5-flash', 'gemini-3.5-flash-lite']);
+			expect(await res.json()).toEqual({ ok: true, lines: [{ n: 1, text: 'မင်္ဂလာပါ' }], model: 'gemini-3.5-flash-lite-v' });
+		});
+
+		it('a busy Flash stays busy (no switch); both used up is quota', async () => {
+			const busy = byModel([], ['gemini-3.5-flash']);
+			expect(await (await handleTranslate(req({ lines: [line] }), both, busy.fetchImpl)).json()).toEqual({ ok: false, error: 'busy' });
+			expect(busy.called).toEqual(['gemini-3.5-flash']);
+			const gone = byModel(['gemini-3.5-flash', 'gemini-3.5-flash-lite']);
+			expect(await (await handleTranslate(req({ lines: [line] }), both, gone.fetchImpl)).json()).toEqual({ ok: false, error: 'quota' });
+		});
+
+		it('GET names both models', async () => {
+			const res = await handleTranslate(req(null, 'https://lab.test', 'GET'), both, fakeGemini(200, '').fetchImpl);
+			expect(await res.json()).toEqual({ model: 'gemini-3.5-flash', fallback: 'gemini-3.5-flash-lite', tier: 'free' });
+		});
+	});
+
 	it('GET reports model and tier', async () => {
 		const res = await handleTranslate(req(null, 'https://lab.test', 'GET'), env, fakeGemini(200, '').fetchImpl);
 		expect(await res.json()).toEqual({ model: 'gemini-3.5-flash', tier: 'free' });

@@ -23,7 +23,9 @@
 	const AUTO_MB = Math.round(MODEL_MB + ENGINE_MB + OCR_MB);
 
 	let error = $state('');
-	let info = $state<{ model: string; tier: 'free' | 'paid' } | null>(null);
+	let info = $state<{ model: string; fallback?: string; tier: 'free' | 'paid' } | null>(null);
+	/** Per page, the model Gemini says translated it (Flash first, Flash Lite once Flash's daily quota is used up). */
+	let models = $state<string[]>([]);
 	/** The server didn't say which tier: assume the free one, so its warning still shows. */
 	let infoFailed = $state(false);
 	/** The page an automatic run stopped on after a failed translation, so it can continue from there. */
@@ -90,6 +92,7 @@
 		book = pages;
 		resetAuto();
 		byPage = Array.from({ length: pages.count }, () => []);
+		models = [];
 		await show(0);
 		if (autoOn) await translateAll(mine, 0);
 	}
@@ -296,7 +299,7 @@
 		busy = true;
 		error = '';
 		const lines = sent;
-		const order = regions;
+		const order = regions, at = index;
 		const reply = await translatePage(lines);
 		busy = false;
 		if (!reply.ok) {
@@ -305,6 +308,7 @@
 				: 'Translation failed. Try again in a moment.';
 			return false;
 		}
+		models[at] = reply.model;
 		const { byN } = checkLines(lines, reply.lines);
 		const english = new Map(reply.lines.map((g) => [g.n, g]));
 		for (const l of lines) {
@@ -320,14 +324,14 @@
 	}
 </script>
 
-<div class="comic" data-auto={running ? 'running' : auto}>
+<div class="comic" data-auto={running ? 'running' : auto} data-model={models[index] ?? ''}>
 	<header class="head">
 		<h1 class="serif">Comic translator</h1>
 		<p><a href="/models/comic-translator">How well it works →</a></p>
 		<p class="soft">English to Burmese. Your pages stay on your device; only the English words are sent to be translated.</p>
 		{#if info || infoFailed}
 			<p class="mono tier">
-				Translating{info ? ` with ${info.model}` : ''}{info?.tier === 'paid' ? '.' : ' on the free tier: only use public-domain or openly licensed pages.'}
+				Translating{info ? ` with ${info.model}` : ''}{info?.fallback ? ` (then ${info.fallback} once its free daily quota is used up)` : ''}{info?.tier === 'paid' ? '.' : ' on the free tier: only use public-domain or openly licensed pages.'}
 			</p>
 		{/if}
 	</header>
@@ -414,6 +418,7 @@
 					{#if regions.some((r) => r.problem)}
 						<button class="btn" disabled={busy} onclick={() => translate(true)}>Retry flagged lines</button>
 					{/if}
+					{#if models[index]}<p class="mono soft">Translated by {models[index]}</p>{/if}
 				</div>
 			</section>
 			<section class="sent" aria-labelledby="sent-h">

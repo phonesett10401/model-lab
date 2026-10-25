@@ -111,6 +111,14 @@ test('quota keeps work', async ({ page }) => {
 	await expect(rows(page).nth(0).getByLabel('English')).toHaveValue('HELLO THERE');
 });
 
+test('says which model translated the page', async ({ page }) => {
+	await fakeTranslate(page, { ok: true, lines: [{ n: 1, text: 'မင်္ဂလာပါ ခင်ဗျာ' }], model: 'gemini-3.5-flash-lite' });
+	await setUp(page);
+	await page.getByRole('button', { name: 'Translate page' }).click();
+	await expect(page.getByText('Translated by gemini-3.5-flash-lite')).toBeVisible();
+	await expect(page.locator('.comic')).toHaveAttribute('data-model', 'gemini-3.5-flash-lite');
+});
+
 test('states the tier', async ({ page }) => {
 	await expect(page.getByText('Translating with gemini-3.5-flash on the free tier: only use public-domain or openly licensed pages.')).toBeVisible();
 });

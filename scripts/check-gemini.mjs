@@ -1,7 +1,7 @@
 // Checks the Gemini key and model without ever printing the key.
 // Run: node --env-file=.env scripts/check-gemini.mjs
 const key = process.env.GEMINI_API_KEY ?? '';
-const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 
 console.log(`key: ${key ? 'present' : 'missing'}`);
 if (!key) process.exit(1); // nothing pending yet, safe to exit

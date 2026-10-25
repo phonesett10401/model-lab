@@ -63,7 +63,7 @@ function perDay(body: unknown): boolean {
 	return details.some((d) => d.violations?.some((v) => v.quotaId?.includes('PerDay')));
 }
 
-const reply = (body: TranslateReply | { model: string; tier: string }, status = 200) =>
+const reply = (body: TranslateReply | { model: string; fallback?: string; tier: string }, status = 200) =>
 	new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 /** Same site only: production, previews and local dev all pass without a list, other sites can't borrow the key. */
@@ -78,7 +78,7 @@ function sameSite(req: Request): boolean {
 }
 
 export async function handleTranslate(req: Request, env: ServerEnv, fetchImpl: typeof fetch = fetch): Promise<Response> {
-	if (req.method === 'GET') return reply({ model: env.model, tier: env.tier });
+	if (req.method === 'GET') return reply({ model: env.model, ...(env.fallback ? { fallback: env.fallback } : {}), tier: env.tier });
 	if (req.method !== 'POST') return reply({ ok: false, error: 'bad-request' }, 405);
 	if (!sameSite(req)) return reply({ ok: false, error: 'forbidden' }, 403);
 
@@ -92,24 +92,35 @@ export async function handleTranslate(req: Request, env: ServerEnv, fetchImpl: t
 	if (!env.key) return reply({ ok: false, error: 'upstream' }, 500);
 
 	const { system, user } = buildPrompt(lines);
-	let res: Response;
-	try {
-		res = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${env.model}:generateContent`, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json', 'x-goog-api-key': env.key },
-			body: JSON.stringify({
-				systemInstruction: { parts: [{ text: system }] },
-				contents: [{ role: 'user', parts: [{ text: user }] }],
-				generationConfig: { responseMimeType: 'application/json' }
-			})
-		});
-	} catch {
-		return reply({ ok: false, error: 'upstream' }, 502);
+	const body = JSON.stringify({
+		systemInstruction: { parts: [{ text: system }] },
+		contents: [{ role: 'user', parts: [{ text: user }] }],
+		generationConfig: { responseMimeType: 'application/json' }
+	});
+	// The main model first; only when its free daily quota is used up does the fallback model get the same request.
+	const models = [env.model, env.fallback].filter((m): m is string => !!m);
+	for (const [i, model] of models.entries()) {
+		let res: Response;
+		try {
+			res = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+				method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': env.key }, body
+			});
+		} catch {
+			return reply({ ok: false, error: 'upstream' }, 502);
+		}
+		// Gemini sends 429 for both the daily cap and the per-minute rate; only the daily one means "try tomorrow".
+		if (res.status === 429) {
+			const daily = perDay(await res.json().catch(() => null));
+			if (daily && i < models.length - 1) continue;
+			return reply({ ok: false, error: daily ? 'quota' : 'busy' }, 429);
+		}
+		if (!res.ok) return reply({ ok: false, error: 'upstream' }, 502);
+		const json = await res.json().catch(() => null);
+		const got = parseGemini(json);
+		if (!got) return reply({ ok: false, error: 'upstream' }, 502);
+		// Name the model Gemini says answered: an alias can be served by a newer model.
+		const version = (json as { modelVersion?: unknown })?.modelVersion;
+		return reply({ ok: true, lines: got, model: typeof version === 'string' ? version : model });
 	}
-	// Gemini sends 429 for both the daily cap and the per-minute rate; only the daily one means "try tomorrow".
-	if (res.status === 429) return reply({ ok: false, error: perDay(await res.json().catch(() => null)) ? 'quota' : 'busy' }, 429);
-	if (!res.ok) return reply({ ok: false, error: 'upstream' }, 502);
-	const got = parseGemini(await res.json().catch(() => null));
-	if (!got) return reply({ ok: false, error: 'upstream' }, 502);
-	return reply({ ok: true, lines: got, model: env.model });
+	return reply({ ok: false, error: 'upstream' }, 502);
 }

@@ -23,4 +23,5 @@ export interface Region {
 	ocr: string; edited: boolean;
 }
 
-export interface ServerEnv { key: string; model: string; tier: 'free' | 'paid' }
+/** `fallback` takes over when `model`'s free daily quota is used up. */
+export interface ServerEnv { key: string; model: string; fallback?: string; tier: 'free' | 'paid' }
