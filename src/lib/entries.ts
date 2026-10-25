@@ -78,7 +78,7 @@ const comicTranslator: ModelEntry = {
 			{ label: 'Text replaced on test pages', value: share(comicPipeline.replaced) },
 			{ label: 'Burmese fitted without covering the art', value: share(comicPipeline.fit) },
 			{ label: 'Translated by', value: Object.keys(comicPipeline.models).length
-				? Object.entries(comicPipeline.models as Record<string, number>).map(([m, n]) => `${m} (${n} pages)`).join(', ') + '; Flash first, Flash Lite once its free daily quota is used up'
+				? Object.entries(comicPipeline.models as Record<string, number>).map(([m, n]) => `${m} (${n} pages)`).join(', ')
 				: null },
 			{ label: 'Sound effects', value: 'not measured (the automatic labels contain no sound effects)' }
 		],
