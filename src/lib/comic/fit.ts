@@ -7,19 +7,21 @@ const words = new Intl.Segmenter('my', { granularity: 'word' });
 const SYLLABLE = /(?<!္)(?=[က-ဪဿ၌-၏](?![်္]))/u;
 const syllables = (word: string) => word.split(SYLLABLE).filter(Boolean);
 
-/** Burmese has no spaces between words: break at dictionary word boundaries, or by syllable for a word wider than the line. */
-export function wrapBurmese(text: string, maxWidth: number, measure: (s: string) => number): string[] {
+/** Burmese has no spaces between words: break at dictionary word boundaries, or by syllable for a word wider than the line.
+ * `maxWidth` may differ per line (a function of the line's index). */
+export function wrapBurmese(text: string, maxWidth: number | ((line: number) => number), measure: (s: string) => number): string[] {
 	const lines: string[] = [];
 	let line = '';
+	const width = () => (typeof maxWidth === 'number' ? maxWidth : maxWidth(lines.length));
 	const place = (piece: string) => {
-		if (!line || measure(line + piece) <= maxWidth) line += piece;
+		if (!line || measure(line + piece) <= width()) line += piece;
 		else {
 			lines.push(line);
 			line = piece;
 		}
 	};
 	for (const { segment } of words.segment(text)) {
-		if (measure(segment) <= maxWidth) place(segment);
+		if (measure(segment) <= width()) place(segment);
 		else for (const s of syllables(segment)) place(s);
 	}
 	if (line) lines.push(line);
