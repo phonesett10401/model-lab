@@ -637,6 +637,7 @@ test('the report card says how it was measured', async ({ page }) => {
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Comic translator');
 	await expect(page.getByText('reviewed by Claude, not by a person').first()).toBeVisible();
 	await expect(page.getByText('Worst case (of all text)')).toBeVisible();
+	await expect(page.getByText('Burmese fitted inside its box')).toBeVisible();
 	await expect(page.getByText('counted by Claude on 20 pages; owner checked 4 and agreed with 4')).toBeVisible();
 	await expect(page.getByText('not measured (the automatic labels contain no sound effects)')).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Open the translator' })).toHaveAttribute('href', '/comic-translator');

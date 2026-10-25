@@ -5,6 +5,7 @@
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import type { Fits } from '../src/lib/comic/render';
 import { doneFiles, fitShare, replacedShare, wordRecall } from '../src/lib/comic/score';
 
 const TRAIN = 'training';
@@ -118,7 +119,7 @@ function writeReport() {
 	}
 	const rect = (b: number[]) => ({ x: b[0], y: b[1], w: b[2], h: b[3] });
 	let replaced = 0, total = 0;
-	const modes: ('fit' | 'grown' | 'cover')[] = [];
+	const modes: Fits[] = [];
 	const failures: { truth: string; said: string; score: number; why: string }[] = [];
 	const truth = JSON.parse(readFileSync('src/lib/data/comic-truth-pepper.json', 'utf8')) as Record<string, string[]>;
 	const before = { found: 0, total: 0 }, after = { found: 0, total: 0 };
@@ -129,7 +130,7 @@ function writeReport() {
 		const translated = r.rows.filter((x) => x.burmese.trim()).map((x) => rect(x.box));
 		const s = replacedShare(lab.map((l) => rect(l.box)), translated);
 		if (s !== null) { replaced += s * lab.length; total += lab.length; share.set(r.file, s); }
-		for (const x of r.rows) if (x.mode) modes.push(x.mode as 'fit' | 'grown' | 'cover');
+		for (const x of r.rows) if (x.mode) modes.push(x.mode as Fits);
 		for (const l of lab)
 			if (failures.length < 3 && replacedShare([rect(l.box)], translated) === 0 && l.text)
 				failures.push({ truth: `${l.cls}: “${l.text.slice(0, 60)}” (${r.file.replace(/\.jpg$/, '')})`, said: 'not replaced', score: 0, why: WHY[l.cls] });
