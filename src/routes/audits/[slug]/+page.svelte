@@ -37,7 +37,7 @@
 
 <style>
 	.page { max-width: var(--max); margin: 0 auto; padding: var(--space-3) var(--gutter); display: grid; gap: var(--space-4); }
-	.summary { max-width: 65ch; font-size: var(--step-1); }
+	.summary { max-width: 52ch; font-size: var(--step-1); }
 	.back { min-height: 44px; display: inline-flex; align-items: center; justify-self: start; }
 	.defences { display: grid; gap: var(--space-2); }
 	.defences h2 { font-size: var(--step--1); color: var(--red); letter-spacing: 0.1em; text-transform: uppercase; }

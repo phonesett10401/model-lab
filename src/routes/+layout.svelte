@@ -59,7 +59,7 @@
 		display: flex; justify-content: space-between; align-items: center; gap: var(--space-2);
 	}
 	.tools { display: flex; align-items: center; gap: var(--space-2); }
-	.intro-link { min-height: 44px; display: inline-flex; align-items: center; gap: 0.3em; color: var(--ink-soft); }
+	.intro-link { white-space: nowrap; min-height: 44px; display: inline-flex; align-items: center; gap: 0.3em; color: var(--ink-soft); }
 	.play { width: 0.7em; height: 0.7em; }
 	@media (max-width: 479px) { .wide { display: none; } }
 	.sections {
@@ -73,5 +73,5 @@
 	}
 	.tab[aria-current='page'] { color: var(--ink); border-bottom-color: var(--red); }
 	@media (hover: hover) { .tab:hover { color: var(--ink); } }
-	.wordmark { min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; letter-spacing: 0.14em; color: var(--red); }
+	.wordmark { white-space: nowrap; min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; letter-spacing: 0.14em; color: var(--red); }
 </style>

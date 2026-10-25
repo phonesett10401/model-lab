@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { onMount, tick } from 'svelte';
 	import { reducedMotion } from '$lib/motion.svelte';
 
@@ -62,8 +63,8 @@
 		<div class="gate">
 			<p class="mono name">AI MODEL LAB</p>
 			<h1 class="serif">Explore the lab.</h1>
-			<button class="btn enter" onclick={enter}>▶ Enter the lab</button>
-			<p class="mono hint">🔊 Best with sound · 21 seconds</p>
+			<button class="btn enter" onclick={enter}><Icon name="play" /> Enter the lab</button>
+			<p class="mono hint"><Icon name="sound" /> Best with sound, 21 seconds</p>
 			{#if reducedMotion.current}<button class="btn ghost" onclick={skip}>Read instead</button>{/if}
 		</div>
 		<button class="skip mono" onclick={skip}>Skip intro →</button>
@@ -74,7 +75,7 @@
 			<p class="mono blocked">Your browser paused it: press play to start.</p>
 		{:else}
 			<div class="controls">
-				<button class="mono" bind:this={muteButton} onclick={toggleMute} aria-pressed={muted}>{muted ? '🔇 Unmute' : '🔊 Mute'}</button>
+				<button class="mono" bind:this={muteButton} onclick={toggleMute} aria-pressed={muted}>{#if muted}<Icon name="mute" /> Unmute{:else}<Icon name="sound" /> Mute{/if}</button>
 				<button class="mono" onclick={replay}>↻ Replay</button>
 				<button class="mono" onclick={skip}>Skip ↓</button>
 			</div>

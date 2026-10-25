@@ -11,19 +11,19 @@ const deck = (page: Page) => page.locator('main.present');
 const at = (page: Page, i: number) => expect(deck(page)).toHaveAttribute('data-index', String(i));
 async function start(page: Page) {
 	await page.goto('/present');
-	await page.getByRole('button', { name: '▶ Start the presentation' }).click();
+	await page.getByRole('button', { name: 'Start the presentation' }).click();
 	await at(page, 0);
 }
 
 test('the gate shows the start button and the title', async ({ page }) => {
 	await page.goto('/present');
-	await expect(page.getByRole('button', { name: '▶ Start the presentation' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Start the presentation' })).toBeVisible();
 	await expect(page).toHaveTitle('Presentation · AI Model Lab');
 });
 
 test('Start opens the cover (name and motto, no intro video); Space then goes to slide 1', async ({ page }) => {
 	await page.goto('/present');
-	await page.getByRole('button', { name: '▶ Start the presentation' }).focus();
+	await page.getByRole('button', { name: 'Start the presentation' }).focus();
 	await page.keyboard.press('Space');
 	await at(page, 0);
 	const cover = page.locator('section.cover[aria-current="step"]');
@@ -65,7 +65,7 @@ test('mashing Space never skips past the last slide', async ({ page }) => {
 test('a hash opens that slide directly', async ({ page }) => {
 	await page.goto('/present#5');
 	await at(page, 5);
-	await expect(page.getByRole('button', { name: '▶ Start the presentation' })).toHaveCount(0);
+	await expect(page.getByRole('button', { name: 'Start the presentation' })).toHaveCount(0);
 	await page.keyboard.press('ArrowDown');
 	await expect.poll(() => page.evaluate(() => location.hash)).toBe('#6');
 });
@@ -234,7 +234,7 @@ test.describe('on a phone', () => {
 	test('tapping Start opens the cover', async ({ page }) => {
 		await page.goto('/present');
 		await expect(page.getByText('Ready')).toBeVisible({ timeout: 30_000 });
-		await page.getByRole('button', { name: '▶ Start the presentation' }).tap();
+		await page.getByRole('button', { name: 'Start the presentation' }).tap();
 		await at(page, 0);
 		await expect(page.locator('section.cover[aria-current="step"]')).toBeVisible();
 	});
