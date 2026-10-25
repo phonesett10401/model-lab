@@ -1,4 +1,4 @@
-import type { GotLine, LineProblem, SentLine } from './types';
+import type { GotLine, LineProblem, Region, SentLine } from './types';
 
 /** Burmese length / English length outside this range is flagged (only for English of 10+ chars). */
 export const LENGTH_RATIO = { min: 0.3, max: 4 };
@@ -35,4 +35,9 @@ export function checkLines(sent: SentLine[], got: GotLine[]): {
 	}
 	const asked = new Set(sent.map((s) => s.n));
 	return { byN, extra: got.map((g) => g.n).filter((n) => !asked.has(n)) };
+}
+
+/** Gemini's corrected English replaces the OCR reading, unless the visitor typed their own. The OCR reading is kept. */
+export function applyRepair(region: Region, got: GotLine): Region {
+	return got.english && !region.edited ? { ...region, english: got.english } : region;
 }

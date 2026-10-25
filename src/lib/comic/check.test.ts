@@ -33,3 +33,15 @@ describe('checkLines', () => {
 		expect(checkLines([sent(1, 'OK')], [{ n: 1, text: 'ရပြီ' }]).byN.get(1)?.problem).toBeNull();
 	});
 });
+
+describe('repair never overwrites an edit', () => {
+	const base = { id: 1, box: { x: 0, y: 0, w: 10, h: 10 }, cls: 'bubble' as const, speaker: 'unknown' as const, burmese: '', problem: null };
+	it('takes the repair only when the visitor has not typed', async () => {
+		const { applyRepair } = await import('./check');
+		const fresh = applyRepair({ ...base, english: 'HELL0 THERE', ocr: 'HELL0 THERE', edited: false }, { n: 1, text: 'x', english: 'HELLO THERE' });
+		expect(fresh).toMatchObject({ english: 'HELLO THERE', ocr: 'HELL0 THERE' });
+		const typed = applyRepair({ ...base, english: 'Hi there', ocr: 'HELL0 THERE', edited: true }, { n: 1, text: 'x', english: 'HELLO THERE' });
+		expect(typed).toMatchObject({ english: 'Hi there', ocr: 'HELL0 THERE' });
+		expect(applyRepair({ ...base, english: 'A', ocr: 'A', edited: false }, { n: 1, text: 'x' }).english).toBe('A');
+	});
+});

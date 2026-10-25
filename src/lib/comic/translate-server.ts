@@ -32,7 +32,8 @@ export function buildPrompt(lines: SentLine[]): { system: string; user: string }
 		'Keep each line short, like real comic dialogue: about as long as the English where you can, so it fits the speech bubble.',
 		'Translate sound effects (sfx) as Burmese sound words. Keep names as names.',
 		'Write Myanmar Unicode only, never Zawgyi.',
-		'Reply with JSON only, exactly {"lines":[{"n":<number>,"text":"<Burmese>"}]}, with the same numbers you were given, one entry each.'
+		'The English comes from OCR and may contain reading mistakes (0 for O, missing letters, joined words): fix them from context.',
+		'Reply with JSON only, exactly {"lines":[{"n":<number>,"text":"<Burmese>","english":"<the English, corrected>"}]}, with the same numbers you were given, one entry each.'
 	].join('\n');
 	const user = [...lines]
 		.sort((a, b) => a.n - b.n)
@@ -49,7 +50,7 @@ export function parseGemini(json: unknown): GotLine[] | null {
 		const lines = JSON.parse(inner).lines;
 		if (!Array.isArray(lines)) return null;
 		if (!lines.every((l) => Number.isInteger(l?.n) && typeof l?.text === 'string')) return null;
-		return lines.map((l: GotLine) => ({ n: l.n, text: l.text }));
+		return lines.map((l: GotLine) => ({ n: l.n, text: l.text, ...(typeof l.english === 'string' ? { english: l.english } : {}) }));
 	} catch {
 		return null;
 	}

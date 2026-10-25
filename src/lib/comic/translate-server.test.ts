@@ -48,6 +48,8 @@ describe('buildPrompt', () => {
 		expect(p.system).toContain('ခင်ဗျာ');
 		expect(p.system).toContain('ရှင်');
 		expect(p.system).toContain('{"lines":[{"n":');
+		expect(p.system).toContain('OCR');
+		expect(p.system).toContain('"english"');
 		expect(p.system).toContain('short');
 	});
 });
@@ -94,6 +96,12 @@ describe('handleTranslate', () => {
 	const limited = (quotaId: string) => (async () => new Response(JSON.stringify({ error: { code: 429, details: [
 		{ '@type': 'type.googleapis.com/google.rpc.QuotaFailure', violations: [{ quotaId }] }
 	] } }), { status: 429 })) as unknown as typeof fetch;
+
+	it('parses repaired English', async () => {
+		const g = fakeGemini(200, '```json\n' + JSON.stringify({ lines: [{ n: 1, text: 'မင်္ဂလာပါ', english: 'HELLO' }] }) + '\n```');
+		const res = await handleTranslate(req({ lines: [line] }), env, g.fetchImpl);
+		expect(await res.json()).toEqual({ ok: true, lines: [{ n: 1, text: 'မင်္ဂလာပါ', english: 'HELLO' }], model: 'gemini-3.5-flash' });
+	});
 
 	it('maps quota', async () => {
 		const quota = await handleTranslate(req({ lines: [line] }), env, limited('GenerateRequestsPerDayPerProjectPerModel-FreeTier'));

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { checkLines } from '$lib/comic/check';
+	import { applyRepair, checkLines } from '$lib/comic/check';
 	import { serviceInfo, translatePage } from '$lib/comic/client';
 	import { latestOnly, loadPages, type Pages } from '$lib/comic/load';
 	import { readingOrder } from '$lib/comic/order';
@@ -134,7 +134,7 @@
 	}
 	function up() {
 		if (drag && drag.box.w >= 8 && drag.box.h >= 8)
-			byPage[index].push({ id: nextId++, box: drag.box, cls: 'bubble', speaker: 'unknown', english: '', burmese: '', problem: null });
+			byPage[index].push({ id: nextId++, box: drag.box, cls: 'bubble', speaker: 'unknown', english: '', burmese: '', problem: null, ocr: '', edited: false });
 		drag = null;
 	}
 	function remove(id: number) {
@@ -157,12 +157,15 @@
 			return;
 		}
 		const { byN } = checkLines(lines, reply.lines);
+		const english = new Map(reply.lines.map((g) => [g.n, g]));
 		for (const l of lines) {
 			const r = order[l.n - 1];
 			if (onlyFlagged && !r.problem) continue;
 			const got = byN.get(l.n)!;
 			r.burmese = got.text || r.burmese;
 			r.problem = got.problem;
+			const fixed = english.get(l.n);
+			if (fixed) r.english = applyRepair(r, fixed).english;
 		}
 	}
 </script>
@@ -224,7 +227,7 @@
 							<span class="num mono">{i + 1}</span>
 							<label>Kind <select bind:value={r.cls}>{#each CLASSES as c (c)}<option value={c}>{c}</option>{/each}</select></label>
 							<label>Speaker <select bind:value={r.speaker}>{#each SPEAKERS as s (s)}<option value={s}>{s}</option>{/each}</select></label>
-							<label class="wide">English <input bind:value={r.english} /></label>
+							<label class="wide">English <input bind:value={r.english} oninput={() => (r.edited = true)} /></label>
 							<label class="wide">Burmese <input lang="my" class="my" bind:value={r.burmese} oninput={() => (r.problem = null)} /></label>
 							{#if r.problem}<p class="problem">{PROBLEMS[r.problem]}</p>{/if}
 							<button class="btn" aria-label="Delete box {i + 1}" onclick={() => remove(r.id)}>Delete</button>
