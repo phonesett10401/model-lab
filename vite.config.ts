@@ -23,7 +23,7 @@ const translateDev = (): Plugin => ({
 				body: req.method === 'POST' ? Buffer.concat(chunks) : undefined
 			});
 			const reply = await handleTranslate(request, {
-				key: env.GEMINI_API_KEY ?? '', model: env.GEMINI_MODEL || 'gemini-3.5-flash', tier: env.GEMINI_TIER === 'paid' ? 'paid' : 'free'
+				key: env.GEMINI_API_KEY ?? '', model: env.GEMINI_MODEL || 'gemini-3.5-flash-lite', tier: env.GEMINI_TIER === 'paid' ? 'paid' : 'free'
 			});
 			res.statusCode = reply.status;
 			res.setHeader('content-type', 'application/json');
