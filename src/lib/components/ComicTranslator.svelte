@@ -6,6 +6,7 @@
 	import { readingOrder } from '$lib/comic/order';
 	import { renderPage } from '$lib/comic/render';
 	import { comicDetector, MODEL_MB } from '$lib/comic/detect';
+	import { growToBubbles } from '$lib/comic/grow';
 	import { loadOcr, looksEnglish, OCR_MB, readBox, stopOcr } from '$lib/comic/ocr';
 	import { ENGINE_MB } from '$lib/runtime/engine';
 	import '@fontsource/noto-sans-myanmar/400.css';
@@ -272,7 +273,7 @@
 			return true;
 		};
 		try {
-			const found = await detector.detect(page);
+			const found = growToBubbles(page, await detector.detect(page));
 			if (gone()) return 'gone';
 			if (!found.length) {
 				auto = 'done';

@@ -91,6 +91,32 @@ export function joinStacked(dets: Detection[]): Detection[] {
 	return out;
 }
 
+/** After each box has grown to its bubble: boxes that now cover the same bubble (IoU >= 0.5), or sit mostly inside
+ * another (60% of the smaller), become one, their union. */
+export function joinSame(dets: Detection[]): Detection[] {
+	const iou = (a: Box, b: Box) => {
+		const i = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+		return i / (a.w * a.h + b.w * b.h - i);
+	};
+	const same = (a: Box, b: Box) => iou(a, b) >= 0.5 || overlapOfSmaller(a, b) >= 0.6;
+	const out = [...dets].sort((a, b) => b.score - a.score).map((d) => ({ ...d, box: { ...d.box } }));
+	// Until nothing changes: a union can grow over a box that was kept apart before it.
+	for (let merged = true; merged; ) {
+		merged = false;
+		for (let i = 0; i < out.length && !merged; i++)
+			for (let j = i + 1; j < out.length; j++) {
+				if (!same(out[i].box, out[j].box)) continue;
+				const [a, b] = [out[i].box, out[j].box];
+				const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
+				out[i].box = { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
+				out.splice(j, 1);
+				merged = true;
+				break;
+			}
+	}
+	return out;
+}
+
 function tensorOf(bmp: ImageBitmap, t: Box): Float32Array {
 	const canvas = document.createElement('canvas');
 	canvas.width = canvas.height = SIZE;

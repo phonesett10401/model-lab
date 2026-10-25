@@ -95,3 +95,13 @@ it('keeps neighbouring bubbles apart even when their boxes overlap (a small one,
 	// Two shouts, one under the other but shifted (Pepper&Carrot 39, page 9): two speakers, two bubbles.
 	expect(joinStacked([d(514, 201, 416, 211), d(763, 61, 385, 280)])).toHaveLength(2);
 });
+
+it('boxes that grew into the same bubble become one', async () => {
+	const { joinSame } = await import('./detect');
+	const d = (x: number, y: number, w: number, h: number, score: number) => ({ box: { x, y, w, h }, cls: 'bubble' as const, score });
+	const kept = joinSame([d(150, 1100, 200, 140, 0.8), d(155, 1095, 190, 150, 0.6), d(650, 1150, 220, 120, 0.7)]);
+	expect(kept).toHaveLength(2);
+	expect(kept[0].box).toEqual({ x: 150, y: 1095, w: 200, h: 150 });
+	// A box that grew over a group of joined bubbles swallows the small boxes inside it.
+	expect(joinSame([d(400, 700, 260, 480, 0.6), d(410, 705, 150, 60, 0.8), d(420, 1110, 170, 70, 0.7)])).toHaveLength(1);
+});

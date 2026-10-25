@@ -119,3 +119,40 @@ it('whitens everything outside the bubble for the OCR, keeping the letters', asy
 	const busy = new Uint8ClampedArray(40 * 40 * 4).map((_, i) => (i * 37) % 256);
 	expect(whitenOutside(busy, 40, 40)).toBe(false); // no bubble: left as it is
 });
+
+it('finds the whole bubble around a box that covers only part of it', async () => {
+	const { bubbleExtent } = await import('./bubble');
+	// A 200×160 crop: the found box is its middle half; the bubble (an ellipse) reaches well beyond that box.
+	const w = 200, h = 160, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const d = ((x - 100) / 80) ** 2 + ((y - 80) / 60) ** 2;
+			const v = d > 1.1 ? 110 : d > 1 ? 0 : 255;
+			px.set([v, v, v, 255], (y * w + x) * 4);
+		}
+	const e = bubbleExtent(px, w, h)!;
+	expect(e.x).toBeLessThan(25);
+	expect(e.x + e.w).toBeGreaterThan(175);
+	expect(e.y).toBeLessThan(25);
+	expect(e.y + e.h).toBeGreaterThan(135);
+	// Paper that runs off the crop (no closed bubble around the box): no answer, the box stays as found.
+	const open = new Uint8ClampedArray(w * h * 4).fill(255);
+	expect(bubbleExtent(open, w, h)).toBeNull();
+});
+
+it('grows a small box to a much bigger bubble, looking for paper only inside the box', async () => {
+	const { bubbleExtent } = await import('./bubble');
+	// "See?" sits at the top of a bubble three times its height; a patch of light art lies near the box but outside the
+	// bubble. Only paper connected to the box itself may count.
+	const w = 400, h = 320, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const d = ((x - 200) / 120) ** 2 + ((y - 200) / 80) ** 2;
+			const patch = x >= 105 && x < 125 && y >= 85 && y < 100;
+			const v = patch ? 252 : d > 1.05 ? 110 : d > 1 ? 0 : 255;
+			px.set([v, v, v, 255], (y * w + x) * 4);
+		}
+	const e = bubbleExtent(px, w, h, { x: 170, y: 128, w: 60, h: 36 })!;
+	expect(e.y).toBeGreaterThan(110); // the patch above is not part of it
+	expect(e.y + e.h).toBeGreaterThan(260); // the bubble's lower part is
+});

@@ -16,11 +16,13 @@ const SATURATION = 45;
  * outline plus the letters it encloses) and a text area that stays inside the oval. The outline and the art around
  * it are never in the mask. Null when there is no clear bubble, e.g. text drawn on busy art.
  */
-export function bubbleShape(px: Uint8ClampedArray, w: number, h: number): { color: string; mask: Uint8Array; inner: Box; loose: Box } | null {
+export function bubbleShape(px: Uint8ClampedArray, w: number, h: number, seed?: Box): { color: string; mask: Uint8Array; inner: Box; loose: Box } | null {
 	const n = w * h;
+	// Where the bubble's paper is looked for: the given area (a found box), else the middle half of the crop.
+	const s0 = seed ?? { x: w / 4, y: h / 4, w: w / 2, h: h / 2 };
 	const central = (i: number) => {
 		const x = i % w, y = (i / w) | 0;
-		return x >= w / 4 && x < (w * 3) / 4 && y >= h / 4 && y < (h * 3) / 4;
+		return x >= s0.x && x < s0.x + s0.w && y >= s0.y && y < s0.y + s0.h;
 	};
 	// Paper colour: the commonest light colour in the middle half of the box.
 	const buckets = new Map<number, { n: number; r: number; g: number; b: number }>();
@@ -73,7 +75,8 @@ export function bubbleShape(px: Uint8ClampedArray, w: number, h: number): { colo
 			const x = i % w, y = (i / w) | 0;
 			if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
 		}
-	if (count < n * 0.15) return null;
+	// Enough paper to be a bubble: 15% of the crop, or with a seed area, 30% of that area.
+	if (count < (seed ? seed.w * seed.h * 0.3 : n * 0.15)) return null;
 
 	// Everything the box edge reaches without crossing the inside is outline or art; the rest is the bubble and its letters.
 	const edge: number[] = [];
@@ -181,4 +184,22 @@ export function whitenOutside(px: Uint8ClampedArray, w: number, h: number): bool
 	if (!s) return false;
 	for (let i = 0; i < s.mask.length; i++) if (!s.mask[i]) px.set([255, 255, 255], i * 4);
 	return true;
+}
+
+/**
+ * The whole bubble around a found box: `px` is a crop centred on the box with room around it (the box is its middle
+ * half). Returns the bubble's extent in crop pixels, or null when there is no closed bubble inside the crop (paper
+ * that runs off its edge), so the box stays as found.
+ */
+export function bubbleExtent(px: Uint8ClampedArray, w: number, h: number, seed?: Box): Box | null {
+	const s = bubbleShape(px, w, h, seed);
+	if (!s) return null;
+	let x0 = w, y0 = h, x1 = -1, y1 = -1;
+	for (let i = 0; i < s.mask.length; i++)
+		if (s.mask[i]) {
+			const x = i % w, y = (i / w) | 0;
+			if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+		}
+	if (x1 < 0 || x0 === 0 || y0 === 0 || x1 === w - 1 || y1 === h - 1) return null;
+	return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }
