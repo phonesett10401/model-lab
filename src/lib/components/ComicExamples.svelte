@@ -21,7 +21,7 @@
 	{:else}
 		<p class="mono faint">Finished examples: not yet measured.</p>
 	{/each}
-	<a class="btn" href="/comic-translator">Open the translator →</a>
+	<a class="btn" href="/comic-translator">Open the translator</a>
 </div>
 
 <style>

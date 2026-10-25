@@ -508,7 +508,7 @@ test('the report card says how it was measured', async ({ page }) => {
 	await expect(page.getByText('Worst case (of all text)')).toBeVisible();
 	await expect(page.getByText('counted by Claude on 20 pages; owner checked 4 and agreed with 4')).toBeVisible();
 	await expect(page.getByText('not measured (the automatic labels contain no sound effects)')).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Open the translator →' })).toHaveAttribute('href', '/comic-translator');
+	await expect(page.getByRole('link', { name: 'Open the translator' })).toHaveAttribute('href', '/comic-translator');
 	const examples = page.locator('.comic-examples figure');
 	await expect(examples).toHaveCount(pipeline.examples.length);
 	for (const e of pipeline.examples) await expect(page.getByRole('link', { name: e.credit }).first()).toBeVisible();
@@ -517,7 +517,7 @@ test('the report card says how it was measured', async ({ page }) => {
 test('the translator page is listed and links its report card', async ({ page }) => {
 	await page.goto('/comic-translator');
 	await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
-	await expect(page.getByRole('link', { name: 'How well it works →' })).toHaveAttribute('href', '/models/comic-translator');
+	await expect(page.getByRole('link', { name: 'How well it works' })).toHaveAttribute('href', '/models/comic-translator');
 });
 
 for (const scheme of ['light', 'dark'] as const)

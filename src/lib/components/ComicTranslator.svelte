@@ -345,7 +345,7 @@
 <div class="comic" data-auto={running ? 'running' : auto} data-model={models[index] ?? ''}>
 	<header class="head">
 		<h1 class="serif">Comic translator</h1>
-		<p><a href="/models/comic-translator">How well it works →</a></p>
+		<p><a href="/models/comic-translator">How well it works</a></p>
 		<p class="soft">English to Burmese. Your pages stay on your device; only the English words are sent to be translated.</p>
 		{#if info || infoFailed}
 			<p class="mono tier">
@@ -392,7 +392,7 @@
 
 		<div class="sides">
 			<figure>
-				<figcaption class="mono">Original (stays on your device) · drag to mark each piece of English</figcaption>
+				<figcaption class="mono">Original, stays on your device. Drag to mark each piece of English.</figcaption>
 				<div class="stage" role="img" aria-label="Original page">
 					<canvas bind:this={original}></canvas>
 					<svg data-testid="draw-layer" viewBox="0 0 {current.width} {current.height}" aria-hidden="true"
