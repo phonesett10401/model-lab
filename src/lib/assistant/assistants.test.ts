@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assistants, findAssistant, isAssistant, raffelLuo } from './assistants';
+import { assistants, findAssistant, raffelLuo } from './assistants';
 
 describe('assistants', () => {
 	it('have unique slugs and numbers, a public role first and a restricted role second', () => {
@@ -15,10 +15,5 @@ describe('assistants', () => {
 		expect(findAssistant('raffel-luo')).toBe(raffelLuo);
 		expect(findAssistant('nope')).toBeUndefined();
 		expect(findAssistant('toString')).toBeUndefined();
-	});
-	it('are told apart from catalogue entries', () => {
-		expect(isAssistant(raffelLuo)).toBe(true);
-		expect(isAssistant({ kind: 'model', slug: 'x' })).toBe(false);
-		expect(isAssistant(null)).toBe(false);
 	});
 });

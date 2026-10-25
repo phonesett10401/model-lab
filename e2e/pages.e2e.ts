@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('a planned model page is honest about having no numbers', async ({ page }) => {
 	await page.goto('/models/fresh-or-spoiled');
 	await expect(page.getByRole('heading', { level: 1, name: 'Fresh or spoiled' })).toBeVisible();
-	await expect(page.getByText('PLANNED', { exact: true })).toBeVisible();
+	await expect(page.getByText('Planned', { exact: true })).toBeVisible();
 	await expect(page.getByText('not yet measured').first()).toBeVisible();
 	await expect(page.locator('main')).not.toContainText('%');
 	await expect(page).toHaveTitle('Fresh or spoiled · AI Model Lab');
@@ -12,7 +12,7 @@ test('a planned model page is honest about having no numbers', async ({ page }) 
 test('the live detector page shows its measured report card', async ({ page }) => {
 	await page.goto('/models/sea-creature-detector');
 	await expect(page.getByRole('heading', { level: 1, name: 'Sea creature detector' })).toBeVisible();
-	await expect(page.getByText('LIVE', { exact: true }).first()).toBeVisible();
+	await expect(page.getByText('Live', { exact: true }).first()).toBeVisible();
 	await expect(page.getByText('DETECTION SCORE PER CREATURE (MAP@50)')).toBeVisible();
 	await expect(page.getByRole('listitem', { name: /^seal, \d+ percent$/ })).toBeVisible();
 	await expect(page).toHaveTitle('Sea creature detector · AI Model Lab');
@@ -22,7 +22,7 @@ test('the live detector page shows its measured report card', async ({ page }) =
 test('the sound detective page shows its measured report card', async ({ page }) => {
 	await page.goto('/models/sound-detective');
 	await expect(page.getByRole('heading', { level: 1, name: 'Sound detective' })).toBeVisible();
-	await expect(page.getByText('LIVE', { exact: true }).first()).toBeVisible();
+	await expect(page.getByText('Live', { exact: true }).first()).toBeVisible();
 	await expect(page.getByText('SCORE PER SOUND (AVERAGE PRECISION)')).toBeVisible();
 	await expect(page.getByRole('listitem', { name: /^speech, \d+ percent$/ })).toBeVisible();
 	await expect(page).toHaveTitle('Sound detective · AI Model Lab');
@@ -31,7 +31,7 @@ test('the sound detective page shows its measured report card', async ({ page })
 
 test('a draft model shows measured metrics, worst first, with DRAFT stamp', async ({ page }) => {
 	await page.goto('/models/draft-shape-sorter');
-	await expect(page.getByText('DRAFT', { exact: true }).first()).toBeVisible();
+	await expect(page.getByText('Draft', { exact: true }).first()).toBeVisible();
 	const rows = page.locator('[id$="-metrics"] li');
 	await expect(rows.first()).toHaveAttribute('aria-label', 'triangle, 81 percent');
 	await expect(page.getByText('said: triangle')).toBeVisible();
@@ -46,4 +46,26 @@ test('an audit page shows its report with before/after', async ({ page }) => {
 test('unknown entries are 404s', async ({ page }) => {
 	const res = await page.goto('/models/nope');
 	expect(res?.status()).toBe(404);
+});
+
+test('headings never skip a level, and the home link is a full-size tap target', async ({ page }) => {
+	for (const path of ['/models/sea-creature-detector', '/audits/pathum-rai', '/']) {
+		await page.goto(path);
+		const levels = await page.locator('h1, h2, h3, h4, h5, h6').evaluateAll((hs) => hs.filter((h) => h.getClientRects().length).map((h) => +h.tagName[1]));
+		expect(levels.filter((l, i) => i > 0 && l > levels[i - 1] + 1), `${path}: ${levels.join(' ')}`).toEqual([]);
+		const box = await page.getByRole('link', { name: 'AI MODEL LAB' }).boundingBox();
+		expect(box!.height, path).toBeGreaterThanOrEqual(44);
+	}
+});
+
+test('the phone browser bar colour follows the Light / Dark switch', async ({ page }) => {
+	await page.emulateMedia({ colorScheme: 'light' });
+	await page.goto('/');
+	await page.getByRole('button', { name: /dark/i }).click();
+	const [meta, bg] = await page.evaluate(() => [
+		[...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')].map((m) => m.content),
+		getComputedStyle(document.body).backgroundColor
+	]);
+	expect(meta).toEqual([bg, bg]);
+	expect(bg).not.toBe('rgb(245, 243, 242)');
 });

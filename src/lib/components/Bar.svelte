@@ -1,13 +1,31 @@
 <script lang="ts">
-	import { Spring } from 'svelte/motion';
+	import { onMount, untrack } from 'svelte';
+	import { cubicOut } from 'svelte/easing';
+	import { Tween } from 'svelte/motion';
 	import { reducedMotion } from '$lib/motion.svelte';
 	import { pct, shownPct } from '$lib/format';
 
 	let { label, score, before, top = false }: { label: string; score: number | null; before?: number | null; top?: boolean } = $props();
 
-	const s = new Spring(0, { stiffness: 0.12, damping: 0.38 });
+	// Drawn at its value on the server, so it reads without JavaScript. A bar that starts below the fold drops to 0
+	// while still off screen and grows when scrolled to; later score changes (a new result) grow it too.
+	const DUR = 420; // --dur-long; ease-out with no overshoot, so the bar never shows more than was measured
+	const s = new Tween(untrack(() => score ?? 0), { duration: DUR, easing: cubicOut });
+	let seen = $state(true);
+	let el: HTMLLIElement;
 	$effect(() => {
-		s.set(score ?? 0, { instant: reducedMotion.current });
+		if (seen) s.set(score ?? 0, { duration: reducedMotion.current ? 0 : DUR });
+	});
+	onMount(() => {
+		if (reducedMotion.current || typeof IntersectionObserver === 'undefined') return;
+		let first = true;
+		const io = new IntersectionObserver(([e]) => {
+			if (e.isIntersecting) { seen = true; io.disconnect(); }
+			else if (first) { seen = false; s.set(0, { duration: 0 }); }
+			first = false;
+		});
+		io.observe(el);
+		return () => io.disconnect();
 	});
 
 	const spoken = $derived(
@@ -17,7 +35,7 @@
 	);
 </script>
 
-<li class="bar" class:top aria-label={spoken}>
+<li class="bar" class:top aria-label={spoken} bind:this={el}>
 	<span class="label mono" aria-hidden="true">{label}</span>
 	<span class="track" aria-hidden="true">
 		{#if typeof before === 'number'}<span class="before" style="transform: scaleX({before})"></span>{/if}

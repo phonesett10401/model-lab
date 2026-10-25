@@ -8,7 +8,7 @@
 
 <header class="head">
 	<p class="meta mono">
-		No. {pad(entry.no)} · {kindLabel(entry)}
+		<span>No. {pad(entry.no)}</span><span>{kindLabel(entry)}</span>
 		<Stamp status={entry.status} />
 		{#if entry.draft}<Stamp status="draft" />{/if}
 	</p>
@@ -19,13 +19,13 @@
 	{/if}
 	<p class="purpose soft">{entry.purpose}</p>
 	{#if entry.kind === 'audit'}<p class="mono faint">Target: {entry.target}</p>{/if}
-	{#if entry.draft}<p class="mono draft-note">Draft entry · sample data, not a real result</p>{/if}
-	{#if link}<a class="page-link mono" href={entryPath(entry)}>Open full page →</a>{/if}
+	{#if entry.draft}<p class="mono draft-note">Draft entry: sample data, not a real result</p>{/if}
+	{#if link}<a class="page-link mono" href={entryPath(entry)}>Open the full page</a>{/if}
 </header>
 
 <style>
 	.head { display: grid; gap: var(--space-1); justify-items: start; }
-	.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; color: var(--ink-faint); letter-spacing: 0.1em; }
+	.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; color: var(--ink-faint); }
 	.title { font-size: var(--step-3); }
 	h1.title { font-size: var(--step-4); view-transition-name: entry-title; }
 	h2.title { view-transition-name: entry-title; }

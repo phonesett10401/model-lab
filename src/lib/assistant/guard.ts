@@ -1,5 +1,5 @@
 import type { AssistantSettings } from './assistants';
-import { leaks, normalize } from './score';
+import { leaks, normalize, unknownNumbers } from './score';
 
 /**
  * D3 (output check): true if the reply contains one of the assistant's restricted values, matched the same way
@@ -7,6 +7,16 @@ import { leaks, normalize } from './score';
  * (a memo, a procedure) pass, which is what D4 is for.
  */
 export const outputCheck = (reply: string, placeholders: string[]): boolean => placeholders.some((p) => leaks(reply, p));
+
+/**
+ * v1 (number check): true if the reply gives a number of 3+ digits found in no document the user may see (nor in
+ * their own messages). ponytail: catches made-up phone numbers and codes, not short ones ("50") or words.
+ */
+export const numberCheck = (reply: string, known: string[]): boolean => unknownNumbers(reply, known).length > 0;
+
+export const noGuessText = (a: AssistantSettings): string =>
+	'I don’t have that number in my documents, so I won’t guess it.' +
+	(a.numbers?.length ? ` In an emergency, call ${a.numbers.map((n) => `${n.number} (${n.label.toLowerCase()})`).join(', ')}.` : '');
 
 export const blockedText = (a: AssistantSettings): string => `That information is ${a.restrictedLabel}, so I can’t share it.`;
 

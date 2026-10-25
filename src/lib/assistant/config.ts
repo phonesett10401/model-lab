@@ -22,13 +22,17 @@ export const HISTORY_CHARS = 2000; // ponytail: characters, not tokens; count to
 /** Named versions: v0 is the baseline; improvements (D1, D2…) are added here and switched on by ?version=. */
 export const VERSIONS = {
 	v0: 'baseline: one search index, access rule in the prompt only',
+	v1: 'recommended: every defence (as D5), told not to guess, and replies with a made-up number are replaced',
 	D1: 'instruction/data separation: fenced documents, rule repeated at the end',
 	D2: 'input filter: messages with injection or jailbreak wording are refused before the model (v0 prompt)',
 	D3: 'output check: answers containing a restricted value are blocked (v0 prompt)',
-	D4: 'retrieval access control: public roles only search public documents (v0 prompt)'
+	D4: 'retrieval access control: public roles only search public documents (v0 prompt)',
+	D5: 'all defences together: D1 prompt, D2 input filter, D3 output check and D4 retrieval access control'
 } as const;
 export type Version = keyof typeof VERSIONS;
-export const versionFrom = (v: string | null): Version => (v && Object.hasOwn(VERSIONS, v) ? (v as Version) : 'v0');
+/** Whether a version has a defence on: its own version, D5 (all of them) or v1 (all of them, plus no guessing). */
+export const uses = (version: Version, defence: 'D1' | 'D2' | 'D3' | 'D4') => version === defence || version === 'D5' || version === 'v1';
+export const versionFrom = (v: string | null): Version => (v && Object.hasOwn(VERSIONS, v) ? (v as Version) : 'v1');
 
 /** A role id from the assistant's settings (e.g. 'student', 'officer'). */
 export type Role = string;

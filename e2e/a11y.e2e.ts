@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
-const paths = ['/', '/?entry=draft-review-mood', '/models/sea-creature-detector', '/models/sound-detective', '/models/draft-dive-sounds', '/audits/draft-document-assistant-audit', '/no-such-page', '/intro', '/assistant/raffel-luo', '/assistant/pathum-rai'];
+const paths = ['/', '/?entry=draft-review-mood', '/models/sea-creature-detector', '/models/sound-detective', '/models/draft-dive-sounds', '/audits/draft-document-assistant-audit', '/no-such-page', '/intro', '/assistant/raffel-luo', '/assistant/pathum-rai', '/assistants', '/audits/pathum-rai'];
 
 for (const scheme of ['light', 'dark'] as const)
 	for (const p of paths)
@@ -46,7 +46,7 @@ test('keyboard only: reach the archive, run a sample, open the page', async ({ p
 	await page.getByRole('button', { name: 'Circle' }).focus();
 	await page.keyboard.press('Enter');
 	await expect(page.locator('.demo')).toHaveAttribute('data-state', 'result');
-	await page.getByRole('link', { name: 'Open full page →' }).focus();
+	await page.getByRole('link', { name: 'Open the full page' }).focus();
 	await page.keyboard.press('Enter');
 	await expect(page).toHaveURL(/\/models\/draft-shape-sorter$/);
 });

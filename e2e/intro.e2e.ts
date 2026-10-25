@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('the gate shows the title, Enter, and Skip', async ({ page }) => {
 	await page.goto('/intro');
 	await expect(page.getByText('Explore the lab.')).toBeVisible();
-	await expect(page.getByRole('button', { name: '▶ Enter the lab' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Enter the lab' })).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Skip intro →' })).toBeVisible();
 	await expect(page).toHaveTitle('Intro · AI Model Lab');
 });
@@ -23,7 +23,7 @@ test('if the browser refuses playback, native controls appear instead of freezin
 	});
 	await page.goto('/intro');
 	await page.waitForLoadState('networkidle');
-	await page.getByRole('button', { name: '▶ Enter the lab' }).click();
+	await page.getByRole('button', { name: 'Enter the lab' }).click();
 	await expect(page.locator('video')).toHaveAttribute('controls', '');
 	await expect(page.getByText(/press play/i)).toBeVisible();
 });
@@ -98,7 +98,7 @@ test('refused playback: the note goes once it plays, and our buttons never cover
 	});
 	await page.goto('/intro');
 	await page.waitForLoadState('networkidle');
-	await page.getByRole('button', { name: '▶ Enter the lab' }).click();
+	await page.getByRole('button', { name: 'Enter the lab' }).click();
 	await expect(page.getByText(/press play/i)).toBeVisible();
 	await expect(page.getByRole('button', { name: /Replay/ })).toBeHidden();
 	await page.locator('video').evaluate((v) => v.dispatchEvent(new Event('play')));
@@ -112,7 +112,7 @@ test('after Enter, focus moves to the controls and the page keeps its heading', 
 	});
 	await page.goto('/intro');
 	await page.waitForLoadState('networkidle');
-	await page.getByRole('button', { name: '▶ Enter the lab' }).click();
+	await page.getByRole('button', { name: 'Enter the lab' }).click();
 	await expect(page.getByRole('button', { name: /Mute/ })).toBeFocused();
 	await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
 });

@@ -52,3 +52,16 @@ export const passagesFor = (a: AssistantSettings): Passage[] => docsFor(a).flatM
 const secretFiles = import.meta.glob('/assistant/*/placeholders.txt', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
 
 export const placeholdersFor = (a: AssistantSettings): string[] => parsePlaceholders(secretFiles[`/assistant/${a.slug}/placeholders.txt`] ?? '');
+
+/** Each restricted document in full, with every place a secret value appears, for showing on the assistant page. */
+export function restrictedDocs(passages: Passage[], secrets: string[]) {
+	const docs = new Map<string, { docId: string; title: string; texts: string[] }>();
+	for (const p of passages.filter((p) => p.access !== 'public'))
+		(docs.get(p.docId) ?? docs.set(p.docId, { docId: p.docId, title: p.title, texts: [] }).get(p.docId)!).texts.push(p.text);
+	return [...docs.values()].map(({ docId, title, texts }) => {
+		const text = texts.join('\n\n');
+		const flagged: [number, number][] = [];
+		for (const s of secrets) for (let i = text.indexOf(s); i >= 0; i = text.indexOf(s, i + s.length)) flagged.push([i, i + s.length]);
+		return { docId, title, text, flagged: flagged.sort((a, b) => a[0] - b[0]) };
+	});
+}

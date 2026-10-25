@@ -1,5 +1,5 @@
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; overflow-x: clip; }
 body {
 	margin: 0;
 	background: var(--paper);
@@ -8,6 +8,7 @@ body {
 	font-size: var(--step-0);
 	line-height: 1.55;
 	overflow-wrap: anywhere;
+	overflow-x: clip;
 }
 h1, h2, h3, h4 { margin: 0; line-height: 1.05; font-weight: 500; text-wrap: balance; }
 p { margin: 0; text-wrap: pretty; }
@@ -15,6 +16,10 @@ a { color: inherit; }
 img, svg, video { max-width: 100%; display: block; }
 button, input, select, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+/* Text fields show focus every time they're tapped; red there reads as an error, so they get a calm ring that hugs the box (an assistant's own colour where set). */
+textarea:focus-visible, select:focus-visible, input:not([type='radio'], [type='checkbox'], [type='file']):focus-visible {
+	outline: 2px solid var(--accent, var(--ink)); outline-offset: 0; border-color: transparent;
+}
 
 .serif { font-family: var(--font-serif); font-weight: 400; }
 .mono { font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.02em; }
@@ -28,16 +33,25 @@ button, input, select, textarea { font: inherit; color: inherit; }
 	background: var(--ink); color: var(--on-ink);
 	font-family: var(--font-mono); font-size: var(--step--1);
 	cursor: pointer; text-decoration: none;
+	transition: background-color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out);
 }
 .btn.ghost { background: transparent; color: var(--ink); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+/* Feedback: hover only where there is a pointer that hovers (a tap would leave it stuck on phones); press everywhere. */
+@media (hover: hover) {
+	.btn:not(:disabled):hover { background: var(--ink-soft); border-color: var(--ink-soft); }
+	.btn.ghost:not(:disabled):hover { background: color-mix(in srgb, var(--ink) 8%, transparent); border-color: var(--ink); }
+}
+.btn:not(:disabled):active { transform: translateY(1px); }
+/* No double-tap-to-zoom delay on controls. */
+a, button, label, summary, input, select, textarea { touch-action: manipulation; }
 
 .visually-hidden {
 	position: absolute; width: 1px; height: 1px; overflow: hidden;
 	clip-path: inset(50%); white-space: nowrap;
 }
-.skip { position: absolute; left: -9999px; }
-.skip:focus { left: var(--gutter); top: 0.5rem; z-index: 10; background: var(--plate); padding: 0.5rem 1rem; }
+.skip-link { position: absolute; left: var(--gutter); top: 0.5rem; z-index: 10; clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; white-space: nowrap; }
+.skip-link:focus { clip-path: none; width: auto; height: auto; overflow: visible; background: var(--plate); padding: 0.5rem 1rem; }
 
 /* Examining motifs. Parents need position:relative; overflow:hidden. */
 .scan {
@@ -63,9 +77,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @keyframes playhead { from { transform: translateX(-100%); } to { transform: translateX(0); } }
 
 @keyframes ink {
-	0% { opacity: 0; transform: rotate(-4deg) scale(1.5); }
-	70% { opacity: 1; transform: rotate(-4deg) scale(0.96); }
-	100% { opacity: 1; transform: rotate(-4deg) scale(1); }
+	from { opacity: 0; transform: rotate(-4deg) scale(1.5); }
+	to { opacity: 1; transform: rotate(-4deg) scale(1); }
 }
 
 ::view-transition-group(entry-title) { animation-duration: 0.45s; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }

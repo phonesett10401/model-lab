@@ -76,4 +76,3 @@ export const assistants: AssistantSettings[] = [raffelLuo, pathumRai];
 
 export const findAssistant = (slug: string): AssistantSettings | undefined => assistants.find((a) => a.slug === slug);
 
-export const isAssistant = (x: unknown): x is AssistantSettings => !!x && typeof x === 'object' && 'roles' in x && 'intro' in x;

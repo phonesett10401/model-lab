@@ -248,7 +248,7 @@
 					{#if listening.skipped}<p class="note warn">Your device is busy, some moments were skipped.</p>{/if}
 					<p class="mono faint">Stops by itself after 2 minutes. Only the last 30 seconds are kept, on your device. Nothing is uploaded.</p>
 				{:else if bench.kind === 'loading'}
-					<p class="mono">Downloading model · {runtime?.sizeLabel} · only the first time</p>
+					<p class="mono">Downloading the model ({runtime?.sizeLabel}), only the first time</p>
 					<progress max="1" value={bench.progress ?? undefined}></progress>
 					<p class="mono faint">Runs on your device. Nothing you add is uploaded.</p>
 				{:else if bench.kind === 'examining'}
@@ -289,7 +289,7 @@
 		</section>
 
 		<div class="report">
-			<ReportCard report={entry.report} show={reportShows} idPrefix={id} tabbed={tabs.length > 0} onpick={live ? pick : undefined} />
+			<ReportCard report={entry.report} show={reportShows} idPrefix={id} level={header ? 3 : 2} tabbed={tabs.length > 0} onpick={live ? pick : undefined} />
 		</div>
 	</div>
 </article>

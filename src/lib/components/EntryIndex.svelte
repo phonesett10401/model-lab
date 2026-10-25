@@ -1,11 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import Plate from './Plate.svelte';
-	import AssistantPlate from './AssistantPlate.svelte';
-	import type { AssistantSettings } from '$lib/assistant/assistants';
 	import type { Entry } from '$lib/types';
 
-	let { entries, assistants, selected }: { entries: Entry[]; assistants: AssistantSettings[]; selected: string | null } = $props();
+	let { entries, selected }: { entries: Entry[]; selected: string | null } = $props();
 
 	const models = $derived(entries.filter((e) => e.kind === 'model'));
 	const audits = $derived(entries.filter((e) => e.kind === 'audit'));
@@ -30,23 +28,19 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <nav id="archive" class="index" aria-label="Archive index" {onkeydown}>
 	{#if models.length}
-		<h2 class="group mono">Models</h2>
+		<h2 class="group">Models</h2>
 		<ul>{#each models as e (e.slug)}<li><Plate entry={e} selected={e.slug === selected} /></li>{/each}</ul>
 	{/if}
-	{#if assistants.length}
-		<h2 class="group mono">RAG assistants</h2>
-		<ul>{#each assistants as a (a.slug)}<li><AssistantPlate assistant={a} selected={a.slug === selected} /></li>{/each}</ul>
-	{/if}
 	{#if audits.length}
-		<h2 class="group mono">Audits</h2>
+		<h2 class="group">Audits</h2>
 		<ul>{#each audits as e (e.slug)}<li><Plate entry={e} selected={e.slug === selected} /></li>{/each}</ul>
 	{/if}
-	<p class="hint mono faint">↑ ↓ to browse · Enter opens the page</p>
+	<p class="hint mono faint">Arrow keys browse; Enter opens the page</p>
 </nav>
 
 <style>
 	.index { display: grid; gap: var(--space-2); align-content: start; min-width: 0; }
-	.group { color: var(--ink-faint); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; }
+	.group { font-family: var(--font-serif); font-size: var(--step-2); }
 	ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
 	.hint { display: none; }
 

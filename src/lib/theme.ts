@@ -8,6 +8,9 @@ export function currentTheme(): Theme {
 
 export function setTheme(t: Theme) {
 	document.documentElement.dataset.theme = t;
+	// A chosen theme beats the system one, so both theme-color tags take the page's colour (--paper, read back, not copied).
+	const paper = getComputedStyle(document.body).backgroundColor;
+	for (const m of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) m.content = paper;
 	try {
 		localStorage.setItem('theme', t);
 	} catch {

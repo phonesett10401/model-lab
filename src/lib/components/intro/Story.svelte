@@ -76,7 +76,7 @@
 	.steps { list-style: none; margin: 0; padding: 0; }
 	li { min-height: 70vh; display: grid; align-content: center; gap: var(--space-2); }
 	/* Dim inactive steps with the contrast-tested faint ink, not opacity, so they stay readable. */
-	li :is(h2, p) { color: var(--ink-faint); transition: color 0.3s; }
+	li :is(h2, p) { color: var(--ink-faint); transition: color var(--dur-short) var(--ease-out); }
 	li.on h2 { color: var(--ink); }
 	li.on p { color: var(--ink-soft); }
 	h2 { font-size: var(--step-3); }
@@ -85,7 +85,7 @@
 	/* A thin red spine that fills with scroll; its markers sit beside each step and light up once reached. */
 	.spine { position: absolute; left: 14px; top: 0; bottom: 0; width: 2px; background: var(--hairline); }
 	.fill { position: absolute; inset: 0; background: var(--red); transform-origin: top; transform: scaleY(var(--p)); box-shadow: 0 0 12px var(--red); }
-	.mark { position: absolute; left: 50%; top: calc((var(--i) + 0.5) * 25%); translate: -50% -50%; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--paper); border: 1px solid var(--hairline); color: var(--ink-faint); font-size: 11px; transition: color 0.3s, border-color 0.3s, box-shadow 0.3s; }
+	.mark { position: absolute; left: 50%; top: calc((var(--i) + 0.5) * 25%); translate: -50% -50%; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--paper); border: 1px solid var(--hairline); color: var(--ink-faint); font-size: 11px; transition: color var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out), box-shadow var(--dur-short) var(--ease-out); }
 	.mark[data-lit] { color: var(--ink); border-color: var(--red); box-shadow: 0 0 14px color-mix(in srgb, var(--red) 70%, transparent); }
 
 	@media (min-width: 900px) {
