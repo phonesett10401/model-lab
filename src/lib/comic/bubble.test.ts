@@ -156,3 +156,33 @@ it('grows a small box to a much bigger bubble, looking for paper only inside the
 	expect(e.y).toBeGreaterThan(110); // the patch above is not part of it
 	expect(e.y + e.h).toBeGreaterThan(260); // the bubble's lower part is
 });
+
+/** The 100×80 ellipse of `page()`, its paper painted row by row by `paint(y)`, a 30×8 bar of letters in the middle. */
+function ellipse(paint: (y: number) => readonly number[], { letters }: { letters: number[] }) {
+	const w = 100, h = 80, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const d = ((x - 50) / 40) ** 2 + ((y - 40) / 30) ** 2;
+			const text = x >= 35 && x < 65 && y >= 36 && y < 44;
+			const c = d > 1.1 ? [110, 110, 110] : d > 1 ? [0, 0, 0] : text ? letters : paint(y);
+			px.set([...c, 255], (y * w + x) * 4);
+		}
+	return { px, w, h };
+}
+
+it('finds the inside of a tinted, a gradient and a dark box', () => {
+	for (const [name, paint] of [
+		['tinted', () => [250, 235, 190]],
+		['gradient', (y: number) => [255 - y, 255 - y, 255]], // top white, bottom light blue
+		['dark', () => [30, 30, 40]]
+	] as const) {
+		const { px, w, h } = ellipse(paint, { letters: name === 'dark' ? [240, 240, 240] : [0, 0, 0] });
+		const s = bubbleShape(px, w, h)!;
+		expect(s, name).not.toBeNull();
+		expect(s.mask[40 * w + 50], `${name}: letter`).toBe(1);
+		expect(s.inside[40 * w + 50], `${name}: letter is not background`).toBe(0);
+		expect(s.inside[20 * w + 50], `${name}: paper is background`).toBe(1);
+		expect(s.mask[40 * w + 9], `${name}: outline`).toBe(0);
+		expect(s.mask[1 * w + 1], `${name}: art outside`).toBe(0);
+	}
+});

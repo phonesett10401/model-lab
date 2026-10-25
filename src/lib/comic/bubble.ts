@@ -1,46 +1,38 @@
 import type { Box } from './types.ts';
 
-/** How far (per colour channel) a pixel may be from the paper colour and still count as paper. */
-const NEAR = 40;
+/** Most a pixel's channels may differ from each of its neighbours for it to count as smooth background (gradients
+ * pass; outlines, letter edges and halftone dots do not). */
+const STEP = 20;
 /** A small margin inside the largest rectangle that fits in the bubble. */
 const INSET = 0.06;
 /** A second, looser text area, tried before giving up on the bubble for a long translation. */
 const LOOSE = 0;
 /** Gaps in an outline up to twice this many pixels wide are closed before the inside is flooded. */
 const GAP = 2;
-/** Most a paper colour's channels may differ (cream paper ~40; a lilac window ~60 is art). */
-const SATURATION = 45;
-
 /**
- * Finds the speech bubble in a box (RGBA pixels, w×h): its paper colour, the pixels to paint (the paper inside the
- * outline plus the letters it encloses) and a text area that stays inside the oval. The outline and the art around
- * it are never in the mask. Null when there is no clear bubble, e.g. text drawn on busy art.
+ * Finds the box in a crop (RGBA pixels, w×h): a bubble or narration box of any colour (white, tinted, gradient, dark).
+ * `inside` is its background (the smooth region inside the outline, letters left out); `mask` is that plus the letters it
+ * encloses (what may be repainted); `color` the background's average colour; `inner`/`loose` a text area that stays
+ * inside the oval. The outline and the art around it are never in the mask. Null when there is no clear box, e.g. text
+ * drawn on busy art.
  */
-export function bubbleShape(px: Uint8ClampedArray, w: number, h: number, seed?: Box): { color: string; mask: Uint8Array; inner: Box; loose: Box } | null {
+export function bubbleShape(px: Uint8ClampedArray, w: number, h: number, seed?: Box): { color: string; mask: Uint8Array; inside: Uint8Array; inner: Box; loose: Box } | null {
 	const n = w * h;
-	// Where the bubble's paper is looked for: the given area (a found box), else the middle half of the crop.
+	// Where the box's background is looked for: the given area (a found box), else the middle half of the crop.
 	const s0 = seed ?? { x: w / 4, y: h / 4, w: w / 2, h: h / 2 };
 	const central = (i: number) => {
 		const x = i % w, y = (i / w) | 0;
 		return x >= s0.x && x < s0.x + s0.w && y >= s0.y && y < s0.y + s0.h;
 	};
-	// Paper colour: the commonest light colour in the middle half of the box.
-	const buckets = new Map<number, { n: number; r: number; g: number; b: number }>();
+
+	// Smooth pixels: close in colour to all four neighbours. A box's background is one connected smooth region.
+	const smooth = new Uint8Array(n);
+	const close = (i: number, j: number) =>
+		Math.abs(px[i * 4] - px[j * 4]) <= STEP && Math.abs(px[i * 4 + 1] - px[j * 4 + 1]) <= STEP && Math.abs(px[i * 4 + 2] - px[j * 4 + 2]) <= STEP;
 	for (let i = 0; i < n; i++) {
-		if (!central(i)) continue;
-		const [r, g, b] = [px[i * 4], px[i * 4 + 1], px[i * 4 + 2]];
-		if (0.299 * r + 0.587 * g + 0.114 * b < 150) continue;
-		// Paper is white, grey or a faint cream; a coloured light patch (a lit window, sky) is art, not a bubble.
-		if (Math.max(r, g, b) - Math.min(r, g, b) > SATURATION) continue;
-		const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
-		const s = buckets.get(key) ?? { n: 0, r: 0, g: 0, b: 0 };
-		s.n++; s.r += r; s.g += g; s.b += b;
-		buckets.set(key, s);
+		const x = i % w;
+		smooth[i] = (x === 0 || close(i, i - 1)) && (x === w - 1 || close(i, i + 1)) && (i < w || close(i, i - w)) && (i >= n - w || close(i, i + w)) ? 1 : 0;
 	}
-	const top = [...buckets.values()].reduce((a, b) => (b.n > a.n ? b : a), { n: 0, r: 0, g: 0, b: 0 });
-	if (!top.n) return null;
-	const paper = [top.r / top.n, top.g / top.n, top.b / top.n].map(Math.round);
-	const near = (i: number) => Math.abs(px[i * 4] - paper[0]) <= NEAR && Math.abs(px[i * 4 + 1] - paper[1]) <= NEAR && Math.abs(px[i * 4 + 2] - paper[2]) <= NEAR;
 
 	/** 4-connected flood fill from `seeds` through pixels where `pass` holds. */
 	const flood = (seeds: number[], pass: (i: number) => boolean) => {
@@ -55,28 +47,46 @@ export function bubbleShape(px: Uint8ClampedArray, w: number, h: number, seed?: 
 		return seen;
 	};
 
-	// The bubble's inside: paper connected to the paper in the middle of the box.
-	const middle: number[] = [];
-	for (let i = 0; i < n; i++) if (central(i)) middle.push(i);
-	// Outlines have small gaps (the tail, a panel edge); flooding straight through one leaks into a white background
-	// and the outline would then be painted over. So flood the paper shrunk by GAP pixels (which closes gaps up to
-	// 2×GAP wide), then grow the result back over the paper.
-	const paperMap = new Uint8Array(n);
-	for (let i = 0; i < n; i++) paperMap[i] = near(i) ? 1 : 0;
-	const core = spread(spread(paperMap, w, h, GAP, true), w, h, GAP, true, true);
-	const coreInside = flood(middle, (i) => core[i] === 1);
-	const grown = spread(spread(coreInside, w, h, GAP, false), w, h, GAP, false, true);
-	const inside = new Uint8Array(n);
-	for (let i = 0; i < n; i++) inside[i] = grown[i] && paperMap[i] ? 1 : 0;
+	// Outlines have small gaps (the tail, a panel edge); flooding straight through one leaks into the background around
+	// the bubble and the outline would then be painted over. So flood the smooth map shrunk by GAP pixels (which closes
+	// gaps up to 2×GAP wide), then grow each region back over the smooth pixels.
+	const core = spread(spread(smooth, w, h, GAP, true), w, h, GAP, true, true);
+	const need = seed ? seed.w * seed.h * 0.3 : n * 0.15;
+	const cx = s0.x + s0.w / 2, cy = s0.y + s0.h / 2;
+	const taken = new Uint8Array(n);
+	let inside: Uint8Array | null = null, best = -Infinity;
+	for (let i = 0; i < n; i++) {
+		if (!central(i) || !core[i] || taken[i]) continue;
+		const part = flood([i], (j) => core[j] === 1);
+		const grown = spread(spread(part, w, h, GAP, false), w, h, GAP, false, true);
+		const region = new Uint8Array(n);
+		// Size counts the region with a 1 px rim: the background next to the outline is not smooth but is still the box.
+		const rim = spread(spread(grown, w, h, 1, false), w, h, 1, false, true);
+		let count = 0, edge = false, near = Infinity;
+		for (let j = 0; j < n; j++) {
+			if (part[j]) taken[j] = 1;
+			if (rim[j]) count++;
+			if (!grown[j] || !smooth[j]) continue;
+			region[j] = 1;
+			const x = j % w, y = (j / w) | 0;
+			if (x === 0 || y === 0 || x === w - 1 || y === h - 1) edge = true;
+			if (central(j)) near = Math.min(near, (x - cx) ** 2 + (y - cy) ** 2);
+		}
+		if (count < need) continue;
+		// A closed region (not running off the crop) is the box; otherwise the one nearest the middle of the seed area.
+		const score = (edge ? 0 : 1e12) - near;
+		if (score > best) { best = score; inside = region; }
+	}
+	if (!inside) return null;
+	let sr = 0, sg = 0, sb = 0;
 	let count = 0, x0 = w, y0 = h, x1 = 0, y1 = 0;
 	for (let i = 0; i < n; i++)
 		if (inside[i]) {
-			count++;
+			count++; sr += px[i * 4]; sg += px[i * 4 + 1]; sb += px[i * 4 + 2];
 			const x = i % w, y = (i / w) | 0;
 			if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
 		}
-	// Enough paper to be a bubble: 15% of the crop, or with a seed area, 30% of that area.
-	if (count < (seed ? seed.w * seed.h * 0.3 : n * 0.15)) return null;
+	const paper = [sr / count, sg / count, sb / count].map(Math.round);
 
 	// Everything the box edge reaches without crossing the inside is outline or art; the rest is the bubble and its letters.
 	const edge: number[] = [];
@@ -99,7 +109,7 @@ export function bubbleShape(px: Uint8ClampedArray, w: number, h: number, seed?: 
 	// bubble's bounding box much bigger than the oval, and a rectangle cut from that box would stick out of it.
 	const room = inscribed(mask, w, h, Math.round((x0 + x1) / 2));
 	const shrink = (k: number) => ({ x: room.x + room.w * k, y: room.y + room.h * k, w: room.w * (1 - 2 * k), h: room.h * (1 - 2 * k) });
-	return { color: `rgb(${paper.join(',')})`, mask, inner: shrink(INSET), loose: shrink(LOOSE) };
+	return { color: `rgb(${paper.join(',')})`, mask, inside, inner: shrink(INSET), loose: shrink(LOOSE) };
 }
 
 /** Largest-area rectangle inside the mask, built from each row's run of mask pixels through column `cx`. */
