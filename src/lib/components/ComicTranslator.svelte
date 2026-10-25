@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { applyRepair, checkLines } from '$lib/comic/check';
 	import { serviceInfo, translatePage } from '$lib/comic/client';
-	import { latestOnly, loadPages, type Pages } from '$lib/comic/load';
+	import { latestOnly, loadFiles, type Pages } from '$lib/comic/load';
 	import { readingOrder } from '$lib/comic/order';
 	import { renderPage } from '$lib/comic/render';
 	import { comicDetector, MODEL_MB } from '$lib/comic/detect';
@@ -36,12 +36,19 @@
 	let drag = $state<{ x: number; y: number; box: Box } | null>(null);
 	let rtl = $state(false);
 	/** Automatic boxes: the detector finds the text, the OCR reads it, both on this device. */
-	let auto = $state<'idle' | 'loading' | 'reading' | 'done'>('idle');
+	let auto = $state<'idle' | 'loading' | 'reading' | 'translating' | 'done'>('idle');
+	/** Find and translate every page as soon as files are chosen. */
+	let autoOn = $state(true);
+	/** Bumped by each new set of files, so an older run stops. */
+	let run = 0;
 	let autoProgress = $state<number | null>(null);
 	let autoStatus = $state('');
 	let autoError = $state('');
 	let ocrReady = false;
 
+	/** True from the first page to the last of an automatic run, so nothing reads as finished in between. */
+	let running = $state(false);
+	const working = $derived(running || auto === 'loading' || auto === 'reading' || auto === 'translating');
 	const regions = $derived(readingOrder(byPage[index] ?? [], rtl));
 	const sent = $derived<SentLine[]>(
 		regions.map((r, i) => ({ n: i + 1, text: r.english.trim(), cls: r.cls, speaker: r.speaker })).filter((l) => l.text)
@@ -52,12 +59,14 @@
 	const OPEN_FAILED = 'That file couldn’t be opened. Try again.';
 	const latest = latestOnly();
 
-	async function open(file: File | undefined) {
-		if (!file) return;
+	async function open(files: File[]) {
+		if (!files.length) return;
 		error = '';
+		const mine = ++run;
+		resetAuto(); // at once, so the last file's "done" never stands for this one
 		let pages: Pages;
 		try {
-			pages = await loadPages(file);
+			pages = await loadFiles(files);
 		} catch {
 			error = OPEN_FAILED;
 			return;
@@ -71,11 +80,47 @@
 		resetAuto();
 		byPage = Array.from({ length: pages.count }, () => []);
 		await show(0);
+		if (autoOn) await translateAll(mine, 0);
+	}
+
+	/** Finds, reads and translates each page in turn (one Gemini request per page), then goes back to the first. */
+	async function translateAll(mine: number, from: number) {
+		if (!book) return;
+		running = true;
+		try {
+			await eachPage(mine, from, book.count);
+		} finally {
+			if (mine === run) running = false;
+		}
+	}
+
+	async function eachPage(mine: number, from: number, count: number) {
+		for (let i = from; i < count; i++) {
+			if (i !== index) await show(i);
+			if (mine !== run) return;
+			const prefix = count > 1 ? `Page ${i + 1} of ${count}: ` : '';
+			const found = await findText(prefix);
+			if (mine !== run || found === 'failed' || found === 'gone') return;
+			if (sent.length) {
+				auto = 'translating';
+				autoStatus = `${prefix}Translating…`;
+				const ok = await translate();
+				if (mine !== run) return;
+				auto = 'done';
+				if (!ok) { autoStatus = ''; return; }
+				if (count === 1) autoStatus = `Found and translated ${regions.length} pieces of English. Check them below.`;
+			}
+		}
+		if (count > 1) {
+			await show(0);
+			auto = 'done';
+			autoStatus = `Finished all ${count} pages. Check each one; fix any line and press Translate page.`;
+		}
 	}
 
 	/** Only the newest page request wins, so fast clicks can't put one page's boxes on another page's art. */
 	function resetAuto() {
-		if (auto !== 'loading' && auto !== 'reading') auto = 'idle';
+		if (auto !== 'loading' && auto !== 'reading' && auto !== 'translating') auto = 'idle';
 		autoStatus = '';
 		autoError = '';
 	}
@@ -175,10 +220,10 @@
 		} else r.problem = 'unread';
 	}
 
-	async function findText() {
-		if (!current) return;
+	async function findText(prefix = ''): Promise<'found' | 'none' | 'failed' | 'gone'> {
+		if (!current) return 'gone';
 		autoError = '';
-		autoStatus = 'Downloading the text finder…';
+		autoStatus = `${prefix}Downloading the text finder…`;
 		auto = 'loading';
 		autoProgress = 0;
 		const detector = comicDetector();
@@ -189,10 +234,10 @@
 			auto = 'idle';
 			autoStatus = '';
 			autoError = 'Couldn’t download the text finder. Check the connection and try again.';
-			return;
+			return 'failed';
 		}
 		auto = 'reading';
-		autoStatus = 'Looking for English…';
+		autoStatus = `${prefix}Looking for English…`;
 		const page = current, at = index;
 		/** The visitor moved to another page: stop quietly and leave the finder ready again. */
 		const gone = () => {
@@ -203,28 +248,30 @@
 		};
 		try {
 			const found = await detector.detect(page);
-			if (gone()) return;
+			if (gone()) return 'gone';
 			if (!found.length) {
 				auto = 'done';
-				autoStatus = 'No English found. Draw boxes by hand.';
-				return;
+				autoStatus = `${prefix}No English found. Draw boxes by hand.`;
+				return 'none';
 			}
 			const ids = found.map(() => nextId++);
 			byPage[at] = [...byPage[at], ...found.map((d, i) => ({ id: ids[i], box: d.box, cls: d.cls, speaker: 'unknown' as Speaker,
 				english: '', burmese: '', problem: null, ocr: '', edited: false }))];
 			for (const [i, id] of ids.entries()) {
-				if (gone()) return;
-				autoStatus = `Reading box ${i + 1} of ${ids.length}…`;
+				if (gone()) return 'gone';
+				autoStatus = `${prefix}Reading box ${i + 1} of ${ids.length}…`;
 				const r = byPage[at].find((x) => x.id === id);
 				if (r) await read(r, page);
 			}
 			auto = 'done';
-			autoStatus = `Found ${ids.length} pieces of English. Check them below.`;
+			autoStatus = `${prefix}Found ${ids.length} pieces of English. Check them below.`;
+			return 'found';
 		} catch {
-			if (gone()) return; // a page released mid-read: nothing to report
+			if (gone()) return 'gone'; // a page released mid-read: nothing to report
 			auto = 'idle';
 			autoStatus = '';
 			autoError = 'Couldn’t read this page. Try again.';
+			return 'failed';
 		}
 	}
 	function remove(id: number) {
@@ -232,8 +279,8 @@
 	}
 
 	/** Sends the page's text. With onlyFlagged, every line is sent again for context but only flagged rows change. */
-	async function translate(onlyFlagged = false) {
-		if (!sent.length) return;
+	async function translate(onlyFlagged = false): Promise<boolean> {
+		if (!sent.length) return false;
 		busy = true;
 		error = '';
 		const lines = sent;
@@ -244,7 +291,7 @@
 			error = reply.error === 'quota' ? 'Today’s translations are used up. Try again tomorrow.'
 				: reply.error === 'busy' ? 'Busy right now. Try again in a minute.'
 				: 'Translation failed. Try again in a moment.';
-			return;
+			return false;
 		}
 		const { byN } = checkLines(lines, reply.lines);
 		const english = new Map(reply.lines.map((g) => [g.n, g]));
@@ -257,14 +304,15 @@
 			const fixed = english.get(l.n);
 			if (fixed) r.english = applyRepair(r, fixed).english;
 		}
+		return true;
 	}
 </script>
 
-<div class="comic" data-auto={auto}>
+<div class="comic" data-auto={running ? 'running' : auto}>
 	<header class="head">
 		<h1 class="serif">Comic translator</h1>
 		<p><a href="/models/comic-translator">How well it works →</a></p>
-		<p class="soft">English to Burmese. Your page stays on your device; only the words you type below are sent to be translated.</p>
+		<p class="soft">English to Burmese. Your pages stay on your device; only the English words are sent to be translated.</p>
 		{#if info}
 			<p class="mono tier">
 				Translating with {info.model}{info.tier === 'free' ? ' on the free tier: only use public-domain or openly licensed pages.' : '.'}
@@ -272,27 +320,33 @@
 		{/if}
 	</header>
 
+	<section class="setup" aria-label="Before you choose">
+		<label class="check"><input type="checkbox" bind:checked={autoOn} /> Find and translate automatically</label>
+		<label class="check"><input type="checkbox" bind:checked={rtl} /> Manga order (right to left)</label>
+		<p class="mono soft">Finding the text downloads about {AUTO_MB} MB once and runs on your device: your pictures are never sent anywhere.</p>
+	</section>
+
 	<label class="btn open">
-		Open a page (image or PDF)
-		<input class="visually-hidden" type="file" aria-label="Open a comic page" accept="image/png,image/jpeg,image/webp,application/pdf"
-			onchange={(e) => open(e.currentTarget.files?.[0])} />
+		Select pictures or files to translate
+		<input class="visually-hidden" type="file" multiple aria-label="Select pictures or files to translate" accept="image/png,image/jpeg,image/webp,application/pdf"
+			onchange={(e) => open([...(e.currentTarget.files ?? [])])} />
 	</label>
 	{#if error}<p role="alert">{error}</p>{/if}
 
 	{#if book && current}
 		<nav class="pager" aria-label="Pages">
-			<button class="btn" disabled={index === 0} onclick={() => show(index - 1)}>Previous page</button>
+			<button class="btn" disabled={index === 0 || working} onclick={() => show(index - 1)}>Previous page</button>
 			<p class="mono">Page {index + 1} of {book.count}</p>
-			<button class="btn" disabled={index === book.count - 1} onclick={() => show(index + 1)}>Next page</button>
+			<button class="btn" disabled={index === book.count - 1 || working} onclick={() => show(index + 1)}>Next page</button>
 		</nav>
 
 		<section class="auto" aria-label="Find the text automatically">
-			<button class="btn" disabled={auto === 'loading' || auto === 'reading'} onclick={findText}>
-				{autoError ? 'Try again' : 'Find the text for me'}
-			</button>
-			<p class="mono soft">About {AUTO_MB} MB, downloaded once. It runs on your device: the page is never sent anywhere.</p>
+			{#if !autoOn || autoError}
+				<button class="btn" disabled={working} onclick={() => (autoOn && autoError ? translateAll(run, index) : findText())}>
+					{autoError ? 'Try again' : 'Find the text for me'}
+				</button>
+			{/if}
 			{#if auto === 'loading'}<progress max="1" value={autoProgress} aria-label="Text finder download"></progress>{/if}
-			<label class="check"><input type="checkbox" bind:checked={rtl} /> Manga order (right to left)</label>
 			<p class="mono" role="status">{autoStatus}</p>
 			{#if autoError}<p role="alert">{autoError}</p>{/if}
 		</section>
@@ -339,7 +393,7 @@
 					{/each}
 				</ol>
 				<div class="actions">
-					<button class="btn" disabled={busy || !sent.length} onclick={() => translate()}>Translate page</button>
+					<button class="btn" disabled={busy || working || !sent.length} onclick={() => translate()}>Translate page</button>
 					{#if regions.some((r) => r.problem)}
 						<button class="btn" disabled={busy} onclick={() => translate(true)}>Retry flagged lines</button>
 					{/if}
@@ -358,6 +412,8 @@
 	.head { display: grid; gap: var(--space-1); }
 	h1 { font-size: var(--step-3); }
 	.open { justify-self: start; }
+	.setup { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
+	.setup p { flex-basis: 100%; }
 	.auto { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
 	.auto progress { flex: 1 1 12rem; }
 	.auto [role='status'] { flex-basis: 100%; min-height: 1.5em; }

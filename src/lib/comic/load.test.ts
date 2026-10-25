@@ -18,3 +18,18 @@ it('keeps only the latest page and releases the stale one', async () => {
 	expect(await second).toBeNull();
 	expect(closed).toEqual(['p2']);
 });
+
+it('joins several files into one book, in name order', async () => {
+	const { joinPages, byName } = await import('./load');
+	const bmp = (name: string) => ({ name }) as unknown as ImageBitmap;
+	const destroyed: string[] = [];
+	const part = (tag: string, count: number) => ({ ok: true as const, count, page: async (i: number) => bmp(`${tag}${i}`), destroy: () => destroyed.push(tag) });
+	const book = joinPages([part('a', 1), part('b', 2)]);
+	expect(book.count).toBe(3);
+	expect(await book.page(0)).toMatchObject({ name: 'a0' });
+	expect(await book.page(2)).toMatchObject({ name: 'b1' });
+	book.destroy();
+	expect(destroyed).toEqual(['a', 'b']);
+	const f = (name: string) => ({ name }) as File;
+	expect([f('page10.jpg'), f('page2.jpg'), f('Page1.jpg')].sort(byName).map((x) => x.name)).toEqual(['Page1.jpg', 'page2.jpg', 'page10.jpg']);
+});

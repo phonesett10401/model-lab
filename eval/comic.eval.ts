@@ -35,14 +35,13 @@ const test_ = JSON.parse(readFileSync(join(DATA, 'annotations/test.json'), 'utf8
 const pages = (test_.images.map((i: { file_name: string }) => i.file_name).sort() as string[]).slice(0, FAKE ? 3 : undefined);
 
 async function runPage(page: Page, file: string): Promise<Done | 'quota'> {
-	await page.getByLabel('Open a comic page').setInputFiles(join(DATA, 'images', file));
-	await expect(page.locator('.comic')).toHaveAttribute('data-auto', 'idle'); // the new page is showing
-	await page.getByRole('button', { name: 'Find the text for me' }).click();
+	// Choosing the file finds, reads and translates it (the page's automatic run).
+	await page.getByLabel('Select pictures or files to translate').setInputFiles(join(DATA, 'images', file));
 	await expect(page.locator('.comic')).toHaveAttribute('data-auto', 'done', { timeout: 300_000 });
 	const hasText = await page.locator('.regions > li label.wide input').evaluateAll((els) => els.some((e) => (e as HTMLInputElement).value.trim()));
 	if (hasText) {
 		for (let attempt = 0; attempt < 2; attempt++) {
-			await page.getByRole('button', { name: 'Translate page' }).click();
+			if (attempt) await page.getByRole('button', { name: 'Translate page' }).click();
 			const outcome = await Promise.race([
 				page.locator('.stage[aria-label="Burmese page"][data-rendered="true"]').waitFor({ timeout: 180_000 }).then(() => 'ok'),
 				page.getByRole('alert').waitFor({ timeout: 180_000 }).then(async () => (await page.getByRole('alert').textContent()) ?? '')

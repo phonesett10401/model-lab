@@ -20,6 +20,43 @@ export async function loadPages(file: File): Promise<Pages> {
 	return { ok: true, count: 1, page: () => createImageBitmap(file), destroy: () => {} };
 }
 
+type Book = Extract<Pages, { ok: true }>;
+
+/** File-name order that reads numbers as numbers, so page2 comes before page10. */
+export const byName = (a: File, b: File) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+
+/** One book from several opened files: their pages follow each other. */
+export function joinPages(parts: Book[]): Book {
+	const at = (i: number) => {
+		for (const p of parts) {
+			if (i < p.count) return p.page(i);
+			i -= p.count;
+		}
+		return Promise.reject(new RangeError('no such page'));
+	};
+	return { ok: true, count: parts.reduce((n, p) => n + p.count, 0), page: at, destroy: () => parts.forEach((p) => p.destroy()) };
+}
+
+/** Opens several images and PDFs as one book, in file-name order. One bad file stops it and says which. */
+export async function loadFiles(files: File[]): Promise<Pages> {
+	const parts: Book[] = [];
+	const sorted = [...files].sort(byName);
+	for (const file of sorted) {
+		const got = await loadPages(file);
+		if (!got.ok) {
+			parts.forEach((p) => p.destroy());
+			return sorted.length > 1 ? { ok: false, reason: `${file.name}: ${got.reason}` } : got;
+		}
+		parts.push(got);
+	}
+	const book = joinPages(parts);
+	if (book.count > MAX_PDF_PAGES) {
+		book.destroy();
+		return { ok: false, reason: `That’s more than ${MAX_PDF_PAGES} pages. Choose fewer files.` };
+	}
+	return book;
+}
+
 async function loadPdf(file: File): Promise<Pages> {
 	if (file.size > MAX_PDF_BYTES)
 		return { ok: false, reason: `That PDF is too large (over ${MAX_PDF_BYTES / 1024 / 1024} MB). Split it and open one part at a time.` };

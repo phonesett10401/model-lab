@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { comicPdf, comicPng, drawBox, fakeTranslate, openFile } from './comic-fake';
+import { comicPdf, comicPng, drawBox, fakeTranslate, openFile, openFiles } from './comic-fake';
 
 // Tall enough that the whole test page is on screen for mouse drags.
 test.use({ viewport: { width: 1280, height: 1600 } });
@@ -250,7 +250,12 @@ test('original and Burmese pages line up', async ({ page }) => {
 
 const pepper = () => readFileSync('e2e/fixtures/comic-pepper.jpg');
 
-test('nothing downloads before asking', async ({ page }) => {
+const blankPng = async (page: import('@playwright/test').Page) => {
+	const url = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 800; c.height = 1000; const g = c.getContext('2d')!; g.fillStyle = '#fff'; g.fillRect(0, 0, 800, 1000); return c.toDataURL('image/png'); });
+	return Buffer.from(url.split(',')[1], 'base64');
+};
+
+test('nothing downloads with the automatic run off', async ({ page }) => {
 	const urls: string[] = [];
 	page.on('request', (r) => urls.push(r.url()));
 	await openFile(page, 'p.jpg', 'image/jpeg', pepper());
@@ -259,35 +264,55 @@ test('nothing downloads before asking', async ({ page }) => {
 	expect(urls.filter((u) => /comic-text-detector|\/ocr\/|traineddata/.test(u))).toEqual([]);
 });
 
-test('finds the text', async ({ page, baseURL }) => {
+test('finds and translates the text as soon as a page is chosen', async ({ page, baseURL }) => {
 	test.setTimeout(180_000);
+	const bodies = await fakeTranslate(page, { ok: true, lines: [{ n: 1, text: 'မင်္ဂလာပါ' }], model: 'gemini-3.5-flash' });
 	const offsite: string[] = [];
 	page.on('request', (r) => { if (!r.url().startsWith(baseURL!)) offsite.push(r.url()); });
-	await openFile(page, 'p.jpg', 'image/jpeg', pepper());
-	await page.getByRole('button', { name: 'Find the text for me' }).click();
+	await openFile(page, 'p.jpg', 'image/jpeg', pepper(), true);
 	await expect(page.locator('.comic')).toHaveAttribute('data-auto', 'done', { timeout: 150_000 });
 	// Every box either holds the English the reader found, or asks the visitor to type it.
 	const found = await rows(page).evaluateAll((els) => els.map((li) => ({
 		english: (li.querySelector('label.wide input') as HTMLInputElement).value, unread: li.querySelector('.problem')?.textContent ?? '' })));
 	expect(found.filter((r) => r.english).length).toBeGreaterThanOrEqual(3);
 	for (const r of found) expect(r.english || r.unread).toBeTruthy();
+	// One request for the whole page, holding every piece of English it read.
+	expect(bodies).toHaveLength(1);
+	expect(JSON.parse(bodies[0]).lines).toHaveLength(found.filter((r) => r.english).length);
+	await expect(rows(page).nth(0).getByLabel('Burmese')).toHaveValue('မင်္ဂလာပါ');
 	expect(offsite).toEqual([]);
+});
+
+test('translates every chosen file, one request per page', async ({ page }) => {
+	test.setTimeout(300_000);
+	const bodies = await fakeTranslate(page, { ok: true, lines: [], model: 'gemini-3.5-flash' });
+	await openFiles(page, [
+		{ name: 'page10.jpg', mimeType: 'image/jpeg', buffer: pepper() },
+		{ name: 'page2.png', mimeType: 'image/png', buffer: await blankPng(page) }
+	], true);
+	await expect(page.locator('.comic')).toHaveAttribute('data-auto', 'done', { timeout: 280_000 });
+	await expect(page.getByRole('status')).toHaveText('Finished all 2 pages. Check each one; fix any line and press Translate page.');
+	await expect(page.getByText('Page 1 of 2')).toBeVisible();
+	await expect(rows(page)).toHaveCount(0); // page2 (blank) comes first by name and has no English
+	expect(bodies).toHaveLength(1); // the blank page sends nothing
+	await page.getByRole('button', { name: 'Next page' }).click();
+	await expect(page.getByText('Page 2 of 2')).toBeVisible();
+	await expect.poll(() => rows(page).count()).toBeGreaterThanOrEqual(3);
 });
 
 test('auto finds nothing', async ({ page }) => {
 	test.setTimeout(180_000);
-	const blank = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 800; c.height = 1000; const g = c.getContext('2d')!; g.fillStyle = '#fff'; g.fillRect(0, 0, 800, 1000); return c.toDataURL('image/png'); });
-	await openFile(page, 'b.png', 'image/png', Buffer.from(blank.split(',')[1], 'base64'));
-	await page.getByRole('button', { name: 'Find the text for me' }).click();
+	const bodies = await fakeTranslate(page, { ok: true, lines: [], model: 'gemini-3.5-flash' });
+	await openFile(page, 'b.png', 'image/png', await blankPng(page), true);
 	await expect(page.getByRole('status')).toHaveText('No English found. Draw boxes by hand.', { timeout: 150_000 });
+	expect(bodies).toEqual([]);
 	await drawBox(page, 0.2, 0.2, 0.5, 0.3);
 	await expect(rows(page)).toHaveCount(1);
 });
 
 test('download fails', async ({ page }) => {
 	await page.route('**/models/comic-text-detector.onnx', (r) => r.abort());
-	await openFile(page, 'p.jpg', 'image/jpeg', pepper());
-	await page.getByRole('button', { name: 'Find the text for me' }).click();
+	await openFile(page, 'p.jpg', 'image/jpeg', pepper(), true);
 	await expect(page.getByRole('alert')).toHaveText('Couldn’t download the text finder. Check the connection and try again.');
 	await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
 	await drawBox(page, 0.2, 0.2, 0.5, 0.3);
@@ -300,6 +325,7 @@ test('unread boxes are not sent', async ({ page }) => {
 	await openFile(page, 'p.jpg', 'image/jpeg', pepper());
 	await page.getByRole('button', { name: 'Find the text for me' }).click();
 	await expect(page.locator('.comic')).toHaveAttribute('data-auto', 'done', { timeout: 150_000 });
+	expect(bodies).toEqual([]); // with the automatic run off, finding the text sends nothing
 	const before = await rows(page).count();
 	const readable = await rows(page).evaluateAll((els) => els.filter((li) => (li.querySelector('label.wide input') as HTMLInputElement).value).length);
 	await drawBox(page, 0.02, 0.97, 0.06, 0.99); // a sliver of art with no words
@@ -321,8 +347,7 @@ test('manga order', async ({ page }) => {
 test('a new file starts fresh', async ({ page }) => {
 	test.setTimeout(180_000);
 	const blank = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 800; c.height = 1000; const g = c.getContext('2d')!; g.fillStyle = '#fff'; g.fillRect(0, 0, 800, 1000); return c.toDataURL('image/png'); });
-	await openFile(page, 'b.png', 'image/png', Buffer.from(blank.split(',')[1], 'base64'));
-	await page.getByRole('button', { name: 'Find the text for me' }).click();
+	await openFile(page, 'b.png', 'image/png', Buffer.from(blank.split(',')[1], 'base64'), true);
 	await expect(page.locator('.comic')).toHaveAttribute('data-auto', 'done', { timeout: 150_000 });
 	await openFile(page, 'p.jpg', 'image/jpeg', pepper());
 	await expect(page.locator('.comic')).toHaveAttribute('data-auto', 'idle');

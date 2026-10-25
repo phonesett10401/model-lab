@@ -48,6 +48,12 @@ export async function drawBox(page: Page, x1: number, y1: number, x2: number, y2
 	await page.mouse.up();
 }
 
-export async function openFile(page: Page, name: string, mimeType: string, buffer: Buffer) {
-	await page.getByLabel('Open a comic page').setInputFiles({ name, mimeType, buffer });
+/** Opens files; by default with the automatic find-and-translate switched off, so tests can draw boxes by hand. */
+export async function openFiles(page: Page, files: { name: string; mimeType: string; buffer: Buffer }[], auto = false) {
+	await page.getByLabel('Find and translate automatically').setChecked(auto);
+	await page.getByLabel('Select pictures or files to translate').setInputFiles(files);
+}
+
+export async function openFile(page: Page, name: string, mimeType: string, buffer: Buffer, auto = false) {
+	await openFiles(page, [{ name, mimeType, buffer }], auto);
 }
