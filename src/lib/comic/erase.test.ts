@@ -26,3 +26,9 @@ it('covers sfx and art text', () => {
 	expect(eraseStyle(white, 'sfx')).toEqual({ mode: 'cover' });
 	expect(eraseStyle(white, 'art-text')).toEqual({ mode: 'cover' });
 });
+
+it('letters white on a dark fill and black on a light one', async () => {
+	const { inkFor } = await import('./erase');
+	expect(inkFor('rgb(20,20,30)')).toBe('#fff');
+	expect(inkFor('rgb(250,240,200)')).toBe('#000');
+});

@@ -24,6 +24,10 @@
 
 	let error = $state('');
 	let info = $state<{ model: string; tier: 'free' | 'paid' } | null>(null);
+	/** The server didn't say which tier: assume the free one, so its warning still shows. */
+	let infoFailed = $state(false);
+	/** The page an automatic run stopped on after a failed translation, so it can continue from there. */
+	let stoppedAt = $state<number | null>(null);
 	let book = $state<Extract<Pages, { ok: true }> | null>(null);
 	let index = $state(0);
 	let current = $state<ImageBitmap | null>(null);
@@ -54,7 +58,10 @@
 		regions.map((r, i) => ({ n: i + 1, text: r.english.trim(), cls: r.cls, speaker: r.speaker })).filter((l) => l.text)
 	);
 
-	onMount(async () => { info = await serviceInfo(); });
+	onMount(async () => {
+		info = await serviceInfo();
+		infoFailed = !info;
+	});
 
 	const OPEN_FAILED = 'That file couldn’t be opened. Try again.';
 	const latest = latestOnly();
@@ -63,6 +70,10 @@
 		if (!files.length) return;
 		error = '';
 		const mine = ++run;
+		// The old run is cancelled: unlock the page now, as its own ending won't (it no longer owns `running`).
+		running = false;
+		auto = 'idle';
+		stoppedAt = null;
 		resetAuto(); // at once, so the last file's "done" never stands for this one
 		let pages: Pages;
 		try {
@@ -99,7 +110,8 @@
 			if (i !== index) await show(i);
 			if (mine !== run) return;
 			const prefix = count > 1 ? `Page ${i + 1} of ${count}: ` : '';
-			const found = await findText(prefix);
+			// Continuing after a failed translation: that page's boxes are already there.
+			const found = byPage[i]?.length ? 'found' : await findText(prefix);
 			if (mine !== run || found === 'failed' || found === 'gone') return;
 			if (sent.length) {
 				auto = 'translating';
@@ -107,7 +119,7 @@
 				const ok = await translate();
 				if (mine !== run) return;
 				auto = 'done';
-				if (!ok) { autoStatus = ''; return; }
+				if (!ok) { autoStatus = ''; stoppedAt = i; return; }
 				if (count === 1) autoStatus = `Found and translated ${regions.length} pieces of English. Check them below.`;
 			}
 		}
@@ -313,9 +325,9 @@
 		<h1 class="serif">Comic translator</h1>
 		<p><a href="/models/comic-translator">How well it works →</a></p>
 		<p class="soft">English to Burmese. Your pages stay on your device; only the English words are sent to be translated.</p>
-		{#if info}
+		{#if info || infoFailed}
 			<p class="mono tier">
-				Translating with {info.model}{info.tier === 'free' ? ' on the free tier: only use public-domain or openly licensed pages.' : '.'}
+				Translating{info ? ` with ${info.model}` : ''}{info?.tier === 'paid' ? '.' : ' on the free tier: only use public-domain or openly licensed pages.'}
 			</p>
 		{/if}
 	</header>
@@ -347,6 +359,11 @@
 				</button>
 			{/if}
 			{#if auto === 'loading'}<progress max="1" value={autoProgress} aria-label="Text finder download"></progress>{/if}
+			{#if stoppedAt !== null && !working}
+				<button class="btn" onclick={() => { const from = stoppedAt!; stoppedAt = null; error = ''; translateAll(run, from); }}>
+					Continue from page {stoppedAt + 1}
+				</button>
+			{/if}
 			<p class="mono" role="status">{autoStatus}</p>
 			{#if autoError}<p role="alert">{autoError}</p>{/if}
 		</section>
@@ -412,6 +429,8 @@
 	.head { display: grid; gap: var(--space-1); }
 	h1 { font-size: var(--step-3); }
 	.open { justify-self: start; }
+	/* The real input is visually hidden, so its keyboard focus shows on the button-like label. */
+	.open:has(input:focus-visible) { outline: 2px solid var(--red); outline-offset: 3px; }
 	.setup { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
 	.setup p { flex-basis: 100%; }
 	.auto { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }

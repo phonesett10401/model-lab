@@ -34,7 +34,7 @@ function csvRows(path: string): Record<string, string>[] {
 const test_ = JSON.parse(readFileSync(join(DATA, 'annotations/test.json'), 'utf8'));
 const pages = (test_.images.map((i: { file_name: string }) => i.file_name).sort() as string[]).slice(0, FAKE ? 3 : undefined);
 
-async function runPage(page: Page, file: string): Promise<Done | 'quota'> {
+async function runPage(page: Page, file: string): Promise<Done | { stop: string }> {
 	// Choosing the file finds, reads and translates it (the page's automatic run).
 	await page.getByLabel('Select pictures or files to translate').setInputFiles(join(DATA, 'images', file));
 	await expect(page.locator('.comic')).toHaveAttribute('data-auto', 'done', { timeout: 300_000 });
@@ -47,9 +47,10 @@ async function runPage(page: Page, file: string): Promise<Done | 'quota'> {
 				page.getByRole('alert').waitFor({ timeout: 180_000 }).then(async () => (await page.getByRole('alert').textContent()) ?? '')
 			]);
 			if (outcome === 'ok') break;
-			if (outcome.includes('used up')) return 'quota';
+			if (outcome.includes('used up')) return { stop: `Gemini's daily limit reached at ${file}; rerun tomorrow, it continues from here` };
 			if (outcome.includes('Busy') && attempt === 0) { await page.waitForTimeout(60_000); continue; }
-			break;
+			// Never record a failed request as an untranslated page: stop, so a rerun tries this page again.
+			return { stop: `translation failed at ${file} (${outcome.trim()}); rerun to continue from here` };
 		}
 	}
 	const rows = await page.locator('.regions > li').evaluateAll((els) => els.map((li) => {
@@ -91,7 +92,7 @@ test('comic pipeline on the test pages', async ({ page }) => {
 	for (const file of pages) {
 		if (done.has(file)) continue;
 		const r = await runPage(page, file);
-		if (r === 'quota') throw new Error(`Gemini's daily limit reached at ${file}; rerun tomorrow, it continues from here`);
+		if ('stop' in r) throw new Error(r.stop);
 		appendFileSync(PROGRESS, JSON.stringify(r) + '\n');
 		console.log(file, r.rows.length, 'boxes');
 	}
@@ -159,7 +160,8 @@ function writeReport() {
 		ocrPages,
 		ocrBefore: r3(before.total ? before.found / before.total : null),
 		ocrAfter: r3(after.total ? after.found / after.total : null),
-		failures
+		failures,
+		examples
 	}, null, 1) + '\n');
 	console.log('wrote', OUT);
 }

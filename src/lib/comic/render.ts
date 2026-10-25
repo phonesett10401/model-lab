@@ -1,5 +1,5 @@
 import { bubbleShape } from './bubble.ts';
-import { eraseStyle } from './erase.ts';
+import { eraseStyle, inkFor } from './erase.ts';
 import { fitText, fontRange } from './fit.ts';
 import type { Region } from './types.ts';
 
@@ -33,11 +33,15 @@ export async function renderPage(
 		// A speech bubble keeps its shape: only the paper inside the outline (and the letters on it) is painted over,
 		// and the Burmese goes in the oval. If it doesn't fit there, the plain box below takes over.
 		const shape = r.cls === 'bubble' ? bubbleShape(img.data, rw, rh) : null;
-		const oval = shape && fitText(text, { x: rx + shape.inner.x, y: ry + shape.inner.y, w: shape.inner.w, h: shape.inner.h }, full, measure, opts);
+		// The oval's text area, then a looser one, before the plain box.
+		const inOval = (a: { x: number; y: number; w: number; h: number }) => fitText(text, { x: rx + a.x, y: ry + a.y, w: a.w, h: a.h }, full, measure, opts);
+		let oval = shape && inOval(shape.inner);
+		if (shape && oval?.mode !== 'fit') oval = inOval(shape.loose);
 		const fit = oval?.mode === 'fit' ? oval : fitText(text, inner, full, measure, opts);
 		counts[fit.mode]++;
 		modes[r.id] = fit.mode;
 
+		let ink = '#000';
 		if (shape && fit === oval) {
 			const [pr, pg, pb] = shape.color.match(/\d+/g)!.map(Number);
 			for (let i = 0; i < shape.mask.length; i++)
@@ -46,6 +50,7 @@ export async function renderPage(
 		} else if (erase.mode === 'fill' && fit.mode !== 'cover') {
 			ctx.fillStyle = erase.color;
 			ctx.fillRect(x, y, w, h);
+			ink = inkFor(erase.color); // white on a dark caption
 			if (fit.mode === 'grown') ctx.fillRect(fit.box.x, fit.box.y, fit.box.w, fit.box.h);
 		} else {
 			const b = fit.mode === 'fit' ? r.box : { x: fit.box.x - PAD, y: fit.box.y - PAD, w: fit.box.w + 2 * PAD, h: fit.box.h + 2 * PAD };
@@ -57,7 +62,7 @@ export async function renderPage(
 		}
 
 		ctx.font = `${fit.size}px ${FONT}`;
-		ctx.fillStyle = '#000';
+		ctx.fillStyle = ink;
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 		const step = fit.size * LINE_HEIGHT;

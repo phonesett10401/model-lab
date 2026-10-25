@@ -42,3 +42,25 @@ it('gives up on busy art with no bubble', () => {
 	for (let i = 0; i < w * h; i++) px.set([(i * 37) % 256, (i * 91) % 256, (i * 53) % 256, 255], i * 4);
 	expect(bubbleShape(px, w, h)).toBeNull();
 });
+
+it('paints a letter that touches the outline', () => {
+	const w = 100, h = 80, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const d = ((x - 50) / 40) ** 2 + ((y - 40) / 30) ** 2;
+			const letter = x >= 9 && x < 30 && y >= 37 && y < 43; // starts on the outline at x=9
+			const v = d > 1.1 ? 120 : d > 1 ? 0 : letter ? 0 : 255;
+			px.set([v, v, v, 255], (y * w + x) * 4);
+		}
+	const s = bubbleShape(px, w, h)!;
+	expect(s.mask[40 * w + 20]).toBe(1); // the letter's body
+	expect(s.mask[10 * w + 1]).toBe(0); // art outside
+});
+
+it('paints a letter that touches the edge of a tight box', () => {
+	const w = 120, h = 40, px = new Uint8ClampedArray(w * h * 4).fill(255);
+	for (let y = 2; y < 38; y++) for (let x = 0; x < 118; x++) if (x % 10 < 3 && (y < 18 || y >= 22)) px.set([0, 0, 0, 255], (y * w + x) * 4);
+	const s = bubbleShape(px, w, h)!;
+	expect(s.mask[10 * w + 1]).toBe(1); // the first letter, on the left edge
+	expect(s.mask[10 * w + 11]).toBe(1);
+});

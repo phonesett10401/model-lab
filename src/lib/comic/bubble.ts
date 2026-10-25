@@ -4,13 +4,15 @@ import type { Box } from './types.ts';
 const NEAR = 40;
 /** A rectangle inside an ellipse covers about 71% of each axis, so the text area is pulled in about 15% per side. */
 const INSET = 0.15;
+/** A second, looser text area, tried before giving up on the oval for a long translation. */
+const LOOSE = 0.07;
 
 /**
  * Finds the speech bubble in a box (RGBA pixels, w×h): its paper colour, the pixels to paint (the paper inside the
  * outline plus the letters it encloses) and a text area that stays inside the oval. The outline and the art around
  * it are never in the mask. Null when there is no clear bubble, e.g. text drawn on busy art.
  */
-export function bubbleShape(px: Uint8ClampedArray, w: number, h: number): { color: string; mask: Uint8Array; inner: Box } | null {
+export function bubbleShape(px: Uint8ClampedArray, w: number, h: number): { color: string; mask: Uint8Array; inner: Box; loose: Box } | null {
 	const n = w * h;
 	const central = (i: number) => {
 		const x = i % w, y = (i / w) | 0;
@@ -64,12 +66,52 @@ export function bubbleShape(px: Uint8ClampedArray, w: number, h: number): { colo
 	for (let y = 0; y < h; y++) edge.push(y * w, y * w + w - 1);
 	const outside = flood(edge, (i) => !inside[i]);
 	const mask = new Uint8Array(n);
-	for (let i = 0; i < n; i++) mask[i] = outside[i] ? 0 : 1;
+	let enclosed = 0;
+	for (let i = 0; i < n; i++) if (!outside[i]) { mask[i] = 1; enclosed++; }
+
+	// Letters that touch the outline or the box edge are reached from outside, so the flood misses them. Bubbles are
+	// (nearly) convex: paint everything inside the convex hull of the paper too. The outline lies just outside it.
+	// Two joined bubbles make a hull much bigger than the paper, which would paint the art between them: skip it then.
+	const hull = hullRows(inside, w, h);
+	const hullArea = hull.reduce((a, r) => a + (r ? r[1] - r[0] + 1 : 0), 0);
+	if (hullArea <= enclosed * 1.3)
+		hull.forEach((r, y) => { if (r) mask.fill(1, y * w + r[0], y * w + r[1] + 1); });
 
 	const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
-	return {
-		color: `rgb(${paper.join(',')})`,
-		mask,
-		inner: { x: x0 + bw * INSET, y: y0 + bh * INSET, w: bw * (1 - 2 * INSET), h: bh * (1 - 2 * INSET) }
+	const area = (k: number) => ({ x: x0 + bw * k, y: y0 + bh * k, w: bw * (1 - 2 * k), h: bh * (1 - 2 * k) });
+	return { color: `rgb(${paper.join(',')})`, mask, inner: area(INSET), loose: area(LOOSE) };
+}
+
+/** Per row, the [first, last] pixel inside the convex hull of the marked pixels (null where the hull misses the row). */
+function hullRows(marked: Uint8Array, w: number, h: number): ([number, number] | null)[] {
+	const pts: [number, number][] = [];
+	for (let y = 0; y < h; y++) {
+		let a = -1, b = -1;
+		for (let x = 0; x < w; x++) if (marked[y * w + x]) { if (a < 0) a = x; b = x; }
+		if (a >= 0) pts.push([a, y], [b, y]);
+	}
+	// Monotone chain, points sorted by x then y.
+	pts.sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+	const cross = (o: number[], a: number[], b: number[]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+	const half = (list: [number, number][]) => {
+		const out: [number, number][] = [];
+		for (const p of list) {
+			while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], p) <= 0) out.pop();
+			out.push(p);
+		}
+		return out.slice(0, -1);
 	};
+	const poly = pts.length < 3 ? pts : [...half(pts), ...half([...pts].reverse())];
+	const rows: ([number, number] | null)[] = Array(h).fill(null);
+	for (let y = 0; y < h; y++) {
+		let lo = Infinity, hi = -Infinity;
+		for (let i = 0; i < poly.length; i++) {
+			const [ax, ay] = poly[i], [bx, by] = poly[(i + 1) % poly.length];
+			if (y < Math.min(ay, by) || y > Math.max(ay, by)) continue;
+			const xs = ay === by ? [ax, bx] : [ax + ((y - ay) * (bx - ax)) / (by - ay)];
+			for (const x of xs) { lo = Math.min(lo, x); hi = Math.max(hi, x); }
+		}
+		if (lo <= hi) rows[y] = [Math.max(0, Math.ceil(lo - 1e-9)), Math.min(w - 1, Math.floor(hi + 1e-9))];
+	}
+	return rows;
 }

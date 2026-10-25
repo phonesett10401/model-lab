@@ -372,6 +372,38 @@ test('a new file starts fresh', async ({ page }) => {
 	await expect(page.getByRole('status')).toHaveText('');
 });
 
+// ---------- Review fixes ----------
+
+test('choosing new files mid-run unlocks the page', async ({ page }) => {
+	test.setTimeout(180_000);
+	await openFile(page, 'p.jpg', 'image/jpeg', pepper(), true);
+	await expect(page.locator('.comic')).toHaveAttribute('data-auto', 'running');
+	await openFile(page, 'b.png', 'image/png', await blankPng(page)); // automatic off: no new run starts
+	await expect(page.locator('.comic')).toHaveAttribute('data-auto', 'idle');
+	await expect(page.getByRole('button', { name: 'Find the text for me' })).toBeEnabled();
+});
+
+test('a failed translation can continue from that page', async ({ page }) => {
+	test.setTimeout(180_000);
+	await fakeTranslate(page, 'quota');
+	await openFile(page, 'p.jpg', 'image/jpeg', pepper(), true);
+	await expect(page.getByRole('alert')).toHaveText('Today’s translations are used up. Try again tomorrow.', { timeout: 150_000 });
+	await expect(page.getByRole('button', { name: 'Continue from page 1' })).toBeVisible();
+});
+
+test('the select button shows keyboard focus', async ({ page }) => {
+	const input = page.getByLabel('Select pictures or files to translate');
+	for (let i = 0; i < 20 && !(await input.evaluate((e) => e === document.activeElement)); i++) await page.keyboard.press('Tab');
+	const outline = await page.locator('label.open').evaluate((e) => getComputedStyle(e).outlineStyle);
+	expect(outline).not.toBe('none');
+});
+
+test('the free-tier warning stays when the server check fails', async ({ page }) => {
+	await page.route('**/api/translate', (r) => (r.request().method() === 'GET' ? r.abort() : r.fallback()));
+	await page.goto('/comic-translator');
+	await expect(page.getByText('Translating on the free tier: only use public-domain or openly licensed pages.')).toBeVisible();
+});
+
 // ---------- Plan 3: report card, examples, home entry ----------
 
 const pipeline = JSON.parse(readFileSync('src/lib/data/comic-translator-pipeline.json', 'utf8'));
