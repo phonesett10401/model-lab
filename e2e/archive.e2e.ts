@@ -83,9 +83,9 @@ test('the assistants banner shows each audit’s measured leak rates and links t
 	await expect(board.getByRole('link', { name: 'Read the full audit' }).first()).toHaveAttribute('href', /\/audits\//);
 });
 
-test('an old shared link to an assistant forwards to its section; nothing downloads there', async ({ page }) => {
+test('an old shared link to an assistant forwards to its section; nothing downloads there', async ({ page, baseURL }) => {
 	const offsite: string[] = [];
-	page.on('request', (r) => { if (!r.url().startsWith('http://localhost:4173')) offsite.push(r.url()); });
+	page.on('request', (r) => { if (!r.url().startsWith(baseURL!)) offsite.push(r.url()); });
 	await page.goto('/?entry=raffel-luo');
 	await expect(page).toHaveURL(/\/assistants$/);
 	await page.waitForLoadState('networkidle');

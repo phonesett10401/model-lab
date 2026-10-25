@@ -5,6 +5,7 @@
 	import EventTimeline from './EventTimeline.svelte';
 	import EventList from './EventList.svelte';
 	import ReportCard from './ReportCard.svelte';
+	import ComicExamples from './ComicExamples.svelte';
 	import ImageInput from './inputs/ImageInput.svelte';
 	import TextInput from './inputs/TextInput.svelte';
 	import AudioInput from './inputs/AudioInput.svelte';
@@ -63,10 +64,10 @@
 	const previous = $derived(bench.kind === 'error' ? lastResult(bench) : null);
 
 	// On phones the answer lands below the input: bring it into view so a run never looks like nothing happened.
-	let out: HTMLElement;
+	let out = $state<HTMLElement>(); // state: it sits inside a block that only some entries render
 	$effect(() => {
 		if (compact && (bench.kind === 'result' || bench.kind === 'error'))
-			out.scrollIntoView({ block: 'nearest', behavior: reducedMotion.current ? 'auto' : 'smooth' });
+			out?.scrollIntoView({ block: 'nearest', behavior: reducedMotion.current ? 'auto' : 'smooth' });
 	});
 
 	let shownImage = $state<string | null>(null);
@@ -193,6 +194,9 @@
 			hidden={tabs.includes('demo') && current !== 'demo'}
 			aria-label="Demo"
 		>
+			{#if entry.task === 'translate'}
+			<ComicExamples />
+			{:else}
 			<div class="input-col">
 			{#if entry.input === 'image'}
 				<ImageInput
@@ -281,6 +285,7 @@
 					{/if}
 				{/if}
 			</div>
+			{/if}
 		</section>
 
 		<div class="report">

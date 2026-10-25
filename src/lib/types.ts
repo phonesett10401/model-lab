@@ -83,8 +83,8 @@ export interface ModelEntry extends EntryBase {
 	kind: 'model';
 	status: ModelStatus;
 	input: InputType;
-	/** 'detect' draws boxes; 'events' marks sounds on a timeline; default 'classify' shows the top answers. */
-	task?: 'classify' | 'detect' | 'events';
+	/** 'detect' draws boxes; 'events' marks sounds on a timeline; 'translate' shows finished examples and links its own tool page; default 'classify' shows the top answers. */
+	task?: 'classify' | 'detect' | 'events' | 'translate';
 	labels: string[];
 	unsureBelow: number;
 	samples: Sample[];

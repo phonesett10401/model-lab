@@ -1,0 +1,222 @@
+"""Scores the comic text detector, using the exported ONNX file (exactly what the browser will run).
+
+Run: python comic_evaluate.py <run> <val|test>
+On `test` it writes src/lib/data/comic-translator.json. Numbers there come only from this script, never typed by hand.
+"""
+import collections
+import contextlib
+import io
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+from PIL import Image
+
+import comic_common as c
+
+CONF = 0.3  # boxes at or above this count as the model's answer for precision/recall
+IOU = 0.5
+MIN_STYLE_PAGES = 10
+SIZE = 1024
+OUT = c.HERE.parent / 'src/lib/data/comic-translator.json'
+
+
+def _iou(a, b):
+    ix = max(0, min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0]))
+    iy = max(0, min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1]))
+    inter = ix * iy
+    return inter / (a[2] * a[3] + b[2] * b[3] - inter) if inter else 0.0
+
+
+def evaluate(gt: dict, pred: list[dict]) -> dict:
+    """{'per_class': {cls: {'precision', 'recall', 'ap50'}}, 'map50'}; a class with no boxes in gt gets None."""
+    from pycocotools.coco import COCO
+    from pycocotools.cocoeval import COCOeval
+
+    per_class = {}
+    with contextlib.redirect_stdout(io.StringIO()):
+        g = COCO()
+        g.dataset = json.loads(json.dumps(gt))
+        # pycocotools reads annotation id 0 as "unmatched", so ids must start at 1.
+        for i, a in enumerate(g.dataset['annotations'], start=1):
+            a['id'] = i
+        g.createIndex()
+        ap = {}
+        if pred:
+            e = COCOeval(g, g.loadRes(json.loads(json.dumps(pred))), 'bbox')
+            e.params.iouThrs = np.array([IOU])
+            e.evaluate()
+            e.accumulate()
+            for k in range(len(c.CLASSES)):
+                p = e.eval['precision'][0, :, k, 0, -1]
+                ap[k] = float(p[p > -1].mean()) if (p > -1).any() else None
+    all_hits = all_truth = 0
+    for k, name in enumerate(c.CLASSES):
+        truth = collections.defaultdict(list)
+        for a in gt['annotations']:
+            if a['category_id'] == k:
+                truth[a['image_id']].append(a['bbox'])
+        n_truth = sum(len(v) for v in truth.values())
+        if not n_truth:
+            per_class[name] = None
+            continue
+        hits = n_pred = 0
+        for image_id in {im['id'] for im in gt['images']}:
+            free = list(truth.get(image_id, []))
+            for p in sorted((p for p in pred if p['image_id'] == image_id and p['category_id'] == k and p['score'] >= CONF),
+                            key=lambda p: -p['score']):
+                n_pred += 1
+                best = max(free, key=lambda t: _iou(t, p['bbox']), default=None)
+                if best is not None and _iou(best, p['bbox']) >= IOU:
+                    hits += 1
+                    free.remove(best)
+        all_hits += hits
+        all_truth += n_truth
+        per_class[name] = {'precision': hits / n_pred if n_pred else 0.0, 'recall': hits / n_truth,
+                           'ap50': ap.get(k) or 0.0}
+    scored = [m['ap50'] for m in per_class.values() if m]
+    # Share of labelled text found by a box of the right type: "of the text the labelling found", not of all text.
+    return {'per_class': per_class, 'map50': float(np.mean(scored)) if scored else 0.0,
+            'recall_all': all_hits / all_truth if all_truth else 0.0}
+
+
+def subset(gt: dict, image_ids: set) -> dict:
+    return {**gt, 'images': [i for i in gt['images'] if i['id'] in image_ids],
+            'annotations': [a for a in gt['annotations'] if a['image_id'] in image_ids]}
+
+
+def by_style(pages: list[c.Page], gt: dict, pred: list[dict], min_pages: int = MIN_STYLE_PAGES) -> dict:
+    """Scores per style; a style with fewer than min_pages pages is None ("not yet measured")."""
+    style_of = {p.file: p.style for p in pages}
+    out = {}
+    for style in c.STYLES:
+        ids = {i['id'] for i in gt['images'] if style_of.get(i['file_name']) == style}
+        out[style] = None if len(ids) < min_pages else {
+            **evaluate(subset(gt, ids), [p for p in pred if p['image_id'] in ids]), 'pages': len(ids)}
+    return out
+
+
+def missed_text(path: Path = c.MISSED, gt: dict | None = None) -> dict | None:
+    """Totals of Claude's count of unlabelled English on sampled test pages, or None before the count exists.
+    With gt, each page's labelled count is taken from today's labels (the CSV's count can predate a re-labelling)."""
+    import csv
+    if not Path(path).exists():
+        return None
+    with open(path, newline='', encoding='utf8') as f:
+        rows = list(csv.DictReader(f))
+    # owner_check: empty (not checked), 'agree', or the owner's corrected count, which replaces Claude's.
+    checks = [(r.get('owner_check') or '').strip() for r in rows]
+    if gt:
+        boxes = collections.Counter(a['image_id'] for a in gt['annotations'])
+        now = {i['file_name']: boxes[i['id']] for i in gt['images']}
+        for r in rows:
+            r['labelled'] = now.get(r['file'], r['labelled'])
+    labelled = sum(int(r['labelled']) for r in rows)
+    missed = sum(int(ch) if ch.isdigit() else int(r['missed']) for r, ch in zip(rows, checks))
+    return {'pages': len(rows), 'labelled': labelled, 'missed': missed, 'missed_share': round(missed / (labelled + missed), 4),
+            'owner_checked': sum(bool(ch) for ch in checks), 'owner_agreed': sum(ch == 'agree' for ch in checks)}
+
+
+def training_counts(pages: list[c.Page], train_coco: dict) -> dict[str, int]:
+    """Pages actually in the training file, per source (the log also holds pages left out of training)."""
+    trained = {i['file_name'] for i in train_coco['images']}
+    return dict(collections.Counter(p.source for p in pages if p.file in trained))
+
+
+def predict(session, kind: str, im: Image.Image) -> list[tuple[int, float, list[float]]]:
+    """(class, score, [x, y, w, h]) in page pixels, scores down to 0.01 so AP sees the whole curve."""
+    W, H = im.size
+    if kind == 'dfine':
+        x = np.asarray(im.convert('RGB').resize((SIZE, SIZE), Image.BILINEAR), np.float32).transpose(2, 0, 1)[None] / 255
+        labels, boxes, scores = session.run(None, {'images': x, 'orig_target_sizes': np.array([[W, H]], np.int64)})
+        return [(int(l), float(s), [float(b[0]), float(b[1]), float(b[2] - b[0]), float(b[3] - b[1])])
+                for l, b, s in zip(labels[0], boxes[0], scores[0]) if s >= 0.01]
+    import torch
+    from torchvision.ops import batched_nms
+    r = min(SIZE / H, SIZE / W)
+    canvas = np.full((SIZE, SIZE, 3), 114, np.float32)
+    canvas[:round(H * r), :round(W * r)] = np.asarray(im.convert('RGB').resize((round(W * r), round(H * r)), Image.BILINEAR), np.float32)
+    (out,) = session.run(None, {'images': canvas[:, :, ::-1].transpose(2, 0, 1)[None].copy()})
+    o = torch.from_numpy(out[0])
+    cls_score, cls = o[:, 5:].max(1)
+    score = o[:, 4] * cls_score
+    keep = score >= 0.01
+    o, score, cls = o[keep], score[keep], cls[keep]
+    xyxy = torch.stack([o[:, 0] - o[:, 2] / 2, o[:, 1] - o[:, 3] / 2, o[:, 0] + o[:, 2] / 2, o[:, 1] + o[:, 3] / 2], 1) / r
+    keep = batched_nms(xyxy, score, cls, 0.45)
+    return [(int(cls[i]), float(score[i]), [float(xyxy[i, 0]), float(xyxy[i, 1]), float(xyxy[i, 2] - xyxy[i, 0]), float(xyxy[i, 3] - xyxy[i, 1])])
+            for i in keep.tolist()]
+
+
+def run_model(run: str, gt: dict) -> list[dict]:
+    import onnxruntime as ort
+    d = c.RUNS / run
+    # CPU, like the browser (and onnxruntime's GPU mode can't find cuDNN on this machine).
+    session = ort.InferenceSession(str(d / 'model.onnx'), providers=['CPUExecutionProvider'])
+    kind = (d / 'kind.txt').read_text().strip()
+    preds = []
+    for img in gt['images']:
+        for k, s, b in predict(session, kind, Image.open(c.DATA / 'images' / img['file_name'])):
+            preds.append({'image_id': img['id'], 'category_id': k, 'bbox': b, 'score': s})
+    return preds
+
+
+def table(r: dict) -> str:
+    rows = [f'{n:<9} ' + ('-' if m is None else f"AP50 {m['ap50']:.3f}  P {m['precision']:.3f}  R {m['recall']:.3f}")
+            for n, m in r['per_class'].items()]
+    return '\n'.join(rows + [f"mAP@50   {r['map50']:.3f}"])
+
+
+def build_report(run: str, gt: dict, result: dict, styles: dict, pages: list[c.Page], train_coco: dict,
+                 missed_path: Path = c.MISSED, review_path: Path = c.REVIEW) -> dict:
+    """The report-card numbers for the site. Every number comes from this run; nothing is typed by hand."""
+    split_of = {p.file: p.split for p in pages}
+    gone = c.dropped(review_path)
+    test_drops = sum(split_of.get(f) == 'test' for f in gone)
+    used = training_counts(pages, train_coco)
+    miss = missed_text(missed_path, gt)
+    per = lambda m: None if m is None else {k: round(m[k], 3) for k in ('ap50', 'precision', 'recall')}
+    return {
+        'run': run,
+        'data': [{'label': f'Training pages: {s}', 'value': n} for s, n in sorted(used.items())]
+                + [{'label': 'Test pages (real, never trained on)', 'value': len(gt['images'])},
+                   {'label': 'Test labels', 'value':
+                    'Made automatically and reviewed by Claude, not by a person: English found by OCR, box shapes and types from '
+                    'an earlier version of this detector, so scores measure agreement with that labelling. '
+                    f'{test_drops} test page{"" if test_drops == 1 else "s"} dropped in review ({len(gone)} pages in all)'}],
+        'metrics': {n: per(m) for n, m in result['per_class'].items()},
+        'map50': round(result['map50'], 3),
+        'found': {'of_labelled_text': round(result['recall_all'], 3),
+                  **({'worst_case_of_all_text': round(result['recall_all'] * (1 - miss['missed_share']), 3), 'missed_count': miss}
+                     if miss else {})},
+        'styles': {s: (None if r is None else {'pages': r['pages'], 'map50': round(r['map50'], 3),
+                                               'per_class': {n: per(m) for n, m in r['per_class'].items()}})
+                   for s, r in styles.items()},
+    }
+
+
+def main() -> None:
+    run, split = sys.argv[1:3]
+    gt = json.loads((c.DATA / 'annotations' / f'{split}.json').read_text(encoding='utf8'))
+    pred = run_model(run, gt)
+    pages = c.load_attribution()
+    result = evaluate(gt, pred)
+    styles = by_style(pages, gt, pred)
+    print(f'{run} on {split}: {len(gt["images"])} pages\n{table(result)}')
+    print(f"found {result['recall_all']:.3f} of the text the labelling found")
+    if split == 'test' and (miss := missed_text(gt=gt)):
+        print(f"worst case {result['recall_all'] * (1 - miss['missed_share']):.3f} of all text "
+              f"(labels missed {miss['missed']} of {miss['labelled'] + miss['missed']} pieces on {miss['pages']} pages counted by Claude; "
+              f"owner checked {miss['owner_checked']} and agreed with {miss['owner_agreed']})")
+    for s, r in styles.items():
+        print(f'-- {s}: ' + ('not yet measured (fewer than 10 pages)' if r is None else f"{r['pages']} pages, mAP@50 {r['map50']:.3f}"))
+    if split != 'test':
+        return
+    train = json.loads((c.DATA / 'annotations/train.json').read_text(encoding='utf8'))
+    OUT.write_text(json.dumps(build_report(run, gt, result, styles, pages, train), indent=1, ensure_ascii=False) + '\n', encoding='utf8')
+    print('wrote', OUT)
+
+
+if __name__ == '__main__':
+    main()

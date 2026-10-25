@@ -1,0 +1,233 @@
+import { describe, expect, it } from 'vitest';
+import { buildPrompt, handleTranslate, LIMITS, rateLimiter, validateLines } from './translate-server';
+import type { ServerEnv, SentLine } from './types';
+
+const env: ServerEnv = { key: 'test-key', model: 'gemini-3.5-flash', tier: 'free' };
+const line: SentLine = { n: 1, text: 'HELLO', cls: 'bubble', speaker: 'man' };
+
+function req(body: unknown, origin: string | null = 'https://lab.test', method = 'POST') {
+	const headers: Record<string, string> = { 'content-type': 'application/json' };
+	if (origin) headers.origin = origin;
+	return new Request('https://lab.test/api/translate', {
+		method, headers, body: method === 'GET' ? undefined : typeof body === 'string' ? body : JSON.stringify(body)
+	});
+}
+
+function fakeGemini(status: number, text: string) {
+	const calls: { url: string; init: RequestInit }[] = [];
+	const fetchImpl = (async (url: string, init: RequestInit) => {
+		calls.push({ url, init });
+		return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] }), { status });
+	}) as unknown as typeof fetch;
+	return { calls, fetchImpl };
+}
+
+const burmeseReply = JSON.stringify({ lines: [{ n: 1, text: 'မင်္ဂလာပါ' }] });
+
+describe('validateLines', () => {
+	it('accepts numbered text lines', () => {
+		expect(validateLines({ lines: [line] })).toEqual([line]);
+	});
+
+	it('rejects images and unknown fields', () => {
+		expect(validateLines({ lines: [line], image: 'data:image/png;base64,AAAA' })).toBeNull();
+		expect(validateLines({ lines: [{ ...line, cls: 'photo' }] })).toBeNull();
+		expect(validateLines({ lines: [line, { ...line }] })).toBeNull();
+		expect(validateLines({ lines: [{ ...line, text: 'A'.repeat(LIMITS.maxLineChars + 1) }] })).toBeNull();
+		expect(validateLines({ lines: Array.from({ length: LIMITS.maxLines + 1 }, (_, i) => ({ ...line, n: i + 1 })) })).toBeNull();
+		expect(validateLines({ lines: [{ ...line, extra: 'x' }] })).toBeNull();
+	});
+});
+
+describe('buildPrompt', () => {
+	it('prompt carries speaker and order', () => {
+		const p = buildPrompt([{ n: 2, text: 'BOOM', cls: 'sfx', speaker: 'unknown' }, line]);
+		expect(p.user.indexOf('1 [man]')).toBeGreaterThanOrEqual(0);
+		expect(p.user.indexOf('1 [man]')).toBeLessThan(p.user.indexOf('2 ['));
+		expect(p.user).toContain('[sfx]');
+		expect(p.system).toContain('ခင်ဗျာ');
+		expect(p.system).toContain('ရှင်');
+		expect(p.system).toContain('{"lines":[{"n":');
+		expect(p.system).toContain('OCR');
+		expect(p.system).toContain('"english"');
+		expect(p.system).toContain('short');
+		expect(p.system).toContain('never add words');
+		expect(p.system).toContain('empty text');
+		expect(p.system).toContain('only names');
+	});
+});
+
+describe('handleTranslate', () => {
+	it('rejects cross-origin', async () => {
+		for (const origin of ['https://evil.test', null]) {
+			const g = fakeGemini(200, burmeseReply);
+			const res = await handleTranslate(req({ lines: [line] }, origin), env, g.fetchImpl);
+			expect(res.status).toBe(403);
+			expect(await res.json()).toEqual({ ok: false, error: 'forbidden' });
+			expect(g.calls).toHaveLength(0);
+		}
+	});
+
+	it('rejects oversized body', async () => {
+		const g = fakeGemini(200, burmeseReply);
+		const res = await handleTranslate(req('x'.repeat(LIMITS.maxBodyBytes + 1)), env, g.fetchImpl);
+		expect(res.status).toBe(400);
+		expect(await res.json()).toEqual({ ok: false, error: 'bad-request' });
+		expect(g.calls).toHaveLength(0);
+	});
+
+	it('sends text only to Gemini', async () => {
+		const g = fakeGemini(200, burmeseReply);
+		await handleTranslate(req({ lines: [line] }), env, g.fetchImpl);
+		expect(g.calls).toHaveLength(1);
+		const { url, init } = g.calls[0];
+		expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent');
+		expect(new Headers(init.headers).get('x-goog-api-key')).toBe('test-key');
+		const body = String(init.body);
+		expect(JSON.parse(body).generationConfig.responseMimeType).toBe('application/json');
+		expect(body).toContain('HELLO');
+		expect(body).not.toContain('data:image');
+	});
+
+	it('parses fenced JSON', async () => {
+		const g = fakeGemini(200, '```json\n' + burmeseReply + '\n```');
+		const res = await handleTranslate(req({ lines: [line] }), env, g.fetchImpl);
+		expect(res.status).toBe(200);
+		expect(await res.json()).toEqual({ ok: true, lines: [{ n: 1, text: 'မင်္ဂလာပါ' }], model: 'gemini-3.5-flash' });
+	});
+
+	const limited = (quotaId: string) => (async () => new Response(JSON.stringify({ error: { code: 429, details: [
+		{ '@type': 'type.googleapis.com/google.rpc.QuotaFailure', violations: [{ quotaId }] }
+	] } }), { status: 429 })) as unknown as typeof fetch;
+
+	it('parses repaired English', async () => {
+		const g = fakeGemini(200, '```json\n' + JSON.stringify({ lines: [{ n: 1, text: 'မင်္ဂလာပါ', english: 'HELLO' }] }) + '\n```');
+		const res = await handleTranslate(req({ lines: [line] }), env, g.fetchImpl);
+		expect(await res.json()).toEqual({ ok: true, lines: [{ n: 1, text: 'မင်္ဂလာပါ', english: 'HELLO' }], model: 'gemini-3.5-flash' });
+	});
+
+	it('maps quota', async () => {
+		const quota = await handleTranslate(req({ lines: [line] }), env, limited('GenerateRequestsPerDayPerProjectPerModel-FreeTier'));
+		expect(quota.status).toBe(429);
+		expect(await quota.json()).toEqual({ ok: false, error: 'quota' });
+		for (const [status, text] of [[500, burmeseReply], [200, 'not json at all']] as const) {
+			const res = await handleTranslate(req({ lines: [line] }), env, fakeGemini(status, text).fetchImpl);
+			expect(res.status).toBe(502);
+			expect(await res.json()).toEqual({ ok: false, error: 'upstream' });
+		}
+	});
+
+	it('leaves retrying a passing failure to the page: one call each', async () => {
+		for (const first of [new Response('overloaded', { status: 503 }), new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'not json' }] } }] }))]) {
+			let calls = 0;
+			const fetchImpl = (async () => { calls++; return first; }) as unknown as typeof fetch;
+			const res = await handleTranslate(req({ lines: [line] }), env, fetchImpl);
+			expect(await res.json()).toEqual({ ok: false, error: 'upstream' });
+			expect(calls).toBe(1);
+		}
+	});
+
+	it('stops reading a body as soon as it passes the size cap', async () => {
+		const endless = new ReadableStream({ pull: (c) => c.enqueue(new Uint8Array(4096).fill(65)) }); // never ends
+		const r = new Request('https://lab.test/api/translate', { method: 'POST', headers: { origin: 'https://lab.test' }, body: endless, duplex: 'half' } as RequestInit);
+		const res = await handleTranslate(r, env, fakeGemini(200, burmeseReply).fetchImpl);
+		expect(res.status).toBe(400);
+	});
+
+	it('a missing key says not-configured, and never calls Gemini', async () => {
+		const g = fakeGemini(200, burmeseReply);
+		const res = await handleTranslate(req({ lines: [line] }), { ...env, key: '' }, g.fetchImpl);
+		expect(res.status).toBe(500);
+		expect(await res.json()).toEqual({ ok: false, error: 'not-configured' });
+		expect(g.calls).toHaveLength(0);
+	});
+
+	it('limits requests per visitor (by address), so nobody can use up the shared quota', async () => {
+		const limit = rateLimiter(2, 60_000);
+		const from = (ip: string) => { const r = req({ lines: [line] }); r.headers.set('x-forwarded-for', `${ip}, 10.0.0.1`); return r; };
+		const g = fakeGemini(200, burmeseReply);
+		for (let i = 0; i < 2; i++) expect((await handleTranslate(from('1.2.3.4'), env, g.fetchImpl, limit)).status).toBe(200);
+		const third = await handleTranslate(from('1.2.3.4'), env, g.fetchImpl, limit);
+		expect(third.status).toBe(429);
+		expect(await third.json()).toEqual({ ok: false, error: 'rate-limited' });
+		expect((await handleTranslate(from('5.6.7.8'), env, g.fetchImpl, limit)).status).toBe(200);
+		expect(g.calls).toHaveLength(3);
+	});
+
+	it('a refused request says so, without retrying', async () => {
+		let calls = 0;
+		const fetchImpl = (async () => { calls++; return new Response(JSON.stringify({ promptFeedback: { blockReason: 'PROHIBITED_CONTENT' } })); }) as unknown as typeof fetch;
+		const res = await handleTranslate(req({ lines: [line] }), env, fetchImpl);
+		expect(await res.json()).toEqual({ ok: false, error: 'blocked' });
+		expect(calls).toBe(1);
+	});
+
+	it('a per-minute limit is busy, not used up', async () => {
+		for (const f of [limited('GenerateRequestsPerMinutePerProjectPerModel-FreeTier'), fakeGemini(429, '').fetchImpl]) {
+			const res = await handleTranslate(req({ lines: [line] }), env, f);
+			expect(res.status).toBe(429);
+			expect(await res.json()).toEqual({ ok: false, error: 'busy' });
+		}
+	});
+
+	describe('Flash first, Flash Lite after its daily quota', () => {
+		const both: ServerEnv = { ...env, fallback: 'gemini-3.5-flash-lite' };
+		/** Answers by model: `daily` models say their daily quota is used up, `minute` ones are busy. */
+		const byModel = (daily: string[], minute: string[] = []) => {
+			const called: string[] = [];
+			const fetchImpl = (async (url: string) => {
+				const model = url.match(/models\/([^:]+):/)![1];
+				called.push(model);
+				const quotaId = daily.includes(model) ? 'GenerateRequestsPerDayPerProjectPerModel-FreeTier'
+					: minute.includes(model) ? 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier' : '';
+				if (quotaId) return new Response(JSON.stringify({ error: { code: 429, details: [{ violations: [{ quotaId }] }] } }), { status: 429 });
+				return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: burmeseReply }] } }], modelVersion: `${model}-v` }));
+			}) as unknown as typeof fetch;
+			return { called, fetchImpl };
+		};
+
+		it('uses Flash while it has quota, and says which model answered', async () => {
+			const g = byModel([]);
+			const res = await handleTranslate(req({ lines: [line] }), both, g.fetchImpl);
+			expect(g.called).toEqual(['gemini-3.5-flash']);
+			expect((await res.json()).model).toBe('gemini-3.5-flash-v');
+		});
+
+		it('switches to Flash Lite when Flash is used up for the day', async () => {
+			const g = byModel(['gemini-3.5-flash']);
+			const res = await handleTranslate(req({ lines: [line] }), both, g.fetchImpl);
+			expect(g.called).toEqual(['gemini-3.5-flash', 'gemini-3.5-flash-lite']);
+			expect(await res.json()).toEqual({ ok: true, lines: [{ n: 1, text: 'မင်္ဂလာပါ' }], model: 'gemini-3.5-flash-lite-v' });
+		});
+
+		it('a busy Flash stays busy (no switch); both used up is quota', async () => {
+			const busy = byModel([], ['gemini-3.5-flash']);
+			expect(await (await handleTranslate(req({ lines: [line] }), both, busy.fetchImpl)).json()).toEqual({ ok: false, error: 'busy' });
+			expect(busy.called).toEqual(['gemini-3.5-flash']);
+			const gone = byModel(['gemini-3.5-flash', 'gemini-3.5-flash-lite']);
+			expect(await (await handleTranslate(req({ lines: [line] }), both, gone.fetchImpl)).json()).toEqual({ ok: false, error: 'quota' });
+		});
+
+		it('GET names both models', async () => {
+			const res = await handleTranslate(req(null, 'https://lab.test', 'GET'), both, fakeGemini(200, '').fetchImpl);
+			expect(await res.json()).toEqual({ model: 'gemini-3.5-flash', fallback: 'gemini-3.5-flash-lite', tier: 'free' });
+		});
+	});
+
+	it('GET reports model and tier', async () => {
+		const res = await handleTranslate(req(null, 'https://lab.test', 'GET'), env, fakeGemini(200, '').fetchImpl);
+		expect(await res.json()).toEqual({ model: 'gemini-3.5-flash', tier: 'free' });
+	});
+
+	it('never leaks the key', async () => {
+		const cases: Request[] = [
+			req({ lines: [line] }), req({ lines: [line] }, 'https://evil.test'), req('{bad'), req(null, 'https://lab.test', 'GET')
+		];
+		for (const status of [200, 429, 500]) {
+			for (const r of cases) {
+				const res = await handleTranslate(r.clone(), env, fakeGemini(status, burmeseReply).fetchImpl);
+				expect(await res.text()).not.toContain('test-key');
+			}
+		}
+	});
+});
