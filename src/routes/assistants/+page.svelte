@@ -19,7 +19,7 @@
 	<meta property="og:type" content="website" />
 	<meta property="og:title" content="RAG assistants · AI Model Lab" />
 	<meta property="og:description" content="Two document chatbots built to be attacked, with every leak measured before and after each defence." />
-	<meta property="og:image" content="{page.url.origin}/og/home.png" />
+	<meta property="og:image" content="{page.url.origin}/og/assistants.png" />
 	<!-- Like the assistant pages: fictional districts and codes stay out of search results. -->
 	<meta name="robots" content="noindex" />
 </svelte:head>
@@ -27,7 +27,7 @@
 <header class="hero">
 	<div class="copy">
 		
-		<h1 class="serif">Ask it. Attack it. See what leaks.</h1>
+		<h1 class="serif">Ask it. Attack it. <span class="accent">See what leaks.</span></h1>
 		<p class="lede soft">Two document chatbots, each holding a few restricted files. They run in your browser, and every attack on them is measured with no defence, with each defence, and with all of them together.</p>
 		<a class="cta btn" href="#assistants">Choose an assistant</a>
 	</div>
@@ -66,6 +66,7 @@
 	.hero { padding: var(--space-4) var(--gutter) var(--space-5); display: grid; gap: var(--space-4); align-items: center; }
 	.copy { display: grid; gap: var(--space-2); justify-items: start; }
 	h1 { font-size: var(--step-4); line-height: 0.98; }
+	h1 .accent { color: var(--red); }
 	.lede { max-width: 46ch; font-size: var(--step-1); }
 
 	.board { margin: 0; display: grid; gap: var(--space-2); padding: var(--space-3); background: var(--plate); border: 1px solid var(--hairline); min-width: 0; }

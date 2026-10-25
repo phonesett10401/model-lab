@@ -23,7 +23,7 @@
 <header class="hero">
 	<div class="copy">
 		
-		<h1 class="serif">Click it. Test it. See the result.</h1>
+		<h1 class="serif">Click it. Test it. <span class="accent">See the result.</span></h1>
 		<p class="lede soft">Small AI models I train. Each one has a report card that shows how it fails.</p>
 		<a class="cta btn" href="#archive">Open the archive</a>
 	</div>
@@ -67,6 +67,7 @@
 	@media (min-width: 640px) { .hero { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); } }
 	.copy { display: grid; gap: var(--space-2); justify-items: start; }
 	h1 { font-size: var(--step-4); line-height: 0.98; }
+	h1 .accent { color: var(--red); }
 	.lede { max-width: 46ch; font-size: var(--step-1); }
 	.plate { margin: 0; background: var(--plate); border: 1px solid var(--hairline); padding: var(--space-2); display: grid; gap: var(--space-2); }
 	figcaption { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; color: var(--ink-faint); }
