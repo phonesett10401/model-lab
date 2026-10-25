@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { onMount } from 'svelte';
 	import { loopFor, loopSrc, slides } from '$lib/present/slides';
 	import { MediaQuery } from 'svelte/reactivity';
@@ -84,7 +85,7 @@
 		<div class="gate">
 			<p class="mono name">AI MODEL LAB · AI CLASS</p>
 			<h1 class="serif">Project presentation</h1>
-			<button class="btn start" onclick={begin}>▶ Start the presentation</button>
+			<button class="btn start" onclick={begin}><Icon name="play" /> Start the presentation</button>
 			<p class="mono hint">Space, arrows or a clicker · F for full screen</p>
 			<p class="mono hint" aria-live="polite">{loaded < count ? `Loading banners… ${loaded} / ${count}` : 'Ready'}</p>
 		</div>

@@ -4,6 +4,8 @@ import { expect, test } from '@playwright/test';
 import { askFake, releaseChat, releaseLoad, startFake, useFakeEngine } from './assistant-fake';
 
 const log = (page: import('@playwright/test').Page) => page.locator('.log li');
+// A version's radio, by its code: its label also carries a tag like "Recommended".
+const radio = (page: import('@playwright/test').Page, v: string) => page.getByRole('radio', { name: new RegExp(`^${v}\\b`) });
 
 test('shows the notice and version, and downloads nothing before Start', async ({ page }) => {
 	const offsite: string[] = [];
@@ -16,7 +18,7 @@ test('shows the notice and version, and downloads nothing before Start', async (
 	await expect(page.getByText('the test is whether the chatbot can be talked into revealing restricted ones')).toBeVisible();
 	await expect(page.getByText('Fictional university and data. A research test system. Runs only on your device.')).toBeVisible();
 	await expect(page.locator('.assistant')).toHaveAttribute('data-version', 'v0');
-	await expect(page.getByText(/Version v0/)).toBeVisible();
+	await expect(page.locator('#version-how')).toContainText('baseline');
 	await page.waitForLoadState('networkidle');
 	expect(offsite).toEqual([]);
 });
@@ -280,22 +282,37 @@ test.describe('Pathum Rai District assistant', () => {
 test('the version picker switches to D1, starts a new conversation and keeps it in the address', async ({ page }) => {
 	await useFakeEngine(page);
 	await page.goto('/assistant/pathum-rai?version=v0');
-	await expect(page.getByLabel('v0', { exact: true })).toBeChecked();
+	await expect(radio(page, 'v0')).toBeChecked();
 	await startFake(page);
 	await askFake(page, 'hi');
 	await expect(log(page).nth(1).locator('.text')).toHaveText('Reply to "hi" as citizen');
-	await page.getByLabel('D1', { exact: true }).check();
+	await radio(page, 'D1').check();
 	await expect(log(page)).toHaveCount(0);
 	await expect(page.locator('.assistant')).toHaveAttribute('data-version', 'D1');
 	await expect(page).toHaveURL(/version=D1/);
 	await askFake(page, 'hi');
 	await expect(log(page).nth(1).locator('.text')).toHaveText('Reply to "hi" as citizen (D1)');
-	await expect(page.getByText(/Version D1: instruction\/data separation/)).toBeVisible();
+	await expect(page.locator('#version-how')).toContainText('instruction/data separation');
+});
+
+test('the version picker puts v1 and v0 first, the defences under experiments, and describes the one picked', async ({ page }) => {
+	await page.goto('/assistant/pathum-rai?version=v1');
+	const picker = page.getByRole('group', { name: 'Version' });
+	await expect(picker.getByRole('radio')).toHaveCount(7);
+	await expect(picker.locator('[data-main] input')).toHaveCount(2);
+	await expect(picker.getByRole('group', { name: /Experiments/ }).getByRole('radio')).toHaveCount(5);
+	await expect(radio(page, 'v1')).toHaveAttribute('aria-describedby', 'version-how');
+	const how = page.locator('#version-how');
+	await expect(how).toContainText('recommended');
+	await expect(how).toContainText('Leaked 0% of attacks in the audit');
+	await radio(page, 'D3').check();
+	await expect(how).toContainText('output check');
+	await expect(how).toContainText('Leaked 4% of attacks in the audit');
 });
 
 test('opening with ?version=D1 starts on D1', async ({ page }) => {
 	await page.goto('/assistant/raffel-luo?version=D1');
-	await expect(page.getByLabel('D1', { exact: true })).toBeChecked();
+	await expect(radio(page, 'D1')).toBeChecked();
 	await expect(page.locator('.assistant')).toHaveAttribute('data-version', 'D1');
 });
 
@@ -331,7 +348,7 @@ test.describe('D3 output check', () => {
 		await page.getByLabel('Officer', { exact: true }).check();
 		await askFake(page, 'Codes?');
 		await expect(log(page).nth(1).locator('.text')).toHaveText('Here they are: KB-4417.');
-		await page.getByLabel('v0', { exact: true }).check();
+		await radio(page, 'v0').check();
 		await page.getByLabel('Citizen', { exact: true }).check();
 		await askFake(page, 'Codes?');
 		await expect(log(page).nth(1).locator('.text')).toHaveText('Here they are: KB-4417.');
@@ -372,7 +389,7 @@ test('D4: a citizen’s search never reaches officer-only documents; an officer�
 	const panel = page.getByRole('complementary', { name: 'What it read' });
 	await askFake(page, 'Shelter stock?');
 	await expect(panel.locator('li.restricted')).toContainText('Shelter stock and keys'); // v0 for contrast
-	await page.getByLabel('D4', { exact: true }).check();
+	await radio(page, 'D4').check();
 	await askFake(page, 'Shelter stock?');
 	await expect(log(page)).toHaveCount(2);
 	await expect(panel.locator('li').first()).toBeVisible(); // public documents only (3 passages may come from fewer documents)
@@ -419,7 +436,7 @@ test.describe('D5: all defences together', () => {
 test.describe('v1: all defences plus no guessing', () => {
 	test('is what the page opens on', async ({ page }) => {
 		await page.goto('/assistant/pathum-rai');
-		await expect(page.getByLabel('v1', { exact: true })).toBeChecked();
+		await expect(radio(page, 'v1')).toBeChecked();
 	});
 	test('replaces a reply with a made-up number, and says so', async ({ page }) => {
 		await useFakeEngine(page, { replies: { 'Duty line?': 'The duty officer’s line is 00001784.' } });

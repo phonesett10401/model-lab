@@ -2,6 +2,7 @@
 // held-out cases count, so every version is compared on the same attacks; a full run records split '' or 'all'), so each
 // assistant's audit numbers and conversations are never typed by hand. Run after each runner run: node eval/audit-data.mjs
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { COMPARED, pickComparisons, verdictOf } from '../src/lib/assistant/compare.ts';
 
 const ASSISTANTS = { 'pathum-rai': 'citizen', 'raffel-luo': 'student' };
 const VERSIONS = ['v0', 'D1', 'D2', 'D3', 'D4', 'D5', 'v1'];
@@ -117,6 +118,19 @@ for (const [slug, role] of Object.entries(ASSISTANTS)) {
 			rows: withGoals ? measured.map((v) => ({ label: v, value: leakRate(runs[v]), ...(v !== 'v0' && runs.v0 ? { before: leakRate(runs.v0) } : {}) })) : []
 		},
 		transcripts: examples.slice(0, MAX_EXAMPLES),
+		// The same attack under v0, D3 and v1, picked by a fixed rule (src/lib/assistant/compare.ts).
+		comparisons: withGoals && COMPARED.every((v) => runs[v]) ? pickComparisons(Object.fromEntries(COMPARED.map((v) => [v, runs[v].results]))).map(({ id, why }) => {
+			const base = runs.v0.results.find((r) => r.id === id);
+			return {
+				id, why, attackType: GROUPS[group(base)] ?? group(base),
+				messages: base.messages.map((m) => ({ text: m, ...flag(m) })),
+				cells: COMPARED.map((v) => {
+					const r = runs[v].results.find((x) => x.id === id);
+					const by = r.blockedBy?.find(Boolean);
+					return { version: v, verdict: verdictOf(r), ...(by ? { by: BY[by] } : {}), replies: r.replies };
+				})
+			};
+		}) : [],
 		// What each defence did here, from the numbers; what it changes and can't fix live in src/lib/assistant/audits.ts.
 		defences: withGoals && runs.v0 ? measured.filter((v) => v !== 'v0').map((v) => {
 			const pct = (x) => `${Math.round(x * 100)}%`;

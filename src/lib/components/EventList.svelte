@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { clock } from '$lib/runtime/events';
 	import type { Prediction } from '$lib/types';
 
@@ -23,7 +24,7 @@
 <ol class="events" aria-label="Sounds heard">
 	{#each predictions.slice(0, max) as p, i (i)}
 		<li data-label={p.label} data-start={p.start} data-end={p.end} data-score={p.score}>
-			<button class="btn ghost play" disabled={!src} onclick={() => play(p)} aria-label="Play {p.label}, {clock(p.start ?? 0)} to {clock(p.end ?? 0)}">▶</button>
+			<button class="btn ghost play" disabled={!src} onclick={() => play(p)} aria-label="Play {p.label}, {clock(p.start ?? 0)} to {clock(p.end ?? 0)}"><Icon name="play" /></button>
 			<span>{p.label}</span>
 			<span class="mono faint">{clock(p.start ?? 0)}–{clock(p.end ?? 0)}</span>
 			<span class="mono">{Math.round(p.score * 100)}%</span>

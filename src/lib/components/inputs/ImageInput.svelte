@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { MediaQuery } from 'svelte/reactivity';
 	import { checkFile, readableImage } from '$lib/input-checks';
 	import { tagStyle } from '$lib/tags';
@@ -71,7 +72,7 @@
 
 <div class="actions">
 	{#if touch.current}
-		<button class="btn" {disabled} onclick={() => camera.click()}>📷 Camera</button>
+		<button class="btn" {disabled} onclick={() => camera.click()}><Icon name="camera" /> Camera</button>
 	{/if}
 	<button class="btn" class:ghost={touch.current} {disabled} onclick={() => upload.click()}>Upload</button>
 	<input bind:this={camera} type="file" accept="image/*" capture="environment" hidden onchange={(e) => take(e.currentTarget.files?.[0])} />

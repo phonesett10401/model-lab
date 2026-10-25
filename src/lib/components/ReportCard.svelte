@@ -18,7 +18,7 @@
 
 <div class="report">
 	<section id="{idPrefix}-data" {role} aria-labelledby="{idPrefix}-data-h" hidden={!show.includes('data')}>
-		<svelte:element this={h} id="{idPrefix}-data-h" class="h mono">DATA</svelte:element>
+		<svelte:element this={h} id="{idPrefix}-data-h" class="h">Data</svelte:element>
 		<Rule />
 		<dl>
 			{#each report.data as d (d.label)}
@@ -28,7 +28,7 @@
 	</section>
 
 	<section id="{idPrefix}-metrics" {role} aria-labelledby="{idPrefix}-metrics-h" hidden={!show.includes('metrics')}>
-		<svelte:element this={h} id="{idPrefix}-metrics-h" class="h mono">{report.metrics.title.toUpperCase()}</svelte:element>
+		<svelte:element this={h} id="{idPrefix}-metrics-h" class="h">{report.metrics.title}</svelte:element>
 		<Rule />
 		<ol class="bars">
 			{#each rows as r (r.label)}
@@ -43,7 +43,7 @@
 	</section>
 
 	<section id="{idPrefix}-fails" {role} aria-labelledby="{idPrefix}-fails-h" hidden={!show.includes('fails')}>
-		<svelte:element this={h} id="{idPrefix}-fails-h" class="h mono">HOW IT FAILS</svelte:element>
+		<svelte:element this={h} id="{idPrefix}-fails-h" class="h">How it fails</svelte:element>
 		<Rule />
 		{#if report.failures.length === 0}
 			<p class="mono faint">not yet measured</p>
@@ -52,7 +52,7 @@
 				{#each report.failures as f, i (i)}
 					<li>
 						<p class="mono">true: {f.truth}</p>
-						<p class="mono said">said: {f.said}{f.score > 0 ? ` · ${pct(f.score)}%` : ''}</p>
+						<p class="mono said">said: {f.said}{f.score > 0 ? `, ${pct(f.score)}%` : ''}</p>
 						<p class="soft">{f.why}</p>
 						{#if onpick && f.sampleId}
 							<button class="btn ghost" onclick={() => onpick(f.sampleId!)}>Try this one</button>
@@ -68,7 +68,7 @@
 	.report { display: grid; gap: var(--space-4); }
 	section { display: grid; gap: var(--space-2); align-content: start; }
 	section[hidden] { display: none; }
-	.h { color: var(--red); font-weight: 500; letter-spacing: 0.12em; font-size: var(--step--1); }
+	.h { font-family: var(--font-serif); font-size: var(--step-2); }
 	dl { margin: 0; display: grid; }
 	dl div { display: flex; justify-content: space-between; gap: var(--space-2); padding: 0.4rem 0; border-bottom: 1px solid var(--hairline); }
 	dt { flex-shrink: 0; max-width: 45%; }

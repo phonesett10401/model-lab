@@ -15,7 +15,7 @@
 	data-sveltekit-noscroll
 	data-sveltekit-keepfocus
 >
-	<span class="meta mono">No. {pad(entry.no)} · {kindLabel(entry)}</span>
+	<span class="meta mono"><span>No. {pad(entry.no)}</span><span>{kindLabel(entry)}</span></span>
 	<span class="name serif" data-plate-title={entry.slug}>{entry.name}</span>
 	<span class="stamps">
 		<Stamp status={entry.status} />
@@ -27,11 +27,11 @@
 	.plate {
 		display: grid; gap: 0.3rem; min-height: 44px; padding: var(--space-2);
 		background: var(--plate); border: 1px solid var(--hairline); text-decoration: none;
-		transition: box-shadow 0.2s, border-color 0.2s;
+		transition: box-shadow var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out);
 	}
 	@media (hover: hover) { .plate:hover { border-color: var(--ink-faint); } }
 	.plate[aria-current='true'] { box-shadow: inset 3px 0 var(--red); border-color: var(--ink-faint); }
-	.meta { color: var(--ink-faint); letter-spacing: 0.1em; }
+	.meta { color: var(--ink-faint); display: flex; flex-wrap: wrap; gap: 0.75em; }
 	.name { font-size: var(--step-1); line-height: 1.1; }
 	.stamps { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 </style>

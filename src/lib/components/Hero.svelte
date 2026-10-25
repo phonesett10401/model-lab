@@ -22,10 +22,10 @@
 
 <header class="hero">
 	<div class="copy">
-		<p class="kicker mono">VOL. 01 · SMALL MODELS, HONEST REPORT CARDS</p>
-		<h1 class="serif">Click it. Test it. <em>See the result.</em></h1>
+		
+		<h1 class="serif">Click it. Test it. See the result.</h1>
 		<p class="lede soft">Small AI models I train. Each one has a report card that shows how it fails.</p>
-		<a class="cta btn" href="#archive">Open the archive ↓</a>
+		<a class="cta btn" href="#archive">Open the archive</a>
 	</div>
 
 	<figure
@@ -33,7 +33,7 @@
 		onmouseenter={() => (paused = true)} onmouseleave={() => (paused = false)}
 		onfocusin={() => (paused = true)} onfocusout={() => (paused = false)}
 	>
-		<figcaption class="mono">No. {s.label} · EXAMINING… <Stamp status="sample" /></figcaption>
+		<figcaption class="mono"><span>Examining: {s.label.toLowerCase()}</span><Stamp status="sample" /></figcaption>
 		{#key i}
 			<div class="specimen">
 				{#if s.kind === 'image'}
@@ -66,9 +66,7 @@
 	}
 	@media (min-width: 640px) { .hero { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); } }
 	.copy { display: grid; gap: var(--space-2); justify-items: start; }
-	.kicker { color: var(--red); letter-spacing: 0.14em; }
 	h1 { font-size: var(--step-4); line-height: 0.98; }
-	h1 em { color: var(--red); }
 	.lede { max-width: 46ch; font-size: var(--step-1); }
 	.plate { margin: 0; background: var(--plate); border: 1px solid var(--hairline); padding: var(--space-2); display: grid; gap: var(--space-2); }
 	figcaption { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; color: var(--ink-faint); }

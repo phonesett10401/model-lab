@@ -8,7 +8,7 @@
 
 <EntryMeta entry={data.entry} />
 <article class="page">
-	<a class="back mono" href="/?entry={data.entry.slug}#archive">← Archive</a>
+	<a class="back mono" href="/?entry={data.entry.slug}#archive">Back to the archive</a>
 	<EntryHeader entry={data.entry} level={1} />
 	<Workbench entry={data.entry} header={false} />
 </article>

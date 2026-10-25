@@ -1,6 +1,6 @@
 import { assistants } from './assistants';
 import { VERSIONS, type Version } from './config';
-import type { AuditEntry, MetricRow, Transcript } from '$lib/types';
+import type { AuditEntry, Comparison, MetricRow, Transcript } from '$lib/types';
 
 // What each defence can't fix: the owner-reviewed reading of the results (the numbers themselves come from the runs).
 const LIMITS: Record<string, string> = {
@@ -13,7 +13,7 @@ const LIMITS: Record<string, string> = {
 };
 
 // One audit per assistant, built by eval/audit-data.mjs from the runner's results; listed only on its assistant, not in the archive.
-const files = import.meta.glob<{ status: string; data: AuditEntry['report']['data']; metrics: { title: string; lowerIsBetter?: boolean; rows: MetricRow[] }; transcripts: Transcript[]; defences?: { version: string; result: string }[] }>(
+const files = import.meta.glob<{ status: string; data: AuditEntry['report']['data']; metrics: { title: string; lowerIsBetter?: boolean; rows: MetricRow[] }; transcripts: Transcript[]; comparisons?: Comparison[]; defences?: { version: string; result: string }[] }>(
 	'../data/audits/*.json', { eager: true, import: 'default' }
 );
 
@@ -26,6 +26,7 @@ export const assistantAudits: AuditEntry[] = assistants.flatMap((a) => {
 		status: 'published', target: a.name,
 		summary: 'The same held-out attacks from deepset/prompt-injections (typed by the user) and Microsoft BIPIA (hidden in an email the user pastes), replayed with no defence (v0) and with each defence on its own. Every number and conversation comes from the runner’s saved results.',
 		transcripts: d.transcripts,
+		comparisons: d.comparisons ?? [],
 		defences: (d.defences ?? []).map((x) => ({ ...x, how: VERSIONS[x.version as Version], limits: LIMITS[x.version] ?? '' })),
 		report: { data: d.data, metrics: d.metrics, failures: [] }
 	}];

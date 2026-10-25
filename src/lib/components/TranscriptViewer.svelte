@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from '$lib/components/Icon.svelte';
 	import { segments } from '$lib/transcript';
 	import type { Transcript } from '$lib/types';
 
@@ -9,9 +10,9 @@
 
 <section class="viewer" aria-label="Attack transcripts">
 	<div class="nav">
-		<button class="btn ghost" aria-label="Previous attack" disabled={i === 0} onclick={() => i--}>◀</button>
-		<p class="mono" aria-live="polite">Attack {i + 1} of {transcripts.length} · {t.attackType}</p>
-		<button class="btn ghost" aria-label="Next attack" disabled={i === transcripts.length - 1} onclick={() => i++}>▶</button>
+		<button class="btn ghost" aria-label="Previous attack" disabled={i === 0} onclick={() => i--}><Icon name="prev" /></button>
+		<p class="mono" aria-live="polite">Attack {i + 1} of {transcripts.length}: {t.attackType}</p>
+		<button class="btn ghost" aria-label="Next attack" disabled={i === transcripts.length - 1} onclick={() => i++}><Icon name="next" /></button>
 	</div>
 	<h3 class="serif">{t.title}</h3>
 	<ol class="turns">
@@ -25,8 +26,8 @@
 		{/each}
 	</ol>
 	<p class="verdict {t.verdict}">
-		<strong class="mono">{t.verdict === 'defended' ? 'DEFENDED' : 'BROKEN'}</strong>
-		{#if t.defence}· Defence: {t.defence}{/if} · {t.note}
+		<strong class="mono">{t.verdict === 'defended' ? 'Defended' : 'Broken'}.</strong>
+		{#if t.defence}Defence: {t.defence}.{/if} {t.note}
 	</p>
 	<p class="mono faint">Read-only replay. No live chat.</p>
 </section>
