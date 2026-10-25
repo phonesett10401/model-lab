@@ -351,6 +351,46 @@ test('edits redraw from the original', async ({ page }) => {
 	await expect.poll(() => canvasHash(page)).toBe(second);
 });
 
+const LONG = Array(250).fill('မင်္ဂလာပါ').join(' ');
+
+test('a too-long line is flagged, not retried', async ({ page }) => {
+	const bodies = await fakeTranslate(page, { ok: true, lines: [{ n: 1, text: LONG }], model: 'gemini-3.5-flash' });
+	await setUp(page);
+	await page.getByRole('button', { name: 'Translate page' }).click();
+	await expect(rows(page).nth(0).getByText('The Burmese is longer than the space: shorten it or check it')).toBeVisible();
+	await expect(rows(page).nth(0)).toHaveAttribute('data-mode', 'too-long');
+	expect(bodies).toHaveLength(1);
+});
+
+test('retrying a too-long line asks for a shorter one', async ({ page }) => {
+	const bodies = await fakeTranslate(page, { ok: true, lines: [{ n: 1, text: LONG }], model: 'gemini-3.5-flash' });
+	await setUp(page);
+	await page.getByRole('button', { name: 'Translate page' }).click();
+	await expect(rows(page).nth(0).getByText('The Burmese is longer than the space')).toBeVisible();
+	await page.getByRole('button', { name: 'Retry flagged lines' }).click();
+	await expect.poll(() => bodies.length).toBe(2);
+	expect(JSON.parse(bodies[1]).lines[0]).toEqual({ n: 1, text: 'HELLO THERE', cls: 'bubble', speaker: 'man', short: true });
+});
+
+test('a box marked as a sound effect is not sent and not lettered', async ({ page }) => {
+	const bodies = await fakeTranslateAll(page, 'အိမ်ပြန်ကြစို့');
+	await setUp(page, true);
+	await rows(page).nth(0).getByLabel('Kind').selectOption('sfx');
+	await expect(rows(page).nth(0).getByText('Sound effects are left as drawn')).toBeVisible();
+	await page.getByRole('button', { name: 'Translate page' }).click();
+	await expect(page.locator('.stage[aria-label="Burmese page"]')).toHaveAttribute('data-rendered', 'true');
+	expect(bodies).toHaveLength(1);
+	expect(JSON.parse(bodies[0]).lines.map((l: { text: string }) => l.text)).toEqual(['GO HOME']);
+	const changed = await page.evaluate(() => {
+		const get = (label: string) => document.querySelector<HTMLCanvasElement>(`[aria-label="${label}"] canvas`)!.getContext('2d')!.getImageData(100, 100, 300, 150).data;
+		const a = get('Original page'), b = get('Burmese page');
+		let n = 0;
+		for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) n++;
+		return n;
+	});
+	expect(changed).toBe(0);
+});
+
 test('uses the Myanmar font', async ({ page }) => {
 	await translated(page);
 	expect(await page.evaluate(() => document.fonts.check('16px "Noto Sans Myanmar"', 'မ'))).toBe(true);

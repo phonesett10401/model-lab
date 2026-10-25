@@ -14,8 +14,9 @@ export function validateLines(body: unknown): SentLine[] | null {
 	if (!Array.isArray(lines) || lines.length === 0 || lines.length > LIMITS.maxLines) return null;
 	const seen = new Set<number>();
 	for (const l of lines) {
-		if (!l || typeof l !== 'object' || Object.keys(l).length !== 4) return null;
-		const { n, text, cls, speaker } = l as SentLine;
+		if (!l || typeof l !== 'object') return null;
+		const { n, text, cls, speaker, short } = l as SentLine;
+		if (Object.keys(l).length !== ('short' in l ? 5 : 4) || ('short' in l && short !== true)) return null;
 		if (!Number.isInteger(n) || n < 1 || seen.has(n)) return null;
 		if (typeof text !== 'string' || text.length > LIMITS.maxLineChars) return null;
 		if (!CLASSES.includes(cls) || !SPEAKERS.includes(speaker)) return null;
@@ -34,11 +35,12 @@ export function buildPrompt(lines: SentLine[]): { system: string; user: string }
 		'Write Myanmar Unicode only, never Zawgyi. Write every word in Burmese: only names may stay in English letters.',
 		'The English comes from OCR and may contain reading mistakes (0 for O, missing letters, joined words): fix them from context.',
 		'Fix only clear reading mistakes: never add words or finish a sentence that is not there, and drop stray symbols (| = a—— and the like). If a line is mostly junk, translate only the words you can read.',
+		...(lines.some((l) => l.short) ? ['Lines marked [shorter] came out too long for their space: give a shorter Burmese line with the same meaning.'] : []),
 		'Reply with JSON only, exactly {"lines":[{"n":<number>,"text":"<Burmese>","english":"<the English, corrected>"}]}, with the same numbers you were given, one entry each.'
 	].join('\n');
 	const user = [...lines]
 		.sort((a, b) => a.n - b.n)
-		.map((l) => `${l.n} [${l.speaker}] [${l.cls}] ${l.text}`)
+		.map((l) => `${l.n} [${l.speaker}] [${l.cls}] ${l.short ? '[shorter] ' : ''}${l.text}`)
 		.join('\n');
 	return { system, user };
 }
