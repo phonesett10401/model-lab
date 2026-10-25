@@ -164,6 +164,24 @@ test('letters the Burmese in place', async ({ page }) => {
 	expect(inside).toBeGreaterThan(100);
 });
 
+test('keeps the bubble outline and the art around it', async ({ page }) => {
+	await fakeTranslate(page, { ok: true, lines: [{ n: 1, text: 'မင်္ဂလာပါ' }], model: 'gemini-3.5-flash' });
+	await openFile(page, 'page.png', 'image/png', await comicPng(page));
+	// A loose box, as the detector draws them: bubble (100,100)-(400,250) plus art on every side.
+	await drawBox(page, 0.1, 0.1, 0.75, 0.35);
+	await rows(page).nth(0).getByLabel('English').fill('HELLO THERE');
+	await page.getByRole('button', { name: 'Translate page' }).click();
+	await expect(page.locator('.stage[aria-label="Burmese page"]')).toHaveAttribute('data-rendered', 'true');
+	const px = await page.evaluate(() => {
+		const c = document.querySelector<HTMLCanvasElement>('[aria-label="Burmese page"] canvas')!;
+		const g = c.getContext('2d')!;
+		const at = (x: number, y: number) => [...g.getImageData(x, y, 1, 1).data.slice(0, 3)];
+		return { art: at(70, 90), outline: at(100, 175) };
+	});
+	expect(px.art).toEqual([0x99, 0xaa, 0xbb]); // the art inside the box is untouched
+	expect(px.outline.every((v) => v < 60)).toBe(true); // the outline is still drawn
+});
+
 test('uses the Myanmar font', async ({ page }) => {
 	await translated(page);
 	expect(await page.evaluate(() => document.fonts.check('16px "Noto Sans Myanmar"', 'မ'))).toBe(true);

@@ -1,3 +1,4 @@
+import { bubbleShape } from './bubble.ts';
 import { eraseStyle } from './erase.ts';
 import { fitText, fontRange } from './fit.ts';
 import type { Region } from './types.ts';
@@ -20,17 +21,29 @@ export async function renderPage(
 		const text = r.burmese.trim();
 		if (!text) continue;
 		const { x, y, w, h } = r.box;
-		const erase = eraseStyle(ctx.getImageData(Math.round(x), Math.round(y), Math.max(1, Math.round(w)), Math.max(1, Math.round(h))).data, r.cls);
+		const rx = Math.round(x), ry = Math.round(y), rw = Math.max(1, Math.round(w)), rh = Math.max(1, Math.round(h));
+		const img = ctx.getImageData(rx, ry, rw, rh);
+		const erase = eraseStyle(img.data, r.cls);
 		const inner = { x: x + PAD, y: y + PAD, w: Math.max(1, w - 2 * PAD), h: Math.max(1, h - 2 * PAD) };
 		const measure = (s: string, size: number) => {
 			ctx.font = `${size}px ${FONT}`;
 			return ctx.measureText(s).width;
 		};
-		const fit = fitText(text, inner, full, measure, { ...fontRange(page.width), lineHeight: LINE_HEIGHT });
+		const opts = { ...fontRange(page.width), lineHeight: LINE_HEIGHT };
+		// A speech bubble keeps its shape: only the paper inside the outline (and the letters on it) is painted over,
+		// and the Burmese goes in the oval. If it doesn't fit there, the plain box below takes over.
+		const shape = r.cls === 'bubble' ? bubbleShape(img.data, rw, rh) : null;
+		const oval = shape && fitText(text, { x: rx + shape.inner.x, y: ry + shape.inner.y, w: shape.inner.w, h: shape.inner.h }, full, measure, opts);
+		const fit = oval?.mode === 'fit' ? oval : fitText(text, inner, full, measure, opts);
 		counts[fit.mode]++;
 		modes[r.id] = fit.mode;
 
-		if (erase.mode === 'fill' && fit.mode !== 'cover') {
+		if (shape && fit === oval) {
+			const [pr, pg, pb] = shape.color.match(/\d+/g)!.map(Number);
+			for (let i = 0; i < shape.mask.length; i++)
+				if (shape.mask[i]) img.data.set([pr, pg, pb, 255], i * 4);
+			ctx.putImageData(img, rx, ry);
+		} else if (erase.mode === 'fill' && fit.mode !== 'cover') {
 			ctx.fillStyle = erase.color;
 			ctx.fillRect(x, y, w, h);
 			if (fit.mode === 'grown') ctx.fillRect(fit.box.x, fit.box.y, fit.box.w, fit.box.h);
