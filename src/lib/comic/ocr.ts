@@ -1,3 +1,4 @@
+import { whitenOutside } from './bubble';
 import type { Box } from './types';
 
 /** Which English model: picked by measurement in plan 3 task 3 (see training/comic_vendor.md). */
@@ -77,6 +78,10 @@ function crop(bmp: ImageBitmap, box: Box, scale: number, clean: boolean): HTMLCa
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
 	ctx.filter = 'grayscale(1)';
 	ctx.drawImage(bmp, x, y, w, h, pad, pad, scale * w, scale * h);
+	// Inside a bubble only its letters matter: the art around them made clean lettering read as junk
+	// ("Thank you!" came back as "cD" with the bar behind it in the crop, and right once the art was whitened).
+	const all = ctx.getImageData(pad, pad, scale * w, scale * h);
+	if (whitenOutside(all.data, scale * w, scale * h)) ctx.putImageData(all, pad, pad);
 	if (clean) {
 		const img = ctx.getImageData(pad, pad, scale * w, scale * h);
 		const g = new Uint8ClampedArray(scale * w * scale * h);

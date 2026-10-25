@@ -62,3 +62,14 @@ it('keeps one box when two sit on the same text, of any kind', async () => {
 	]);
 	expect(kept.map((d) => d.score)).toEqual([0.8, 0.7, 0.6]);
 });
+
+it('skips sound effects, even when one sits on a bubble', async () => {
+	const { cleanUp } = await import('./detect');
+	const b = (x: number, y: number) => ({ x, y, w: 100, h: 100 });
+	const kept = cleanUp([
+		{ box: b(0, 0), cls: 'sfx', score: 0.9, tile: 0 },
+		{ box: b(2, 2), cls: 'bubble', score: 0.6, tile: 0 },
+		{ box: b(300, 0), cls: 'sfx', score: 0.8, tile: 0 }
+	]);
+	expect(kept.map((d) => d.cls)).toEqual(['bubble']);
+});

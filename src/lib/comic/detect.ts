@@ -63,6 +63,12 @@ export function dropTwins(dets: Detection[]): Detection[] {
 	return kept;
 }
 
+/** Everything after the model: merge across tiles, drop wrappers, skip sound effects (the owner leaves them in the
+ * art), then keep one box per piece of text. Sound effects go before the twins, so one can't win over a bubble. */
+export function cleanUp(found: (Detection & { tile: number })[]): Detection[] {
+	return dropTwins(dropContainers(mergeBoxes(found)).filter((d) => d.cls !== 'sfx'));
+}
+
 function tensorOf(bmp: ImageBitmap, t: Box): Float32Array {
 	const canvas = document.createElement('canvas');
 	canvas.width = canvas.height = SIZE;
@@ -103,7 +109,7 @@ function create() {
 					found.push({ box: { x: t.x + x0, y: t.y + y0, w: x1 - x0, h: y1 - y0 }, cls: CLASSES[Number(labels[i])], score: scores[i], tile });
 				}
 			}
-			return dropTwins(dropContainers(mergeBoxes(found)));
+			return cleanUp(found);
 		}
 	};
 }

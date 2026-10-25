@@ -30,7 +30,7 @@ export function buildPrompt(lines: SentLine[]): { system: string; user: string }
 		'The lines are one comic page in reading order. Each has a number, a speaker and a kind of text.',
 		'Make endings fit the speaker: a polite man ends with ခင်ဗျာ, a polite woman with ရှင်; friends talk casually.',
 		'Keep each line short, like real comic dialogue: about as long as the English where you can, so it fits the speech bubble.',
-		'Translate sound effects (sfx) as Burmese sound words. Keep names as names.',
+		'Sound effects (CLAP!, BOOM!, GRRR) and lines that are only junk stay as drawn: give them an empty text. Keep names as names.',
 		'Write Myanmar Unicode only, never Zawgyi.',
 		'The English comes from OCR and may contain reading mistakes (0 for O, missing letters, joined words): fix them from context.',
 		'Fix only clear reading mistakes: never add words or finish a sentence that is not there, and drop stray symbols (| = a—— and the like). If a line is mostly junk, translate only the words you can read.',
@@ -99,28 +99,34 @@ export async function handleTranslate(req: Request, env: ServerEnv, fetchImpl: t
 	});
 	// The main model first; only when its free daily quota is used up does the fallback model get the same request.
 	const models = [env.model, env.fallback].filter((m): m is string => !!m);
-	for (const [i, model] of models.entries()) {
-		let res: Response;
-		try {
-			res = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-				method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': env.key }, body
-			});
-		} catch {
-			return reply({ ok: false, error: 'upstream' }, 502);
+	tryModels: for (const [i, model] of models.entries()) {
+		// Gemini sometimes fails in passing (a 5xx, or a reply that isn't the JSON asked for): one more try each.
+		for (let attempt = 0; attempt < 2; attempt++) {
+			let res: Response;
+			try {
+				res = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+					method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': env.key }, body
+				});
+			} catch {
+				if (attempt === 0) continue;
+				return reply({ ok: false, error: 'upstream' }, 502);
+			}
+			// Gemini sends 429 for both the daily cap and the per-minute rate; only the daily one means "try tomorrow".
+			if (res.status === 429) {
+				const daily = perDay(await res.json().catch(() => null));
+				if (daily && i < models.length - 1) continue tryModels;
+				return reply({ ok: false, error: daily ? 'quota' : 'busy' }, 429);
+			}
+			const json = res.ok ? await res.json().catch(() => null) : null;
+			const got = parseGemini(json);
+			if (!got) {
+				if (attempt === 0) continue;
+				return reply({ ok: false, error: 'upstream' }, 502);
+			}
+			// Name the model Gemini says answered: an alias can be served by a newer model.
+			const version = (json as { modelVersion?: unknown })?.modelVersion;
+			return reply({ ok: true, lines: got, model: typeof version === 'string' ? version : model });
 		}
-		// Gemini sends 429 for both the daily cap and the per-minute rate; only the daily one means "try tomorrow".
-		if (res.status === 429) {
-			const daily = perDay(await res.json().catch(() => null));
-			if (daily && i < models.length - 1) continue;
-			return reply({ ok: false, error: daily ? 'quota' : 'busy' }, 429);
-		}
-		if (!res.ok) return reply({ ok: false, error: 'upstream' }, 502);
-		const json = await res.json().catch(() => null);
-		const got = parseGemini(json);
-		if (!got) return reply({ ok: false, error: 'upstream' }, 502);
-		// Name the model Gemini says answered: an alias can be served by a newer model.
-		const version = (json as { modelVersion?: unknown })?.modelVersion;
-		return reply({ ok: true, lines: got, model: typeof version === 'string' ? version : model });
 	}
 	return reply({ ok: false, error: 'upstream' }, 502);
 }

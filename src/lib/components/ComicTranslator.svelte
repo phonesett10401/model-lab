@@ -278,8 +278,17 @@
 				const r = byPage[at].find((x) => x.id === id);
 				if (r) await read(r, page);
 			}
+			// A found box nobody can read is almost always a sound effect or a scribble: leave it as drawn rather than
+			// ask for typing. (A box drawn by hand still asks.)
+			const dropped = new Set(ids.filter((id) => byPage[at].find((x) => x.id === id)?.problem === 'unread'));
+			byPage[at] = byPage[at].filter((x) => !dropped.has(x.id));
+			const kept = ids.length - dropped.size;
 			auto = 'done';
-			autoStatus = `${prefix}Found ${ids.length} pieces of English. Check them below.`;
+			if (!kept) {
+				autoStatus = `${prefix}No English found. Draw boxes by hand.`;
+				return 'none';
+			}
+			autoStatus = `${prefix}Found ${kept} pieces of English. Check them below.`;
 			return 'found';
 		} catch {
 			if (gone()) return 'gone'; // a page released mid-read: nothing to report

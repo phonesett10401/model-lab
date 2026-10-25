@@ -29,6 +29,11 @@ describe('checkLines', () => {
 		expect(got('Saito ဆီ အခုချက်ချင်းသွား')).toBeNull();
 	});
 
+	it('an empty line on purpose (a sound effect, junk) is left as drawn, not flagged', () => {
+		expect(checkLines([sent(1, 'CLAP! CLAP!')], [{ n: 1, text: '' }]).byN.get(1)).toEqual({ text: '', problem: null });
+		expect(checkLines([sent(1, 'CLAP!')], [{ n: 1, text: '  ' }]).byN.get(1)).toEqual({ text: '', problem: null });
+	});
+
 	it('flags Zawgyi', () => {
 		expect(isZawgyiLikely('ေမာင္')).toBe(true);
 		expect(isZawgyiLikely('မောင်')).toBe(false);

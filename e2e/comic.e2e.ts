@@ -355,6 +355,16 @@ test('translates every chosen file, one request per page', async ({ page }) => {
 	await expect.poll(() => rows(page).count()).toBeGreaterThanOrEqual(3);
 });
 
+test('found boxes the reader cannot read are dropped, not flagged (sound effects, scribbles)', async ({ page }) => {
+	test.setTimeout(180_000);
+	await openFile(page, 'p10.jpg', 'image/jpeg', readFileSync('e2e/fixtures/comic-pepper-e39p10.jpg'));
+	await page.getByRole('button', { name: 'Find the text for me' }).click();
+	await expect(page.locator('.comic')).toHaveAttribute('data-auto', 'done', { timeout: 150_000 });
+	await expect(page.getByText('Couldn’t read this. Type the English.')).toHaveCount(0);
+	const english = await rows(page).evaluateAll((els) => els.map((li) => (li.querySelector('label.wide input') as HTMLInputElement).value));
+	expect(english).toContain('Thank you!'); // clean lettering over busy art, read once the art is whitened
+});
+
 test('auto finds nothing', async ({ page }) => {
 	test.setTimeout(180_000);
 	const bodies = await fakeTranslate(page, { ok: true, lines: [], model: 'gemini-3.5-flash' });

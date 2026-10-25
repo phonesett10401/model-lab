@@ -2,12 +2,14 @@ import type { Box } from './types.ts';
 
 /** How far (per colour channel) a pixel may be from the paper colour and still count as paper. */
 const NEAR = 40;
-/** A rectangle inside an ellipse covers about 71% of each axis, so the text area is pulled in about 15% per side. */
-const INSET = 0.15;
-/** A second, looser text area, tried before giving up on the oval for a long translation. */
-const LOOSE = 0.07;
+/** A small margin inside the largest rectangle that fits in the bubble. */
+const INSET = 0.06;
+/** A second, looser text area, tried before giving up on the bubble for a long translation. */
+const LOOSE = 0;
 /** Gaps in an outline up to twice this many pixels wide are closed before the inside is flooded. */
 const GAP = 2;
+/** Most a paper colour's channels may differ (cream paper ~40; a lilac window ~60 is art). */
+const SATURATION = 45;
 
 /**
  * Finds the speech bubble in a box (RGBA pixels, w×h): its paper colour, the pixels to paint (the paper inside the
@@ -26,6 +28,8 @@ export function bubbleShape(px: Uint8ClampedArray, w: number, h: number): { colo
 		if (!central(i)) continue;
 		const [r, g, b] = [px[i * 4], px[i * 4 + 1], px[i * 4 + 2]];
 		if (0.299 * r + 0.587 * g + 0.114 * b < 150) continue;
+		// Paper is white, grey or a faint cream; a coloured light patch (a lit window, sky) is art, not a bubble.
+		if (Math.max(r, g, b) - Math.min(r, g, b) > SATURATION) continue;
 		const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
 		const s = buckets.get(key) ?? { n: 0, r: 0, g: 0, b: 0 };
 		s.n++; s.r += r; s.g += g; s.b += b;
@@ -88,9 +92,33 @@ export function bubbleShape(px: Uint8ClampedArray, w: number, h: number): { colo
 	if (hullArea <= enclosed * 1.3)
 		hull.forEach((r, y) => { if (r) mask.fill(1, y * w + r[0], y * w + r[1] + 1); });
 
-	const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
-	const area = (k: number) => ({ x: x0 + bw * k, y: y0 + bh * k, w: bw * (1 - 2 * k), h: bh * (1 - 2 * k) });
-	return { color: `rgb(${paper.join(',')})`, mask, inner: area(INSET), loose: area(LOOSE) };
+	// The text goes in the largest rectangle that lies wholly inside the bubble: a tail or a cut edge makes the
+	// bubble's bounding box much bigger than the oval, and a rectangle cut from that box would stick out of it.
+	const room = inscribed(mask, w, h, Math.round((x0 + x1) / 2));
+	const shrink = (k: number) => ({ x: room.x + room.w * k, y: room.y + room.h * k, w: room.w * (1 - 2 * k), h: room.h * (1 - 2 * k) });
+	return { color: `rgb(${paper.join(',')})`, mask, inner: shrink(INSET), loose: shrink(LOOSE) };
+}
+
+/** Largest-area rectangle inside the mask, built from each row's run of mask pixels through column `cx`. */
+function inscribed(mask: Uint8Array, w: number, h: number, cx: number): Box {
+	const L = new Int32Array(h).fill(-1), R = new Int32Array(h).fill(-2);
+	for (let y = 0; y < h; y++) {
+		if (!mask[y * w + cx]) continue;
+		let a = cx, b = cx;
+		while (a > 0 && mask[y * w + a - 1]) a--;
+		while (b < w - 1 && mask[y * w + b + 1]) b++;
+		L[y] = a; R[y] = b;
+	}
+	let best: Box = { x: cx, y: 0, w: 1, h: 1 }, bestArea = 0;
+	for (let top = 0; top < h; top++) {
+		let l = -Infinity, r = Infinity;
+		for (let y = top; y < h && L[y] >= 0; y++) {
+			l = Math.max(l, L[y]); r = Math.min(r, R[y]);
+			const area = (r - l + 1) * (y - top + 1);
+			if (area > bestArea) { bestArea = area; best = { x: l, y: top, w: r - l + 1, h: y - top + 1 }; }
+		}
+	}
+	return best;
 }
 
 /** Shrinks (min) or grows (max) a 0/1 map by r pixels along rows, or along columns when `cols` is set. */
@@ -144,4 +172,13 @@ function hullRows(marked: Uint8Array, w: number, h: number): ([number, number] |
 		if (lo <= hi) rows[y] = [Math.max(0, Math.ceil(lo - 1e-9)), Math.min(w - 1, Math.floor(hi + 1e-9))];
 	}
 	return rows;
+}
+
+/** For the OCR: paints everything outside the bubble white, so only its letters are read, not the art around them.
+ * Returns false (pixels untouched) when the box holds no clear bubble. */
+export function whitenOutside(px: Uint8ClampedArray, w: number, h: number): boolean {
+	const s = bubbleShape(px, w, h);
+	if (!s) return false;
+	for (let i = 0; i < s.mask.length; i++) if (!s.mask[i]) px.set([255, 255, 255], i * 4);
+	return true;
 }

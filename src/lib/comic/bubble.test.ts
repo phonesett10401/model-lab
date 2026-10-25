@@ -80,3 +80,42 @@ it('does not leak through a small gap in the outline into a white background', (
 	expect(s.mask[15 * w + 74]).toBe(0); // the outline near the top right stays
 	expect(s.mask[40 * w + 50]).toBe(1); // the letters go
 });
+
+it('puts the text area wholly inside a bubble with a tail', () => {
+	const w = 120, h = 100, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const d = ((x - 60) / 40) ** 2 + ((y - 35) / 25) ** 2;
+			const tail = y >= 55 && y < 95 && Math.abs(x - (60 + (y - 55) * 0.9)) < (95 - y) / 8; // a long tail down-right
+			const v = d <= 1 || tail ? 255 : d <= 1.12 ? 0 : 110;
+			px.set([v, v, v, 255], (y * w + x) * 4);
+		}
+	const s = bubbleShape(px, w, h)!;
+	for (const a of [s.inner, s.loose])
+		for (const [x, y] of [[a.x, a.y], [a.x + a.w - 1, a.y], [a.x, a.y + a.h - 1], [a.x + a.w - 1, a.y + a.h - 1]])
+			expect(((Math.round(x) - 60) / 40) ** 2 + ((Math.round(y) - 35) / 25) ** 2, `corner ${x},${y}`).toBeLessThanOrEqual(1);
+	expect(s.loose.w * s.loose.h).toBeGreaterThan(0.4 * Math.PI * 40 * 25); // and still a good share of the oval
+});
+
+it('takes white paper, not a coloured light patch, as the bubble', () => {
+	const w = 100, h = 100, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const window = y < 60; // a light lilac window filling the top
+			const d = ((x - 50) / 35) ** 2 + ((y - 78) / 15) ** 2; // the white bubble at the bottom
+			px.set(window ? [200, 180, 240, 255] : d <= 1 ? [255, 255, 255, 255] : d <= 1.15 ? [0, 0, 0, 255] : [60, 40, 30, 255], (y * w + x) * 4);
+		}
+	const s = bubbleShape(px, w, h)!;
+	expect(s.color).toBe('rgb(255,255,255)');
+	expect(s.mask[20 * w + 50]).toBe(0); // the window is left alone
+});
+
+it('whitens everything outside the bubble for the OCR, keeping the letters', async () => {
+	const { whitenOutside } = await import('./bubble');
+	const { px, w, h } = page();
+	expect(whitenOutside(px, w, h)).toBe(true);
+	expect([...px.slice((1 * w + 1) * 4, (1 * w + 1) * 4 + 3)]).toEqual([255, 255, 255]); // art gone
+	expect(px[(40 * w + 50) * 4]).toBe(0); // the letter stays
+	const busy = new Uint8ClampedArray(40 * 40 * 4).map((_, i) => (i * 37) % 256);
+	expect(whitenOutside(busy, 40, 40)).toBe(false); // no bubble: left as it is
+});

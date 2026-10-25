@@ -52,6 +52,7 @@ describe('buildPrompt', () => {
 		expect(p.system).toContain('"english"');
 		expect(p.system).toContain('short');
 		expect(p.system).toContain('never add words');
+		expect(p.system).toContain('empty text');
 	});
 });
 
@@ -112,6 +113,17 @@ describe('handleTranslate', () => {
 			const res = await handleTranslate(req({ lines: [line] }), env, fakeGemini(status, text).fetchImpl);
 			expect(res.status).toBe(502);
 			expect(await res.json()).toEqual({ ok: false, error: 'upstream' });
+		}
+	});
+
+	it('retries once when Gemini has a passing failure', async () => {
+		for (const first of [new Response('overloaded', { status: 503 }), new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'not json' }] } }] }))]) {
+			const answers = [first, new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: burmeseReply }] } }] }))];
+			let calls = 0;
+			const fetchImpl = (async () => { calls++; return answers.shift()!; }) as unknown as typeof fetch;
+			const res = await handleTranslate(req({ lines: [line] }), env, fetchImpl);
+			expect(await res.json()).toEqual({ ok: true, lines: [{ n: 1, text: 'မင်္ဂလာပါ' }], model: 'gemini-3.5-flash' });
+			expect(calls).toBe(2);
 		}
 	});
 

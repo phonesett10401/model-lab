@@ -33,7 +33,8 @@ export function checkLines(sent: SentLine[], got: GotLine[]): {
 	const byN = new Map<number, { text: string; problem: LineProblem | null }>();
 	for (const s of sent) {
 		const text = back.get(s.n);
-		byN.set(s.n, text === undefined ? { text: '', problem: 'missing' } : { text, problem: problemOf(s.text, text) });
+		// An empty text on purpose means "leave this one as drawn" (sound effects, junk), so it isn't a problem.
+		byN.set(s.n, text === undefined ? { text: '', problem: 'missing' } : !text.trim() ? { text: '', problem: null } : { text, problem: problemOf(s.text, text) });
 	}
 	const asked = new Set(sent.map((s) => s.n));
 	return { byN, extra: got.map((g) => g.n).filter((n) => !asked.has(n)) };
