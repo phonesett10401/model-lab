@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 import { loadEnv, type Plugin } from 'vite';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
-import { handleTranslate } from './src/lib/comic/translate-server.ts';
+import { handleTranslate, LIMITS } from './src/lib/comic/translate-server.ts';
 import { copyOcrAssets } from './src/lib/comic/ocr-assets.ts';
 
 // The comic translator's OCR files, served from our own site (static/ocr/ is git-ignored and filled from node_modules).
@@ -15,8 +15,14 @@ const translateDev = (): Plugin => ({
 	configureServer(server) {
 		const env = loadEnv(server.config.mode, process.cwd(), '');
 		server.middlewares.use('/api/translate', async (req, res) => {
+			// Stop reading past the cap: the handler then sees an oversized body and refuses it.
 			const chunks: Buffer[] = [];
-			for await (const c of req) chunks.push(c as Buffer);
+			let size = 0;
+			for await (const c of req) {
+				chunks.push(c as Buffer);
+				size += (c as Buffer).length;
+				if (size > LIMITS.maxBodyBytes) break;
+			}
 			const request = new Request(`http://${req.headers.host}/api/translate`, {
 				method: req.method,
 				headers: req.headers as Record<string, string>,

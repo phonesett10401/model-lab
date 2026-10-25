@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import { applyRepair, checkLines } from '$lib/comic/check';
 	import { serviceInfo, translateLines } from '$lib/comic/client';
 	import { latestOnly, loadFiles, type Pages } from '$lib/comic/load';
 	import { readingOrder } from '$lib/comic/order';
 	import { renderPage } from '$lib/comic/render';
 	import { comicDetector, MODEL_MB } from '$lib/comic/detect';
-	import { loadOcr, looksEnglish, OCR_MB, readBox } from '$lib/comic/ocr';
+	import { loadOcr, looksEnglish, OCR_MB, readBox, stopOcr } from '$lib/comic/ocr';
 	import { ENGINE_MB } from '$lib/runtime/engine';
 	import '@fontsource/noto-sans-myanmar/400.css';
 	import type { Box, LineProblem, Region, RegionClass, SentLine, Speaker } from '$lib/comic/types';
@@ -68,6 +68,10 @@
 	onMount(async () => {
 		info = await serviceInfo();
 		infoFailed = !info;
+	});
+	onDestroy(() => {
+		stopOcr();
+		ocrReady = false;
 	});
 
 	const OPEN_FAILED = 'That file couldn’t be opened. Try again.';
@@ -200,7 +204,8 @@
 			a.href = URL.createObjectURL(blob);
 			a.download = `comic-page-${index + 1}-my.png`;
 			a.click();
-			URL.revokeObjectURL(a.href);
+			// Released a moment later: revoking at once can cancel the download in Firefox and some Safari versions.
+			setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 		}, 'image/png');
 	}
 
@@ -320,6 +325,8 @@
 			error = reply.error === 'quota' ? 'Today’s translations are used up. Try again tomorrow.'
 				: reply.error === 'busy' ? 'Busy right now. Try again in a minute.'
 				: reply.error === 'blocked' ? 'Gemini wouldn’t translate this page. Type the Burmese.'
+				: reply.error === 'rate-limited' ? 'Too many translations from this connection. Try again in an hour.'
+				: reply.error === 'not-configured' ? 'Translation isn’t set up on this site yet.'
 				: 'Translation failed. Try again in a moment.';
 			return false;
 		}

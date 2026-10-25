@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPrompt, handleTranslate, LIMITS, validateLines } from './translate-server';
+import { buildPrompt, handleTranslate, LIMITS, rateLimiter, validateLines } from './translate-server';
 import type { ServerEnv, SentLine } from './types';
 
 const env: ServerEnv = { key: 'test-key', model: 'gemini-3.5-flash', tier: 'free' };
@@ -117,15 +117,41 @@ describe('handleTranslate', () => {
 		}
 	});
 
-	it('retries once when Gemini has a passing failure', async () => {
+	it('leaves retrying a passing failure to the page: one call each', async () => {
 		for (const first of [new Response('overloaded', { status: 503 }), new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'not json' }] } }] }))]) {
-			const answers = [first, new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: burmeseReply }] } }] }))];
 			let calls = 0;
-			const fetchImpl = (async () => { calls++; return answers.shift()!; }) as unknown as typeof fetch;
+			const fetchImpl = (async () => { calls++; return first; }) as unknown as typeof fetch;
 			const res = await handleTranslate(req({ lines: [line] }), env, fetchImpl);
-			expect(await res.json()).toEqual({ ok: true, lines: [{ n: 1, text: 'မင်္ဂလာပါ' }], model: 'gemini-3.5-flash' });
-			expect(calls).toBe(2);
+			expect(await res.json()).toEqual({ ok: false, error: 'upstream' });
+			expect(calls).toBe(1);
 		}
+	});
+
+	it('stops reading a body as soon as it passes the size cap', async () => {
+		const endless = new ReadableStream({ pull: (c) => c.enqueue(new Uint8Array(4096).fill(65)) }); // never ends
+		const r = new Request('https://lab.test/api/translate', { method: 'POST', headers: { origin: 'https://lab.test' }, body: endless, duplex: 'half' } as RequestInit);
+		const res = await handleTranslate(r, env, fakeGemini(200, burmeseReply).fetchImpl);
+		expect(res.status).toBe(400);
+	});
+
+	it('a missing key says not-configured, and never calls Gemini', async () => {
+		const g = fakeGemini(200, burmeseReply);
+		const res = await handleTranslate(req({ lines: [line] }), { ...env, key: '' }, g.fetchImpl);
+		expect(res.status).toBe(500);
+		expect(await res.json()).toEqual({ ok: false, error: 'not-configured' });
+		expect(g.calls).toHaveLength(0);
+	});
+
+	it('limits requests per visitor (by address), so nobody can use up the shared quota', async () => {
+		const limit = rateLimiter(2, 60_000);
+		const from = (ip: string) => { const r = req({ lines: [line] }); r.headers.set('x-forwarded-for', `${ip}, 10.0.0.1`); return r; };
+		const g = fakeGemini(200, burmeseReply);
+		for (let i = 0; i < 2; i++) expect((await handleTranslate(from('1.2.3.4'), env, g.fetchImpl, limit)).status).toBe(200);
+		const third = await handleTranslate(from('1.2.3.4'), env, g.fetchImpl, limit);
+		expect(third.status).toBe(429);
+		expect(await third.json()).toEqual({ ok: false, error: 'rate-limited' });
+		expect((await handleTranslate(from('5.6.7.8'), env, g.fetchImpl, limit)).status).toBe(200);
+		expect(g.calls).toHaveLength(3);
 	});
 
 	it('a refused request says so, without retrying', async () => {

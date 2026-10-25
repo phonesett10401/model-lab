@@ -77,19 +77,66 @@ function sameSite(req: Request): boolean {
 	}
 }
 
-export async function handleTranslate(req: Request, env: ServerEnv, fetchImpl: typeof fetch = fetch): Promise<Response> {
+/** Reads a request body as text, giving up (null) as soon as it passes `max` bytes, so a huge body is never held. */
+async function readCapped(req: Request, max: number): Promise<string | null> {
+	if (!req.body) return '';
+	const reader = req.body.getReader();
+	const parts: Uint8Array[] = [];
+	let size = 0;
+	for (;;) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		size += value.byteLength;
+		if (size > max) {
+			await reader.cancel();
+			return null;
+		}
+		parts.push(value);
+	}
+	const all = new Uint8Array(size);
+	let at = 0;
+	for (const p of parts) { all.set(p, at); at += p.byteLength; }
+	return new TextDecoder().decode(all);
+}
+
+/**
+ * At most `max` translations per visitor (by address) per `windowMs`, so one caller can't use up the shared daily
+ * quota. In memory, so on Vercel it holds per running instance only: the Vercel Firewall rule in the HANDOFF is the
+ * real guard, this is the backstop. ponytail: per-instance map; move to a shared store (KV) if abuse gets past it.
+ */
+export function rateLimiter(max = 100, windowMs = 60 * 60 * 1000): (ip: string) => boolean {
+	const seen = new Map<string, { start: number; count: number }>();
+	return (ip) => {
+		const now = Date.now();
+		const hit = seen.get(ip);
+		if (!hit || now - hit.start > windowMs) {
+			if (seen.size > 10_000) seen.clear(); // never grows without bound
+			seen.set(ip, { start: now, count: 1 });
+			return true;
+		}
+		hit.count++;
+		return hit.count <= max;
+	};
+}
+const perVisitor = rateLimiter();
+
+/** The caller's address as Vercel (and most proxies) pass it: the first entry of x-forwarded-for. */
+const callerOf = (req: Request) => (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || req.headers.get('x-real-ip') || 'unknown';
+
+export async function handleTranslate(req: Request, env: ServerEnv, fetchImpl: typeof fetch = fetch, allow = perVisitor): Promise<Response> {
 	if (req.method === 'GET') return reply({ model: env.model, ...(env.fallback ? { fallback: env.fallback } : {}), tier: env.tier });
 	if (req.method !== 'POST') return reply({ ok: false, error: 'bad-request' }, 405);
-	if (!sameSite(req)) return reply({ ok: false, error: 'forbidden' }, 403);
+	if (!sameSite(req)) return reply({ ok: false, error: 'forbidden' }, 403); // a first filter: Origin can be faked
+	if (!allow(callerOf(req))) return reply({ ok: false, error: 'rate-limited' }, 429);
 
-	const raw = await req.text();
-	if (new TextEncoder().encode(raw).length > LIMITS.maxBodyBytes) return reply({ ok: false, error: 'bad-request' }, 400);
+	const raw = await readCapped(req, LIMITS.maxBodyBytes);
+	if (raw === null) return reply({ ok: false, error: 'bad-request' }, 400);
 	let lines: SentLine[] | null = null;
 	try {
 		lines = validateLines(JSON.parse(raw));
 	} catch { /* bad JSON falls through */ }
 	if (!lines) return reply({ ok: false, error: 'bad-request' }, 400);
-	if (!env.key) return reply({ ok: false, error: 'upstream' }, 500);
+	if (!env.key) return reply({ ok: false, error: 'not-configured' }, 500); // can never succeed: the page doesn't retry it
 
 	const { system, user } = buildPrompt(lines);
 	const body = JSON.stringify({
@@ -99,37 +146,32 @@ export async function handleTranslate(req: Request, env: ServerEnv, fetchImpl: t
 	});
 	// The main model first; only when its free daily quota is used up does the fallback model get the same request.
 	const models = [env.model, env.fallback].filter((m): m is string => !!m);
-	tryModels: for (const [i, model] of models.entries()) {
-		// Gemini sometimes fails in passing (a 5xx, or a reply that isn't the JSON asked for): one more try each.
-		for (let attempt = 0; attempt < 2; attempt++) {
-			let res: Response;
-			try {
-				res = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-					method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': env.key }, body
-				});
-			} catch {
-				if (attempt === 0) continue;
-				return reply({ ok: false, error: 'upstream' }, 502);
-			}
-			// Gemini sends 429 for both the daily cap and the per-minute rate; only the daily one means "try tomorrow".
-			if (res.status === 429) {
-				const daily = perDay(await res.json().catch(() => null));
-				if (daily && i < models.length - 1) continue tryModels;
-				return reply({ ok: false, error: daily ? 'quota' : 'busy' }, 429);
-			}
-			const json = res.ok ? await res.json().catch(() => null) : null;
-			// Gemini's safety filter can refuse harmless comic lines ("GET IN TOUCH WITH MR. MIYAMURA." was refused as
-			// PROHIBITED_CONTENT); a refusal won't change on a retry, so say so and let the page send lines one by one.
-			if ((json as { promptFeedback?: { blockReason?: string } })?.promptFeedback?.blockReason) return reply({ ok: false, error: 'blocked' }, 422);
-			const got = parseGemini(json);
-			if (!got) {
-				if (attempt === 0) continue;
-				return reply({ ok: false, error: 'upstream' }, 502);
-			}
-			// Name the model Gemini says answered: an alias can be served by a newer model.
-			const version = (json as { modelVersion?: unknown })?.modelVersion;
-			return reply({ ok: true, lines: got, model: typeof version === 'string' ? version : model });
+	// One try per model: a passing failure (a 5xx, or a reply that isn't the JSON asked for) is retried by the page,
+	// after a pause, so a failing page never costs more than a few calls.
+	for (const [i, model] of models.entries()) {
+		let res: Response;
+		try {
+			res = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+				method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': env.key }, body
+			});
+		} catch {
+			return reply({ ok: false, error: 'upstream' }, 502);
 		}
+		// Gemini sends 429 for both the daily cap and the per-minute rate; only the daily one means "try tomorrow".
+		if (res.status === 429) {
+			const daily = perDay(await res.json().catch(() => null));
+			if (daily && i < models.length - 1) continue;
+			return reply({ ok: false, error: daily ? 'quota' : 'busy' }, 429);
+		}
+		const json = res.ok ? await res.json().catch(() => null) : null;
+		// Gemini's safety filter can refuse harmless comic lines ("GET IN TOUCH WITH MR. MIYAMURA." was refused as
+		// PROHIBITED_CONTENT); a refusal won't change on a retry, so say so and let the page send lines one by one.
+		if ((json as { promptFeedback?: { blockReason?: string } })?.promptFeedback?.blockReason) return reply({ ok: false, error: 'blocked' }, 422);
+		const got = parseGemini(json);
+		if (!got) return reply({ ok: false, error: 'upstream' }, 502);
+		// Name the model Gemini says answered: an alias can be served by a newer model.
+		const version = (json as { modelVersion?: unknown })?.modelVersion;
+		return reply({ ok: true, lines: got, model: typeof version === 'string' ? version : model });
 	}
 	return reply({ ok: false, error: 'upstream' }, 502);
 }

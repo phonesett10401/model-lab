@@ -11,7 +11,7 @@ export interface GotLine { n: number; text: string; english?: string }
 
 export type TranslateReply =
 	| { ok: true; lines: GotLine[]; model: string }
-	| { ok: false; error: 'bad-request' | 'forbidden' | 'quota' | 'busy' | 'upstream' | 'blocked' };
+	| { ok: false; error: 'bad-request' | 'forbidden' | 'quota' | 'busy' | 'upstream' | 'blocked' | 'not-configured' | 'rate-limited' };
 
 export type LineProblem = 'missing' | 'not-burmese' | 'zawgyi' | 'length' | 'unread' | 'blocked';
 

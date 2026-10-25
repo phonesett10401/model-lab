@@ -14,7 +14,8 @@ type Worker = import('tesseract.js').Worker;
 type Model = typeof OCR_MODEL;
 const workers = new Map<Model, Promise<Worker>>();
 
-/** One Tesseract worker per page, loaded from /ocr/ on our own site (copied there by vite.config.ts). */
+/** One Tesseract worker per model, kept while the translator is open (stopOcr ends it), loaded from /ocr/ on our own
+ * site (copied there by vite.config.ts). */
 function getWorker(model: Model = OCR_MODEL): Promise<Worker> {
 	const known = workers.get(model);
 	if (known) return known;
@@ -37,6 +38,12 @@ function getWorker(model: Model = OCR_MODEL): Promise<Worker> {
 }
 
 export const loadOcr = () => getWorker().then(() => undefined);
+
+/** Ends the workers when the visitor leaves the translator, so a phone gets their memory back. */
+export function stopOcr() {
+	for (const w of workers.values()) w.then((x) => x.terminate()).catch(() => {});
+	workers.clear();
+}
 
 /** Below this confidence a second, cleaned-up reading is tried and the more confident one kept. */
 const SURE = 60;

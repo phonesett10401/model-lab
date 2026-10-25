@@ -95,6 +95,8 @@ test('fills Burmese and flags problems', async ({ page }) => {
 	await page.getByRole('button', { name: 'Translate page' }).click();
 	await expect(rows(page).nth(0).getByLabel('Burmese')).toHaveValue('မင်္ဂလာပါ ခင်ဗျာ');
 	await expect(rows(page).nth(1).locator('.problem')).toHaveText('Didn’t come back. Retry or type your own.');
+	// The page retries a missing line by itself first; wait until those tries are over before changing the answers.
+	await expect(page.getByRole('button', { name: 'Retry flagged lines' })).toBeEnabled();
 	await fakeTranslate(page, { ok: true, lines: [{ n: 1, text: 'ဟယ်လို' }, { n: 2, text: 'အိမ်ပြန်' }], model: 'gemini-3.5-flash' });
 	await page.getByRole('button', { name: 'Retry flagged lines' }).click();
 	await expect(rows(page).nth(1).getByLabel('Burmese')).toHaveValue('အိမ်ပြန်');
