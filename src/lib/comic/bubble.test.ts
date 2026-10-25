@@ -59,8 +59,24 @@ it('paints a letter that touches the outline', () => {
 
 it('paints a letter that touches the edge of a tight box', () => {
 	const w = 120, h = 40, px = new Uint8ClampedArray(w * h * 4).fill(255);
-	for (let y = 2; y < 38; y++) for (let x = 0; x < 118; x++) if (x % 10 < 3 && (y < 18 || y >= 22)) px.set([0, 0, 0, 255], (y * w + x) * 4);
+	for (let y = 4; y < 36; y++) for (let x = 0; x < 118; x++) if (x % 10 < 3 && (y < 18 || y >= 22)) px.set([0, 0, 0, 255], (y * w + x) * 4);
 	const s = bubbleShape(px, w, h)!;
 	expect(s.mask[10 * w + 1]).toBe(1); // the first letter, on the left edge
 	expect(s.mask[10 * w + 11]).toBe(1);
+});
+
+it('does not leak through a small gap in the outline into a white background', () => {
+	const w = 100, h = 80, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const d = ((x - 50) / 40) ** 2 + ((y - 40) / 30) ** 2;
+			const gap = x > 80 && y >= 39 && y < 42; // 3 px gap in the outline on the right
+			const letter = x >= 35 && x < 65 && y >= 36 && y < 44;
+			const v = d > 1.1 ? 255 : d > 1 ? (gap ? 255 : 0) : letter ? 0 : 255; // white background outside
+			px.set([v, v, v, 255], (y * w + x) * 4);
+		}
+	const s = bubbleShape(px, w, h)!;
+	expect(s.mask[40 * w + 9]).toBe(0); // the outline on the far side stays
+	expect(s.mask[15 * w + 74]).toBe(0); // the outline near the top right stays
+	expect(s.mask[40 * w + 50]).toBe(1); // the letters go
 });

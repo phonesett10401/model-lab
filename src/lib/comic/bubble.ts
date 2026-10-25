@@ -6,6 +6,8 @@ const NEAR = 40;
 const INSET = 0.15;
 /** A second, looser text area, tried before giving up on the oval for a long translation. */
 const LOOSE = 0.07;
+/** Gaps in an outline up to twice this many pixels wide are closed before the inside is flooded. */
+const GAP = 2;
 
 /**
  * Finds the speech bubble in a box (RGBA pixels, w×h): its paper colour, the pixels to paint (the paper inside the
@@ -50,7 +52,16 @@ export function bubbleShape(px: Uint8ClampedArray, w: number, h: number): { colo
 	// The bubble's inside: paper connected to the paper in the middle of the box.
 	const middle: number[] = [];
 	for (let i = 0; i < n; i++) if (central(i)) middle.push(i);
-	const inside = flood(middle, near);
+	// Outlines have small gaps (the tail, a panel edge); flooding straight through one leaks into a white background
+	// and the outline would then be painted over. So flood the paper shrunk by GAP pixels (which closes gaps up to
+	// 2×GAP wide), then grow the result back over the paper.
+	const paperMap = new Uint8Array(n);
+	for (let i = 0; i < n; i++) paperMap[i] = near(i) ? 1 : 0;
+	const core = spread(spread(paperMap, w, h, GAP, true), w, h, GAP, true, true);
+	const coreInside = flood(middle, (i) => core[i] === 1);
+	const grown = spread(spread(coreInside, w, h, GAP, false), w, h, GAP, false, true);
+	const inside = new Uint8Array(n);
+	for (let i = 0; i < n; i++) inside[i] = grown[i] && paperMap[i] ? 1 : 0;
 	let count = 0, x0 = w, y0 = h, x1 = 0, y1 = 0;
 	for (let i = 0; i < n; i++)
 		if (inside[i]) {
@@ -80,6 +91,25 @@ export function bubbleShape(px: Uint8ClampedArray, w: number, h: number): { colo
 	const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
 	const area = (k: number) => ({ x: x0 + bw * k, y: y0 + bh * k, w: bw * (1 - 2 * k), h: bh * (1 - 2 * k) });
 	return { color: `rgb(${paper.join(',')})`, mask, inner: area(INSET), loose: area(LOOSE) };
+}
+
+/** Shrinks (min) or grows (max) a 0/1 map by r pixels along rows, or along columns when `cols` is set. */
+function spread(m: Uint8Array, w: number, h: number, r: number, shrink: boolean, cols = false): Uint8Array {
+	const out = new Uint8Array(m.length);
+	const [len, lines, step, stride] = cols ? [h, w, w, 1] : [w, h, 1, w];
+	for (let l = 0; l < lines; l++) {
+		const base = l * stride;
+		for (let k = 0; k < len; k++) {
+			let v = shrink ? 1 : 0;
+			for (let d = -r; d <= r; d++) {
+				const j = k + d;
+				const got = j < 0 || j >= len ? (shrink ? 1 : 0) : m[base + j * step];
+				if (shrink ? !got : got) { v = shrink ? 0 : 1; break; }
+			}
+			out[base + k * step] = v;
+		}
+	}
+	return out;
 }
 
 /** Per row, the [first, last] pixel inside the convex hull of the marked pixels (null where the hull misses the row). */
