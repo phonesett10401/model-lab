@@ -5,6 +5,9 @@
 	import { latestOnly, loadPages, type Pages } from '$lib/comic/load';
 	import { readingOrder } from '$lib/comic/order';
 	import { renderPage } from '$lib/comic/render';
+	import { comicDetector, MODEL_MB } from '$lib/comic/detect';
+	import { loadOcr, looksEnglish, OCR_MB, readBox } from '$lib/comic/ocr';
+	import { ENGINE_MB } from '$lib/runtime/engine';
 	import '@fontsource/noto-sans-myanmar/400.css';
 	import type { Box, LineProblem, Region, RegionClass, SentLine, Speaker } from '$lib/comic/types';
 
@@ -14,8 +17,10 @@
 		missing: 'Didn’t come back. Retry or type your own.',
 		'not-burmese': 'Didn’t come back in Burmese. Retry or type your own.',
 		zawgyi: 'Came back in Zawgyi, not Unicode. Retry or type your own.',
-		length: 'The length looks off. Check it, retry or type your own.'
+		length: 'The length looks off. Check it, retry or type your own.',
+		unread: 'Couldn’t read this. Type the English.'
 	};
+	const AUTO_MB = Math.round(MODEL_MB + ENGINE_MB + OCR_MB);
 
 	let error = $state('');
 	let info = $state<{ model: string; tier: 'free' | 'paid' } | null>(null);
@@ -29,8 +34,15 @@
 	let byPage = $state<Region[][]>([]);
 	let nextId = 0;
 	let drag = $state<{ x: number; y: number; box: Box } | null>(null);
+	let rtl = $state(false);
+	/** Automatic boxes: the detector finds the text, the OCR reads it, both on this device. */
+	let auto = $state<'idle' | 'loading' | 'reading' | 'done'>('idle');
+	let autoProgress = $state<number | null>(null);
+	let autoStatus = $state('');
+	let autoError = $state('');
+	let ocrReady = false;
 
-	const regions = $derived(readingOrder(byPage[index] ?? []));
+	const regions = $derived(readingOrder(byPage[index] ?? [], rtl));
 	const sent = $derived<SentLine[]>(
 		regions.map((r, i) => ({ n: i + 1, text: r.english.trim(), cls: r.cls, speaker: r.speaker })).filter((l) => l.text)
 	);
@@ -133,9 +145,60 @@
 		drag.box = { x: Math.min(p.x, drag.x), y: Math.min(p.y, drag.y), w: Math.abs(p.x - drag.x), h: Math.abs(p.y - drag.y) };
 	}
 	function up() {
-		if (drag && drag.box.w >= 8 && drag.box.h >= 8)
+		if (drag && drag.box.w >= 8 && drag.box.h >= 8) {
 			byPage[index].push({ id: nextId++, box: drag.box, cls: 'bubble', speaker: 'unknown', english: '', burmese: '', problem: null, ocr: '', edited: false });
+			// Once the reader is loaded, a box drawn by hand is read too.
+			if (ocrReady && current) read(byPage[index].at(-1)!, current);
+		}
 		drag = null;
+	}
+
+	/** Fills one row from the OCR; a box it can't read asks the visitor to type the English. */
+	async function read(r: Region, page: ImageBitmap) {
+		const { text, conf } = await readBox(page, r.box);
+		if (r.edited) return;
+		if (looksEnglish(text, conf)) {
+			r.english = text;
+			r.ocr = text;
+			r.problem = null;
+		} else r.problem = 'unread';
+	}
+
+	async function findText() {
+		if (!current) return;
+		autoError = '';
+		autoStatus = 'Downloading the text finder…';
+		auto = 'loading';
+		autoProgress = 0;
+		const detector = comicDetector();
+		try {
+			await Promise.all([detector.load((p) => (autoProgress = p)), loadOcr()]);
+			ocrReady = true;
+		} catch {
+			auto = 'idle';
+			autoStatus = '';
+			autoError = 'Couldn’t download the text finder. Check the connection and try again.';
+			return;
+		}
+		auto = 'reading';
+		autoStatus = 'Looking for English…';
+		const page = current, at = index;
+		const found = await detector.detect(page);
+		if (!found.length) {
+			auto = 'done';
+			autoStatus = 'No English found. Draw boxes by hand.';
+			return;
+		}
+		const ids = found.map(() => nextId++);
+		byPage[at] = [...byPage[at], ...found.map((d, i) => ({ id: ids[i], box: d.box, cls: d.cls, speaker: 'unknown' as Speaker,
+			english: '', burmese: '', problem: null, ocr: '', edited: false }))];
+		for (const [i, id] of ids.entries()) {
+			autoStatus = `Reading box ${i + 1} of ${ids.length}…`;
+			const r = byPage[at].find((x) => x.id === id);
+			if (r) await read(r, page);
+		}
+		auto = 'done';
+		autoStatus = `Found ${ids.length} pieces of English. Check them below.`;
 	}
 	function remove(id: number) {
 		byPage[index] = byPage[index].filter((r) => r.id !== id);
@@ -170,7 +233,7 @@
 	}
 </script>
 
-<div class="comic">
+<div class="comic" data-auto={auto}>
 	<header class="head">
 		<h1 class="serif">Comic translator</h1>
 		<p class="soft">English to Burmese. Your page stays on your device; only the words you type below are sent to be translated.</p>
@@ -194,6 +257,17 @@
 			<p class="mono">Page {index + 1} of {book.count}</p>
 			<button class="btn" disabled={index === book.count - 1} onclick={() => show(index + 1)}>Next page</button>
 		</nav>
+
+		<section class="auto" aria-label="Find the text automatically">
+			<button class="btn" disabled={auto === 'loading' || auto === 'reading'} onclick={findText}>
+				{autoError ? 'Try again' : 'Find the text for me'}
+			</button>
+			<p class="mono soft">About {AUTO_MB} MB, downloaded once. It runs on your device: the page is never sent anywhere.</p>
+			{#if auto === 'loading'}<progress max="1" value={autoProgress} aria-label="Text finder download"></progress>{/if}
+			<label class="check"><input type="checkbox" bind:checked={rtl} /> Manga order (right to left)</label>
+			<p class="mono" role="status">{autoStatus}</p>
+			{#if autoError}<p role="alert">{autoError}</p>{/if}
+		</section>
 
 		<div class="sides">
 			<figure>
@@ -223,11 +297,12 @@
 				{#if !regions.length}<p class="soft">No boxes yet. Drag over each piece of English on the original.</p>{/if}
 				<ol class="regions">
 					{#each regions as r, i (r.id)}
-						<li class:flagged={r.problem}>
+						<li class:flagged={r.problem} data-x={Math.round(r.box.x)}>
 							<span class="num mono">{i + 1}</span>
 							<label>Kind <select bind:value={r.cls}>{#each CLASSES as c (c)}<option value={c}>{c}</option>{/each}</select></label>
 							<label>Speaker <select bind:value={r.speaker}>{#each SPEAKERS as s (s)}<option value={s}>{s}</option>{/each}</select></label>
-							<label class="wide">English <input bind:value={r.english} oninput={() => (r.edited = true)} /></label>
+							<label class="wide">English <input bind:value={r.english} oninput={() => { r.edited = true; if (r.problem === 'unread') r.problem = null; }} /></label>
+							{#if r.ocr && r.ocr !== r.english}<p class="ocr mono soft">OCR read: {r.ocr}</p>{/if}
 							<label class="wide">Burmese <input lang="my" class="my" bind:value={r.burmese} oninput={() => (r.problem = null)} /></label>
 							{#if r.problem}<p class="problem">{PROBLEMS[r.problem]}</p>{/if}
 							<button class="btn" aria-label="Delete box {i + 1}" onclick={() => remove(r.id)}>Delete</button>
@@ -254,6 +329,12 @@
 	.head { display: grid; gap: var(--space-1); }
 	h1 { font-size: var(--step-3); }
 	.open { justify-self: start; }
+	.auto { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
+	.auto progress { flex: 1 1 12rem; }
+	.auto [role='status'] { flex-basis: 100%; min-height: 1.5em; }
+	.check { display: inline-flex; align-items: center; gap: 0.5em; min-height: 44px; }
+	.check input { width: 1.2em; height: 1.2em; }
+	.ocr { flex-basis: 100%; font-size: var(--step--1); }
 	.pager { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 	.sides { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--space-3); }
 	/* align-content: start, or the shorter column stretches its rows to match the one with the Download button. */

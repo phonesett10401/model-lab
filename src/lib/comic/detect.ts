@@ -45,6 +45,12 @@ export function mergeBoxes(dets: (Detection & { tile: number })[], minOverlap = 
 	return out.map(({ box, cls, score }) => ({ box, cls, score }));
 }
 
+/** A box that wraps two or more boxes of its own kind (each 80%+ inside it) is a duplicate of them: drop it. */
+export function dropContainers(dets: Detection[]): Detection[] {
+	return dets.filter((d) => dets.filter((o) => o !== d && o.cls === d.cls && overlapOfSmaller(o.box, d.box) >= 0.8
+		&& o.box.w * o.box.h < d.box.w * d.box.h).length < 2);
+}
+
 function tensorOf(bmp: ImageBitmap, t: Box): Float32Array {
 	const canvas = document.createElement('canvas');
 	canvas.width = canvas.height = SIZE;
@@ -85,7 +91,7 @@ function create() {
 					found.push({ box: { x: t.x + x0, y: t.y + y0, w: x1 - x0, h: y1 - y0 }, cls: CLASSES[Number(labels[i])], score: scores[i], tile });
 				}
 			}
-			return mergeBoxes(found);
+			return dropContainers(mergeBoxes(found));
 		}
 	};
 }

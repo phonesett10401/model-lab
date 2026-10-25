@@ -13,7 +13,7 @@ export type TranslateReply =
 	| { ok: true; lines: GotLine[]; model: string }
 	| { ok: false; error: 'bad-request' | 'forbidden' | 'quota' | 'busy' | 'upstream' };
 
-export type LineProblem = 'missing' | 'not-burmese' | 'zawgyi' | 'length';
+export type LineProblem = 'missing' | 'not-burmese' | 'zawgyi' | 'length' | 'unread';
 
 /** One text area the visitor marked on a page. */
 export interface Region {

@@ -39,3 +39,13 @@ it('states the real model size', async () => {
 	const { MODEL_MB, MODEL_URL } = await import('./detect');
 	expect(MODEL_MB).toBe(Math.round(statSync(`static${MODEL_URL}`).size / 1e5) / 10);
 });
+
+it('drops a box that only wraps two others of the same kind', async () => {
+	const { dropContainers } = await import('./detect');
+	const a = { box: { x: 900, y: 80, w: 100, h: 50 }, cls: 'bubble' as const, score: 0.9 };
+	const b = { box: { x: 1060, y: 120, w: 140, h: 70 }, cls: 'bubble' as const, score: 0.9 };
+	const wrap = { box: { x: 890, y: 70, w: 320, h: 130 }, cls: 'bubble' as const, score: 0.6 };
+	expect(dropContainers([a, b, wrap])).toEqual([a, b]);
+	expect(dropContainers([a, wrap]), 'one box inside is a big bubble with a small one, not a wrapper').toHaveLength(2);
+	expect(dropContainers([a, b, { ...wrap, cls: 'caption' as const }]), 'different kind stays').toHaveLength(3);
+});
