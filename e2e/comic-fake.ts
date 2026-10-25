@@ -16,6 +16,31 @@ export async function comicPng(page: Page): Promise<Buffer> {
 	return Buffer.from(url.split(',')[1], 'base64');
 }
 
+/**
+ * The test page with a different box at (100,100,300,150): a gradient bubble (white to light blue, black letters), a
+ * dark caption (light letters) or no box at all (white letters straight on the art).
+ */
+export async function comicKindPng(page: Page, kind: 'gradient' | 'dark' | 'art'): Promise<Buffer> {
+	const url = await page.evaluate((kind) => {
+		const c = document.createElement('canvas');
+		c.width = 600; c.height = 800;
+		const g = c.getContext('2d')!;
+		g.fillStyle = '#9ab'; g.fillRect(0, 0, 600, 800);
+		if (kind === 'gradient') {
+			const grad = g.createLinearGradient(0, 100, 0, 250);
+			grad.addColorStop(0, '#fff'); grad.addColorStop(1, 'rgb(180,200,255)');
+			g.fillStyle = grad;
+		} else g.fillStyle = '#223';
+		if (kind !== 'art') {
+			g.fillRect(100, 100, 300, 150);
+			g.strokeStyle = '#000'; g.lineWidth = 3; g.strokeRect(100, 100, 300, 150);
+		}
+		g.fillStyle = kind === 'gradient' ? '#000' : '#fff'; g.font = 'bold 28px sans-serif'; g.fillText('HELLO THERE', 150, 185);
+		return c.toDataURL('image/png');
+	}, kind);
+	return Buffer.from(url.split(',')[1], 'base64');
+}
+
 /** An N-page PDF made by Chromium's print (chromium only). */
 export async function comicPdf(page: Page, pages: number): Promise<Buffer> {
 	const p = await page.context().newPage();

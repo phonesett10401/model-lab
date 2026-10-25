@@ -4,7 +4,7 @@
 	import { serviceInfo, translateLines } from '$lib/comic/client';
 	import { latestOnly, loadFiles, type Pages } from '$lib/comic/load';
 	import { readingOrder } from '$lib/comic/order';
-	import { renderPage } from '$lib/comic/render';
+	import { renderPage, type Fits } from '$lib/comic/render';
 	import { comicDetector, MODEL_MB } from '$lib/comic/detect';
 	import { growToBubbles } from '$lib/comic/grow';
 	import { loadOcr, looksEnglish, OCR_MB, readBox, stopOcr } from '$lib/comic/ocr';
@@ -172,8 +172,8 @@
 	});
 
 	let rendered = $state(false);
-	/** How each box's Burmese was lettered: fitted, grown inside the page, or on a covering box. */
-	let modes = $state<Record<number, 'fit' | 'grown' | 'cover'>>({});
+	/** How each box's Burmese fitted inside its box: at the usual size, smaller, or too long even at the smallest. */
+	let modes = $state<Record<number, Fits>>({});
 	let renderToken = 0;
 	$effect(() => {
 		if (!burmeseCanvas || !current) return;
