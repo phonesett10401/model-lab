@@ -1,11 +1,63 @@
 {
- "pages": 0,
- "replaced": null,
- "fit": null,
- "ocrPages": 0,
- "ocrBefore": null,
- "ocrAfter": null,
- "failures": [],
- "examples": [],
- "models": {}
+ "pages": 97,
+ "replaced": 0.845,
+ "fit": 0.977,
+ "ocrPages": 21,
+ "ocrBefore": 0.832,
+ "ocrAfter": 0.833,
+ "failures": [
+  {
+   "truth": "bubble: “MR. MIYAMURA s CHANCES FOR A SUCCESSFUL SURGERY” (blackjack_v02_003)",
+   "said": "not replaced",
+   "score": 0,
+   "why": "A speech bubble the text finder missed or boxed with its neighbour."
+  },
+  {
+   "truth": "art-text: “CLANK” (blackjack_v02_011)",
+   "said": "not replaced",
+   "score": 0,
+   "why": "Words drawn as part of the scene (signs, titles): few training examples."
+  },
+  {
+   "truth": "caption: “ON YOUR VIME.” (blackjack_v02_011)",
+   "said": "not replaced",
+   "score": 0,
+   "why": "A narration box the text finder missed."
+  }
+ ],
+ "examples": [
+  {
+   "id": "pepper_E04P01",
+   "title": "Pepper&Carrot, episode 4 page 1",
+   "en": "/samples/comic/pepper_E04P01-en.jpg",
+   "my": "/samples/comic/pepper_E04P01-my.jpg",
+   "credit": "David Revoy",
+   "creditUrl": "https://www.peppercarrot.com",
+   "license": "CC BY 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+  },
+  {
+   "id": "pepper_E04P03",
+   "title": "Pepper&Carrot, episode 4 page 3",
+   "en": "/samples/comic/pepper_E04P03-en.jpg",
+   "my": "/samples/comic/pepper_E04P03-my.jpg",
+   "credit": "David Revoy",
+   "creditUrl": "https://www.peppercarrot.com",
+   "license": "CC BY 4.0",
+   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+  },
+  {
+   "id": "blackjack_v02_027",
+   "title": "Give My Regards to Black Jack, volume 2",
+   "en": "/samples/comic/blackjack_v02_027-en.jpg",
+   "my": "/samples/comic/blackjack_v02_027-my.jpg",
+   "credit": "Shuho Sato (Sato Manga Works)",
+   "creditUrl": "http://mangaonweb.com",
+   "license": "Free reuse (Give My Regards to Black Jack / Shuho Sato / Manga on Web)",
+   "licenseUrl": "http://mangaonweb.com"
+  }
+ ],
+ "models": {
+  "gemini-3.5-flash-lite": 81
+ }
 }
