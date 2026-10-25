@@ -101,3 +101,8 @@ test.describe('phone', () => {
 		expect(overflow).toBeLessThanOrEqual(0);
 	});
 });
+
+test('/assistants shares its own preview image', async ({ page }) => {
+	await page.goto('/assistants');
+	await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /\/og\/assistants\.png$/);
+});
