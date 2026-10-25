@@ -36,6 +36,13 @@
 	--space-6: clamp(3rem, 2rem + 4.4vw, 6.5rem);
 	--gutter: clamp(1rem, 0.6rem + 2vw, 2.5rem);
 	--radius: 4px;
+
+	/* Motion: micro for press, tick and colour; short for hover and small panels; long for reveals. Exits run shorter. */
+	--dur-micro: 120ms;
+	--dur-short: 220ms;
+	--dur-long: 420ms;
+	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+	--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 	--max: 1680px;
 }
 

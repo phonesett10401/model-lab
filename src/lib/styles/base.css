@@ -32,7 +32,7 @@ textarea:focus-visible, select:focus-visible, input:not([type='radio'], [type='c
 	background: var(--ink); color: var(--on-ink);
 	font-family: var(--font-mono); font-size: var(--step--1);
 	cursor: pointer; text-decoration: none;
-	transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease-out;
+	transition: background-color var(--dur-micro) var(--ease-out), border-color var(--dur-micro) var(--ease-out), transform var(--dur-micro) var(--ease-out);
 }
 .btn.ghost { background: transparent; color: var(--ink); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -76,9 +76,8 @@ a, button, label, summary, input, select, textarea { touch-action: manipulation;
 @keyframes playhead { from { transform: translateX(-100%); } to { transform: translateX(0); } }
 
 @keyframes ink {
-	0% { opacity: 0; transform: rotate(-4deg) scale(1.5); }
-	70% { opacity: 1; transform: rotate(-4deg) scale(0.96); }
-	100% { opacity: 1; transform: rotate(-4deg) scale(1); }
+	from { opacity: 0; transform: rotate(-4deg) scale(1.5); }
+	to { opacity: 1; transform: rotate(-4deg) scale(1); }
 }
 
 ::view-transition-group(entry-title) { animation-duration: 0.45s; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }

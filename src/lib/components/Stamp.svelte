@@ -17,7 +17,7 @@
 	.stamp {
 		display: inline-block; padding: 0.1em 0.5em; border: 1.5px solid var(--red); color: var(--red);
 		font-size: 0.75rem; letter-spacing: 0.12em; white-space: nowrap;
-		transform: rotate(-4deg); animation: ink 0.5s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+		transform: rotate(-4deg); animation: ink var(--dur-long) var(--ease-out) both;
 	}
 	.quiet { border-style: dashed; }
 </style>
