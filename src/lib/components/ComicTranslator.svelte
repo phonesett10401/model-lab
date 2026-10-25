@@ -263,6 +263,7 @@
 <div class="comic" data-auto={auto}>
 	<header class="head">
 		<h1 class="serif">Comic translator</h1>
+		<p><a href="/models/comic-translator">How well it works →</a></p>
 		<p class="soft">English to Burmese. Your page stays on your device; only the words you type below are sent to be translated.</p>
 		{#if info}
 			<p class="mono tier">

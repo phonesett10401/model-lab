@@ -1,5 +1,6 @@
 // Runs the real comic translator page over the frozen test pages: automatic boxes, OCR, Gemini (real), lettering.
-// Progress is saved per page, so a rerun continues. Writes src/lib/data/comic-translator-pipeline.json and 3 examples.
+// Progress is saved per page, so a rerun continues. Writes src/lib/data/comic-translator-pipeline.json (numbers and
+// 3 finished examples, whose images go to static/samples/comic/).
 // Run: pnpm eval:comic   (needs GEMINI_API_KEY in .env; sends only the text of open-licence test pages)
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

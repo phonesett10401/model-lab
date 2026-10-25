@@ -8,7 +8,8 @@ const models = allEntries.filter((e): e is ModelEntry => e.kind === 'model');
 
 describe('runtime slot', () => {
 	it('every live, non-draft model has a registered runtime', () => {
-		const missing = models.filter((m) => m.status === 'live' && !m.draft && !registry[m.slug]).map((m) => m.slug);
+		// The translator runs on its own page (/comic-translator), not through a classify runtime.
+		const missing = models.filter((m) => m.status === 'live' && !m.draft && m.task !== 'translate' && !registry[m.slug]).map((m) => m.slug);
 		expect(missing).toEqual([]);
 	});
 

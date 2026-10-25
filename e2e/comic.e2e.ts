@@ -328,3 +328,46 @@ test('a new file starts fresh', async ({ page }) => {
 	await expect(page.locator('.comic')).toHaveAttribute('data-auto', 'idle');
 	await expect(page.getByRole('status')).toHaveText('');
 });
+
+// ---------- Plan 3: report card, examples, home entry ----------
+
+const pipeline = JSON.parse(readFileSync('src/lib/data/comic-translator-pipeline.json', 'utf8'));
+
+test('the home page lists the comic translator', async ({ page }) => {
+	await page.goto('/');
+	await expect(page.getByText('Comic translator').first()).toBeVisible();
+});
+
+test('the report card says how it was measured', async ({ page }) => {
+	await page.goto('/models/comic-translator');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Comic translator');
+	await expect(page.getByText('reviewed by Claude, not by a person').first()).toBeVisible();
+	await expect(page.getByText('Worst case (of all text)')).toBeVisible();
+	await expect(page.getByText('counted by Claude on 20 pages; owner checked 4 and agreed with 4')).toBeVisible();
+	await expect(page.getByText('not measured (the automatic labels contain no sound effects)')).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Open the translator →' })).toHaveAttribute('href', '/comic-translator');
+	const examples = page.locator('.comic-examples figure');
+	await expect(examples).toHaveCount(pipeline.examples.length);
+	for (const e of pipeline.examples) await expect(page.getByRole('link', { name: e.credit }).first()).toBeVisible();
+});
+
+test('the translator page is listed and links its report card', async ({ page }) => {
+	await page.goto('/comic-translator');
+	await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+	await expect(page.getByRole('link', { name: 'How well it works →' })).toHaveAttribute('href', '/models/comic-translator');
+});
+
+for (const scheme of ['light', 'dark'] as const)
+	test(`the report card has no axe violations (${scheme})`, async ({ page }) => {
+		await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
+		await page.goto('/models/comic-translator');
+		await page.waitForLoadState('networkidle');
+		const { violations } = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+		expect(violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(', ')}`)).toEqual([]);
+	});
+
+test('the report card fits a phone', async ({ page }) => {
+	await page.setViewportSize({ width: 375, height: 812 });
+	await page.goto('/models/comic-translator');
+	expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+});

@@ -1,5 +1,7 @@
 import sea from './data/sea-creature-detector.json';
 import sounds from './data/sound-detective.json';
+import comic from './data/comic-translator.json';
+import comicPipeline from './data/comic-translator-pipeline.json';
 import type { AuditEntry, Entry, Failure, ModelEntry, Sample } from './types';
 
 const span = (text: string, phrase: string): [number, number] => {
@@ -53,6 +55,39 @@ const gender: ModelEntry = {
 			rows: [{ label: 'by skin tone', value: null }, { label: 'by age group', value: null }, { label: 'trans and non-binary people', value: null }]
 		},
 		failures: []
+	}
+};
+
+// Numbers come from the detector's test run (training/comic_evaluate.py) and the page's own run over the test pages
+// (pnpm eval:comic), never typed by hand. null shows "not yet measured".
+const share = (v: number | null) => (v === null ? null : `${Math.round(v * 100)}%`);
+const miss = comic.found.missed_count;
+const comicTranslator: ModelEntry = {
+	kind: 'model', slug: 'comic-translator', no: 5, name: 'Comic translator',
+	purpose: 'Finds the English in a comic page and letters it back in Burmese. The page stays on your device; only the words are sent to be translated.',
+	status: 'live', task: 'translate', input: 'image', labels: ['speech bubble', 'caption', 'sound effect', 'text on art'], unsureBelow: 0.3,
+	samples: [],
+	report: {
+		data: [
+			...comic.data.map((d) => ({ label: d.label, value: String(d.value) })),
+			{ label: 'Missed text check', value: `${miss.missed} of ${miss.labelled + miss.missed} pieces of English had no label; counted by Claude on ${miss.pages} pages; owner checked ${miss.owner_checked} and agreed with ${miss.owner_agreed}` },
+			{ label: 'English text found (of labelled)', value: share(comic.found.of_labelled_text) },
+			{ label: 'Worst case (of all text)', value: share(comic.found.worst_case_of_all_text) },
+			{ label: 'OCR words read (before / after Gemini repair)', value: comicPipeline.ocrBefore === null || comicPipeline.ocrAfter === null ? null
+				: `${share(comicPipeline.ocrBefore)} / ${share(comicPipeline.ocrAfter)} (on ${comicPipeline.ocrPages} Pepper&Carrot pages with their own text files)` },
+			{ label: 'Text replaced on test pages', value: share(comicPipeline.replaced) },
+			{ label: 'Burmese fitted without covering the art', value: share(comicPipeline.fit) },
+			{ label: 'Sound effects', value: 'not measured (the automatic labels contain no sound effects)' }
+		],
+		metrics: {
+			title: 'Text found per kind (AP@50)',
+			rows: [
+				{ label: 'speech bubble', value: comic.metrics.bubble?.ap50 ?? null },
+				{ label: 'caption', value: comic.metrics.caption?.ap50 ?? null },
+				{ label: 'text on art', value: comic.metrics['art-text']?.ap50 ?? null }
+			]
+		},
+		failures: comicPipeline.failures as Failure[]
 	}
 };
 
@@ -182,7 +217,7 @@ const draftAudit: AuditEntry = {
 
 // Drafts are compiled out of production builds entirely (not just hidden), so their sample content never ships.
 export const allEntries: Entry[] = [
-	creature, produce, gender, soundDetective,
+	creature, produce, gender, soundDetective, comicTranslator,
 	...(__SHOW_DRAFTS__ ? [draftShapes, draftMood, draftSounds, draftPlants, draftAudit] : [])
 ];
 

@@ -19,7 +19,8 @@ export function validateEntry(e: Entry): string[] {
 		if (e.status === 'live') {
 			if (!allMeasured) p.push(`${e.slug}: live model has unmeasured metrics`);
 			if (e.report.failures.length === 0) p.push(`${e.slug}: live model must show at least one failure`);
-			if (!e.samples.some((s) => s.knownFailure)) p.push(`${e.slug}: live model needs a sample it gets wrong`);
+			// The translator has no samples to classify; its failures list (real test pages) does this job.
+			if (e.task !== 'translate' && !e.samples.some((s) => s.knownFailure)) p.push(`${e.slug}: live model needs a sample it gets wrong`);
 			if (e.labels.length < 2) p.push(`${e.slug}: live model needs at least two labels`);
 		} else {
 			if (!noneMeasured) p.push(`${e.slug}: ${e.status} model must not show numbers`);
