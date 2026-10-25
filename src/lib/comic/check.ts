@@ -16,6 +16,8 @@ export function isZawgyiLikely(s: string): boolean {
 function problemOf(english: string, burmese: string): LineProblem | null {
 	const letters = [...burmese].filter((c) => LETTER.test(c));
 	if (letters.length === 0 || letters.filter((c) => MYANMAR.test(c)).length < letters.length / 2) return 'not-burmese';
+	// An English word left untranslated ("… chaotic ဖြစ်တယ်"): lower-case Latin words of 3+ letters. Names are capitalised.
+	if (/(^|[^A-Za-z])[a-z]{3,}/.test(burmese)) return 'not-burmese';
 	// Latin is fine (names, "OK"); any other script is a model slip (Flash Lite mixed in Sinhala, Tamil, Georgian).
 	if (letters.some((c) => !MYANMAR.test(c) && !/[A-Za-zÀ-ɏ]/.test(c))) return 'not-burmese';
 	if (isZawgyiLikely(burmese)) return 'zawgyi';

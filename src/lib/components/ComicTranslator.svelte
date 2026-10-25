@@ -308,7 +308,7 @@
 	}
 
 	/** Sends the page's text. With onlyFlagged, every line is sent again for context but only flagged rows change. */
-	async function translate(onlyFlagged = false): Promise<boolean> {
+	async function translate(onlyFlagged = false, slipsLeft = 2): Promise<boolean> {
 		if (!sent.length) return false;
 		busy = true;
 		error = '';
@@ -336,8 +336,8 @@
 			const fixed = english.get(l.n);
 			if (fixed) r.english = applyRepair(r, fixed).english;
 		}
-		// A slip (another script, Zawgyi, a dropped line) usually comes right on a second try: retry those once.
-		if (!onlyFlagged && order.some((r) => r.problem && SLIPS.has(r.problem))) return translate(true);
+		// A slip (another script, an English word, Zawgyi, a dropped line) usually comes right on another try: twice more.
+		if (slipsLeft > 0 && order.some((r) => r.problem && SLIPS.has(r.problem))) return translate(true, slipsLeft - 1);
 		return true;
 	}
 </script>

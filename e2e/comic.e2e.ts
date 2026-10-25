@@ -129,7 +129,7 @@ test('a line in the wrong script is retried once by itself, and never drawn whil
 	});
 	await setUp(page);
 	await page.getByRole('button', { name: 'Translate page' }).click();
-	await expect.poll(() => bodies.length).toBe(2); // the page, then the flagged line again
+	await expect.poll(() => bodies.length).toBe(3); // the page, then the flagged line twice more
 	await expect(rows(page).nth(0).locator('.problem')).toHaveText('Didn’t come back in Burmese. Retry or type your own.');
 	// Still wrong after the retry: the art is left as drawn.
 	const changed = await page.evaluate(() => {

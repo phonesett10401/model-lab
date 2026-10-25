@@ -29,6 +29,12 @@ describe('checkLines', () => {
 		expect(got('Saito ဆီ အခုချက်ချင်းသွား')).toBeNull();
 	});
 
+	it('flags an English word left inside the Burmese, but not a name', () => {
+		const got = (text: string) => checkLines([sent(1, 'REALITY IS FAR MORE CHAOTIC')], [{ n: 1, text }]).byN.get(1)?.problem;
+		expect(got('အဖြစ်မှန်က chaotic ဖြစ်တယ်။')).toBe('not-burmese');
+		expect(got('သတ္တိရှိစမ်းပါ Pepper၊ ရဲရဲလုပ်။')).toBeNull();
+	});
+
 	it('an empty line on purpose (a sound effect, junk) is left as drawn, not flagged', () => {
 		expect(checkLines([sent(1, 'CLAP! CLAP!')], [{ n: 1, text: '' }]).byN.get(1)).toEqual({ text: '', problem: null });
 		expect(checkLines([sent(1, 'CLAP!')], [{ n: 1, text: '  ' }]).byN.get(1)).toEqual({ text: '', problem: null });

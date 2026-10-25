@@ -31,7 +31,7 @@ export function buildPrompt(lines: SentLine[]): { system: string; user: string }
 		'Make endings fit the speaker: a polite man ends with ခင်ဗျာ, a polite woman with ရှင်; friends talk casually.',
 		'Keep each line short, like real comic dialogue: about as long as the English where you can, so it fits the speech bubble.',
 		'Sound effects (CLAP!, BOOM!, GRRR) and lines that are only junk stay as drawn: give them an empty text. Keep names as names.',
-		'Write Myanmar Unicode only, never Zawgyi.',
+		'Write Myanmar Unicode only, never Zawgyi. Write every word in Burmese: only names may stay in English letters.',
 		'The English comes from OCR and may contain reading mistakes (0 for O, missing letters, joined words): fix them from context.',
 		'Fix only clear reading mistakes: never add words or finish a sentence that is not there, and drop stray symbols (| = a—— and the like). If a line is mostly junk, translate only the words you can read.',
 		'Reply with JSON only, exactly {"lines":[{"n":<number>,"text":"<Burmese>","english":"<the English, corrected>"}]}, with the same numbers you were given, one entry each.'

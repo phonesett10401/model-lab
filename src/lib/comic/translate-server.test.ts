@@ -53,6 +53,7 @@ describe('buildPrompt', () => {
 		expect(p.system).toContain('short');
 		expect(p.system).toContain('never add words');
 		expect(p.system).toContain('empty text');
+		expect(p.system).toContain('only names');
 	});
 });
 
