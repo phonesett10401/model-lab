@@ -39,3 +39,6 @@ training/weight/
 training/*.log
 __pycache__/
 .chrome-profile/
+
+# Comic translator OCR files, copied from node_modules by vite.config.ts
+static/ocr/

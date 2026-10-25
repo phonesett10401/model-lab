@@ -38,7 +38,9 @@
 		"@fontsource/instrument-serif": "^5.3.0",
 		"@fontsource/noto-sans-myanmar": "5.3.0",
 		"@mlc-ai/web-llm": "0.2.85",
+		"@tesseract.js-data/eng": "1.0.0",
 		"onnxruntime-web": "^1.30.0",
-		"pdfjs-dist": "6.4.299"
+		"pdfjs-dist": "6.4.299",
+		"tesseract.js": "7.0.0"
 	}
 }

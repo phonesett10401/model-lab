@@ -3,6 +3,10 @@ import { loadEnv, type Plugin } from 'vite';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { handleTranslate } from './src/lib/comic/translate-server.ts';
+import { copyOcrAssets } from './src/lib/comic/ocr-assets.ts';
+
+// The comic translator's OCR files, served from our own site (static/ocr/ is git-ignored and filled from node_modules).
+copyOcrAssets(process.cwd());
 
 // In dev, mount the same handler Vercel runs as api/translate.ts (the static build has no server).
 const translateDev = (): Plugin => ({
