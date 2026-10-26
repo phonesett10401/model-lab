@@ -166,7 +166,8 @@ function writeReport() {
 	writeFileSync(OUT, JSON.stringify({
 		pages: results.length,
 		replaced: r3(total ? replaced / total : null),
-		fit: r3(fitShare(modes)),
+		// Share lettered inside its box at the usual size (lettering round 2); the older `fit` measured something else.
+		fitInBox: r3(fitShare(modes)),
 		ocrPages,
 		ocrBefore: r3(before.total ? before.found / before.total : null),
 		ocrAfter: r3(after.total ? after.found / after.total : null),

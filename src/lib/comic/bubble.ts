@@ -53,19 +53,43 @@ export function bubbleShape(px: Uint8ClampedArray, w: number, h: number, seed?: 
 	const core = spread(spread(smooth, w, h, GAP, true), w, h, GAP, true, true);
 	const need = seed ? seed.w * seed.h * 0.3 : n * 0.15;
 	const cx = s0.x + s0.w / 2, cy = s0.y + s0.h / 2;
-	const taken = new Uint8Array(n);
-	let inside: Uint8Array | null = null, best = -Infinity;
+	// Label every region of the shrunk map once, with its bounding box and whether it meets the seed area. Only regions
+	// whose box (grown back) could hold `need` pixels are weighed: letter holes and specks are skipped cheaply.
+	const label = new Int32Array(n);
+	const boxes: { x0: number; y0: number; x1: number; y1: number; seen: boolean }[] = [];
 	for (let i = 0; i < n; i++) {
-		if (!central(i) || !core[i] || taken[i]) continue;
-		const part = flood([i], (j) => core[j] === 1);
+		if (!core[i] || label[i]) continue;
+		const b = { x0: w, y0: h, x1: -1, y1: -1, seen: false };
+		boxes.push(b);
+		const id = boxes.length, stack = [i];
+		label[i] = id;
+		while (stack.length) {
+			const k = stack.pop()!, x = k % w, y = (k / w) | 0;
+			if (x < b.x0) b.x0 = x; if (x > b.x1) b.x1 = x; if (y < b.y0) b.y0 = y; if (y > b.y1) b.y1 = y;
+			if (!b.seen && central(k)) b.seen = true;
+			for (const j of [x > 0 ? k - 1 : -1, x < w - 1 ? k + 1 : -1, k - w, k + w])
+				if (j >= 0 && j < n && core[j] && !label[j]) { label[j] = id; stack.push(j); }
+		}
+	}
+	const rim: number[] = [];
+	for (let x = 0; x < w; x++) rim.push(x, (h - 1) * w + x);
+	for (let y = 0; y < h; y++) rim.push(y * w, y * w + w - 1);
+	let inside: Uint8Array | null = null, best = -Infinity;
+	for (let id = 1; id <= boxes.length; id++) {
+		const b = boxes[id - 1], pad = 2 * GAP + 2;
+		if (!b.seen || (b.x1 - b.x0 + 1 + pad) * (b.y1 - b.y0 + 1 + pad) < need) continue;
+		const part = new Uint8Array(n);
+		for (let j = 0; j < n; j++) if (label[j] === id) part[j] = 1;
 		const grown = spread(spread(part, w, h, GAP, false), w, h, GAP, false, true);
 		const region = new Uint8Array(n);
-		// Size counts the region with a 1 px rim: the background next to the outline is not smooth but is still the box.
-		const rim = spread(spread(grown, w, h, 1, false), w, h, 1, false, true);
-		let count = 0, edge = false, near = Infinity;
+		// Size is the area the region encloses (its paper and the letters it surrounds): a bubble packed with text has
+		// only a thin ring of paper, but that ring still holds the whole bubble. The region counts with a 1 px rim: the
+		// background next to the outline is not smooth but is still the box.
+		const ring = spread(spread(grown, w, h, 1, false), w, h, 1, false, true);
+		const out = flood(rim, (j) => !ring[j]);
+		let count = n, edge = false, near = Infinity;
 		for (let j = 0; j < n; j++) {
-			if (part[j]) taken[j] = 1;
-			if (rim[j]) count++;
+			if (out[j]) count--;
 			if (!grown[j] || !smooth[j]) continue;
 			region[j] = 1;
 			const x = j % w, y = (j / w) | 0;
@@ -74,7 +98,11 @@ export function bubbleShape(px: Uint8ClampedArray, w: number, h: number, seed?: 
 		}
 		if (count < need) continue;
 		// A closed region (not running off the crop) is the box; otherwise the one nearest the middle of the seed area.
-		const score = (edge ? 0 : 1e12) - near;
+		// With a found box as the seed, a closed region must also hold the box's middle (around it, or near it), so the
+		// box never grows onto a flat blob beside it when its own bubble runs off the crop.
+		const middle = Math.min(h - 1, Math.round(cy)) * w + Math.min(w - 1, Math.round(cx));
+		const closed = !edge && (!seed || !out[middle] || near <= (Math.min(seed.w, seed.h) / 4) ** 2);
+		const score = (closed ? 1e12 : 0) - near;
 		if (score > best) { best = score; inside = region; }
 	}
 	if (!inside) return null;

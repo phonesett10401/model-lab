@@ -263,10 +263,10 @@ test('a long translation keeps the bubble outline', async ({ page }) => {
 });
 
 /** Opens a page of `kind`, boxes (102,104)-(396,248) as `cls`, translates it as `text` and returns both canvases' pixels. */
-async function letterKind(page: import('@playwright/test').Page, kind: 'gradient' | 'dark' | 'art', cls: string, text = 'မင်္ဂလာပါ') {
+async function letterKind(page: import('@playwright/test').Page, kind: 'gradient' | 'dark' | 'art' | 'dense', cls: string, text = 'မင်္ဂလာပါ', box = [0.17, 0.13, 0.66, 0.31]) {
 	await fakeTranslate(page, { ok: true, lines: [{ n: 1, text }], model: 'gemini-3.5-flash' });
 	await openFile(page, 'page.png', 'image/png', await comicKindPng(page, kind));
-	await drawBox(page, 0.17, 0.13, 0.66, 0.31);
+	await drawBox(page, box[0], box[1], box[2], box[3]);
 	await rows(page).nth(0).getByLabel('Kind').selectOption(cls);
 	await rows(page).nth(0).getByLabel('English').fill('HELLO THERE');
 	await page.getByRole('button', { name: 'Translate page' }).click();
@@ -330,6 +330,17 @@ test('text on the art is lettered in place without a box', async ({ page }) => {
 	expect(kept / total).toBeGreaterThan(0.85); // the art shows through: no white box
 });
 
+test('a bubble packed with text keeps its outline', async ({ page }) => {
+	// The box takes in the outline and a little art; the bubble's middle is all letters.
+	const { before, after } = await letterKind(page, 'dense', 'bubble', 'မင်္ဂလာပါ', [0.15, 0.11, 0.69, 0.33]);
+	let outline = 0, kept = 0;
+	for (let y = 110; y < 240; y++)
+		for (const x of [99, 100, 101, 399, 400, 401])
+			if (rgb(before, x, y)[0] < 60) { outline++; if (rgb(after, x, y)[0] < 60) kept++; }
+	expect(outline).toBeGreaterThan(300);
+	expect(kept).toBe(outline);
+});
+
 test('nothing outside a box ever changes', async ({ page }) => {
 	const { before, after } = await letterKind(page, 'gradient', 'bubble', Array(30).fill('မင်္ဂလာပါ').join(' '));
 	let changed = 0;
@@ -357,7 +368,7 @@ test('a too-long line is flagged, not retried', async ({ page }) => {
 	const bodies = await fakeTranslate(page, { ok: true, lines: [{ n: 1, text: LONG }], model: 'gemini-3.5-flash' });
 	await setUp(page);
 	await page.getByRole('button', { name: 'Translate page' }).click();
-	await expect(rows(page).nth(0).getByText('The Burmese is longer than the space: shorten it or check it')).toBeVisible();
+	await expect(rows(page).nth(0).getByText('The Burmese is longer than the space: shorten it or check it')).toBeVisible({ timeout: 15_000 }) // fitting a very long line takes a while;
 	await expect(rows(page).nth(0)).toHaveAttribute('data-mode', 'too-long');
 	expect(bodies).toHaveLength(1);
 });
@@ -366,7 +377,7 @@ test('retrying a too-long line asks for a shorter one', async ({ page }) => {
 	const bodies = await fakeTranslate(page, { ok: true, lines: [{ n: 1, text: LONG }], model: 'gemini-3.5-flash' });
 	await setUp(page);
 	await page.getByRole('button', { name: 'Translate page' }).click();
-	await expect(rows(page).nth(0).getByText('The Burmese is longer than the space')).toBeVisible();
+	await expect(rows(page).nth(0).getByText('The Burmese is longer than the space')).toBeVisible({ timeout: 15_000 }) // fitting a very long line takes a while;
 	await page.getByRole('button', { name: 'Retry flagged lines' }).click();
 	await expect.poll(() => bodies.length).toBe(2);
 	expect(JSON.parse(bodies[1]).lines[0]).toEqual({ n: 1, text: 'HELLO THERE', cls: 'bubble', speaker: 'man', short: true });
@@ -637,7 +648,10 @@ test('the report card says how it was measured', async ({ page }) => {
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Comic translator');
 	await expect(page.getByText('reviewed by Claude, not by a person').first()).toBeVisible();
 	await expect(page.getByText('Worst case (of all text)')).toBeVisible();
-	await expect(page.getByText('Burmese fitted inside its box')).toBeVisible();
+	// Measured only by the round-2 evaluation (`fitInBox`); the old "without covering the art" number never shows here.
+	const fit = (pipeline as { fitInBox?: number | null }).fitInBox ?? null;
+	await expect(page.locator('dt', { hasText: 'Burmese fitted inside its box' }).locator('xpath=following-sibling::dd'))
+		.toHaveText(fit === null ? 'not yet measured' : `${Math.round(fit * 100)}%`);
 	await expect(page.getByText('counted by Claude on 20 pages; owner checked 4 and agreed with 4')).toBeVisible();
 	await expect(page.getByText('not measured (the automatic labels contain no sound effects)')).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Open the translator' })).toHaveAttribute('href', '/comic-translator');

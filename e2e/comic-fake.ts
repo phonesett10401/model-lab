@@ -18,9 +18,10 @@ export async function comicPng(page: Page): Promise<Buffer> {
 
 /**
  * The test page with a different box at (100,100,300,150): a gradient bubble (white to light blue, black letters), a
- * dark caption (light letters) or no box at all (white letters straight on the art).
+ * dark caption (light letters), no box at all (white letters straight on the art) or a white bubble packed with
+ * lines of text, so its middle has no clear paper.
  */
-export async function comicKindPng(page: Page, kind: 'gradient' | 'dark' | 'art'): Promise<Buffer> {
+export async function comicKindPng(page: Page, kind: 'gradient' | 'dark' | 'art' | 'dense'): Promise<Buffer> {
 	const url = await page.evaluate((kind) => {
 		const c = document.createElement('canvas');
 		c.width = 600; c.height = 800;
@@ -30,12 +31,15 @@ export async function comicKindPng(page: Page, kind: 'gradient' | 'dark' | 'art'
 			const grad = g.createLinearGradient(0, 100, 0, 250);
 			grad.addColorStop(0, '#fff'); grad.addColorStop(1, 'rgb(180,200,255)');
 			g.fillStyle = grad;
-		} else g.fillStyle = '#223';
+		} else g.fillStyle = kind === 'dense' ? '#fff' : '#223';
 		if (kind !== 'art') {
 			g.fillRect(100, 100, 300, 150);
 			g.strokeStyle = '#000'; g.lineWidth = 3; g.strokeRect(100, 100, 300, 150);
 		}
-		g.fillStyle = kind === 'gradient' ? '#000' : '#fff'; g.font = 'bold 28px sans-serif'; g.fillText('HELLO THERE', 150, 185);
+		if (kind === 'dense') {
+			g.fillStyle = '#000'; g.font = 'bold 15px sans-serif';
+			for (let y = 122; y < 245; y += 14) g.fillText('HELLO THERE HELLO THERE HELLO', 114, y);
+		} else { g.fillStyle = kind === 'gradient' ? '#000' : '#fff'; g.font = 'bold 28px sans-serif'; g.fillText('HELLO THERE', 150, 185); }
 		return c.toDataURL('image/png');
 	}, kind);
 	return Buffer.from(url.split(',')[1], 'base64');

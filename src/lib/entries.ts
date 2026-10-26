@@ -76,7 +76,7 @@ const comicTranslator: ModelEntry = {
 			{ label: 'OCR words read (before / after Gemini repair)', value: comicPipeline.ocrBefore === null || comicPipeline.ocrAfter === null ? null
 				: `${share(comicPipeline.ocrBefore)} / ${share(comicPipeline.ocrAfter)} (on ${comicPipeline.ocrPages} Pepper&Carrot pages with their own text files)` },
 			{ label: 'Text replaced on test pages', value: share(comicPipeline.replaced) },
-			{ label: 'Burmese fitted inside its box', value: share(comicPipeline.fit) },
+			{ label: 'Burmese fitted inside its box', value: share((comicPipeline as { fitInBox?: number | null }).fitInBox ?? null) },
 			{ label: 'Translated by', value: Object.keys(comicPipeline.models).length
 				? Object.entries(comicPipeline.models as Record<string, number>).map(([m, n]) => `${m} (${n} pages)`).join(', ')
 				: null },

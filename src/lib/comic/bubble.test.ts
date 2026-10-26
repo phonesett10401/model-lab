@@ -186,3 +186,37 @@ it('finds the inside of a tinted, a gradient and a dark box', () => {
 		expect(s.mask[1 * w + 1], `${name}: art outside`).toBe(0);
 	}
 });
+
+it('stays fast on a big crop full of round letters (each letter hole is not a bubble)', () => {
+	// A 660×270 OCR crop: a white oval packed with "O"s whose holes (10 px) survive the gap closing.
+	const w = 660, h = 270, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const d = ((x - 330) / 320) ** 2 + ((y - 135) / 130) ** 2;
+			const lx = (x - 90) % 26, ly = (y - 60) % 30, r = Math.hypot(lx - 13, ly - 15);
+			const letter = x >= 90 && x < 570 && y >= 60 && y < 210 && r >= 5 && r < 10;
+			const v = d > 1.06 ? 110 : d > 1 ? 0 : letter ? 0 : 255;
+			px.set([v, v, v, 255], (y * w + x) * 4);
+		}
+	bubbleShape(px, w, h); // warm up
+	const t = performance.now();
+	const s = bubbleShape(px, w, h)!;
+	expect(performance.now() - t).toBeLessThan(250);
+	expect(s.color).toBe('rgb(255,255,255)');
+	expect(s.mask[75 * w + 103]).toBe(1); // a letter hole is part of the bubble
+});
+
+it('a found box does not grow onto a closed dark blob beside it when its own bubble runs off the crop', async () => {
+	const { bubbleExtent } = await import('./bubble');
+	// The bubble holding the box runs off the crop's left edge (so the box stays as found); a flat black fill sits
+	// beside the box, closed and big enough, but away from the box's middle.
+	const w = 200, h = 160, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const d = ((x - 40) / 95) ** 2 + ((y - 80) / 70) ** 2;
+			const blob = x >= 146 && x < 195 && y >= 45 && y < 115;
+			const v = blob ? 0 : d > 1.08 ? 110 : d > 1 ? 0 : 255;
+			px.set([v, v, v, 255], (y * w + x) * 4);
+		}
+	expect(bubbleExtent(px, w, h, { x: 50, y: 40, w: 100, h: 80 })).toBeNull();
+});
