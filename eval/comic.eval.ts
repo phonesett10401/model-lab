@@ -10,7 +10,7 @@ import { doneFiles, fitShare, replacedShare, wordRecall } from '../src/lib/comic
 
 const TRAIN = 'training';
 const DATA = join(TRAIN, 'data/comic');
-// COMIC_EVAL_FAKE=1: a dry run of the runner itself — fake Burmese, 3 pages, everything written to a scratch folder.
+// COMIC_EVAL_FAKE=1: a dry run of the runner itself — fake Burmese, 3 pages (all pages with =all), everything written to a scratch folder.
 const FAKE = !!process.env.COMIC_EVAL_FAKE;
 const RUN = join(TRAIN, FAKE ? 'runs/comic/eval-pipeline-fake' : 'runs/comic/eval-pipeline');
 const PROGRESS = join(RUN, 'pages.jsonl');
@@ -33,7 +33,7 @@ function csvRows(path: string): Record<string, string>[] {
 }
 
 const test_ = JSON.parse(readFileSync(join(DATA, 'annotations/test.json'), 'utf8'));
-const pages = (test_.images.map((i: { file_name: string }) => i.file_name).sort() as string[]).slice(0, FAKE ? 3 : undefined);
+const pages = (test_.images.map((i: { file_name: string }) => i.file_name).sort() as string[]).slice(0, FAKE && process.env.COMIC_EVAL_FAKE !== 'all' ? 3 : undefined);
 
 async function runPage(page: Page, file: string): Promise<Done | { stop: string }> {
 	// Choosing the file finds, reads and translates it (the page's automatic run).

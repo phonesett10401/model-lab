@@ -220,3 +220,19 @@ it('a found box does not grow onto a closed dark blob beside it when its own bub
 		}
 	expect(bubbleExtent(px, w, h, { x: 50, y: 40, w: 100, h: 80 })).toBeNull();
 });
+
+it('box growing and the OCR clean-up take only bubble paper, not a smooth painted patch of the art', async () => {
+	const { bubbleExtent, whitenOutside } = await import('./bubble');
+	// A closed, smoothly painted blue-green patch (like Pepper&Carrot's painted sky) on busy art: lettering may take it as a
+	// box's inside, but growing a found box onto it, or whitening around it for the OCR, would lose the text.
+	const w = 200, h = 160, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const d = ((x - 100) / 80) ** 2 + ((y - 80) / 60) ** 2;
+			const c = d > 1.1 ? [(x * 37 + y * 91) % 256, (x * 53) % 256, (y * 71) % 256] : d > 1 ? [0, 0, 0] : [60, 120 + y / 4, 190];
+			px.set([...c, 255], (y * w + x) * 4);
+		}
+	expect(bubbleShape(px, w, h)).not.toBeNull(); // lettering still finds it
+	expect(bubbleExtent(px, w, h, { x: 50, y: 40, w: 100, h: 80 })).toBeNull();
+	expect(whitenOutside(px.slice(), w, h)).toBe(false);
+});
