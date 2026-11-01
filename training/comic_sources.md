@@ -15,8 +15,10 @@ dataset: never committed, never shown on the site (owner, 2026-10-25). Import wi
 | Roboflow `crepidules-workspace/manga-bubble-detection` | manga | CC BY 4.0 (labels); publishers' art | bubble boxes | waiting: Roboflow export (owner) |
 | Roboflow `moon-6f9b2/cg-manhua-bubbles-10k` | manhua | CC BY 4.0 (labels); publishers' art | bubble boxes | waiting: Roboflow export |
 | Roboflow `comic-speech-bubbles/comicbubbles` | modern Western | CC BY 4.0 (labels); publishers' art | bubble boxes | waiting: Roboflow export |
+| Roboflow `testspace-r2sxk/webtoon-bbox-detection` | webtoon | licence not shown on the page; check the export; publishers' art | `bubble` → bubble, `onomatopoeia` → sfx, `other` left out | waiting: Roboflow export (owner) |
+| Roboflow `wip-sama-wip-sama-smastermega/webtoon-segmented` | webtoon | CC BY 4.0 (labels); publishers' art | `balloon-*` → bubble, `sfx` → sfx, `text-outside` → free-text | waiting: Roboflow export (owner) |
 | GitHub `xulihang/balloon-dataset` | webtoon | none shown | — | **dropped** (2026-11-02): the repo holds 8 pages and one ImageTrans project file, no usable labels; its models are not data |
 | DCM772 (IAPR TC10) | old American | public-domain pages; masks' terms to check | balloon masks | to try (no account expected) |
 | Comix v0.1 (Hugging Face `comix-v0_1-pages-tiny`) | old American | CC0 | ours (`comic_comix.py`, then `comic_autolabel.py comix`); their labels are machine-made | Task 3 |
 
-No webtoon source is in yet: the one webtoon set in the design turned out to be manga. A webtoon test set needs one (Task 5).
+No webtoon source is in yet: the one webtoon set in the design turned out to be manga; Kaggle and Hugging Face have none with bubble boxes (searched 2026-11-02). The two Roboflow webtoon sets above are the candidates.

@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory() as d:
         for book, n in (('c1', 10), ('c2', 3)):
             for p in range(n):
                 stem = f'{book}_p{p:03d}'
-                add(f'{stem}.json', json.dumps({'book_id': book, 'page_number': p, 'page_class': 'Cover' if p == 0 else 'Story'}).encode())
+                add(f'{stem}.json', json.dumps({'book_id': book, 'page_number': p, 'page_class': 'Cover' if p == 0 else 'story' if book == 'c2' else 'Story'}).encode())
                 add(f'{stem}.jpg', b'jpg' + stem.encode())
     got = story_pages(tar, per_book=4)
     assert sorted(got) == ['c1', 'c2'], got

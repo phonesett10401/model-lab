@@ -31,7 +31,7 @@ def story_pages(tar_path: Path, per_book: int) -> dict[str, list[tuple[str, byte
                 jpgs[stem] = t.extractfile(m).read()
     books: dict[str, list[tuple[int, str]]] = {}
     for stem, j in meta.items():
-        if j.get('page_class') == 'Story' and stem in jpgs:
+        if str(j.get('page_class', '')).lower() == 'story' and stem in jpgs:
             books.setdefault(j['book_id'], []).append((j.get('page_number', 0), stem))
     out = {}
     for book, pages in books.items():
