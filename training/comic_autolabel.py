@@ -3,21 +3,32 @@
 The owner chose this over hand labelling (2026-10-24). The report card says so: test labels are machine-made and
 reviewed by Claude, not by a person.
 
-Run: python comic_autolabel.py <pepper|blackjack|commons> --run r1-dfine
-Writes data/comic/<source>_labels.json (read by comic_train.py) and caches OCR words in data/comic/ocr/.
+Run: python comic_autolabel.py <pepper|blackjack|commons> --run final2-dfine
+Writes data/comic3/<source>/labels.json in round 3's target (comic_common.CLASSES; pages stay in data/comic/images)
+and caches OCR words in data/comic/ocr/.
 """
 import argparse
 import json
 import re
 import statistics
 
+import numpy as np
+
 import comic_common as c
+from comic_bubble import bubble_extent
 
 MIN_CONF = 0.5  # OCR words below this are noise
 FREE_MIN_LETTERS = 4  # English outside any detected box needs at least this many letters...
 FREE_MIN_CONF = 0.6  # ...read this confidently, or it is junk from the art
 INSIDE = 0.6  # a region belongs to a detected box when this share of it lies inside
 SOURCES = {'pepper': 'Pepper&Carrot', 'blackjack': 'Black Jack', 'commons': 'Wikimedia Commons'}
+# Sound-effect words (left as drawn on the page); any word with a letter drawn out 3+ times ("Grooo", "Shhh") is one too.
+SFX = set('''aah argh ba bam bang bash beep blam blip bloop bonk boom bop brr bzz chomp chug clack clang clank clap
+clatter click clink clomp clonk crack crash creak crunch ding dong doki drip fwoosh fwip gasp glug gong grr growl gulp
+ha hah haha hehe hiss honk huff hmph kaboom kapow knock krak munch pant plip plonk plop pow puff purr rattle ring rip
+roar rumble rustle shff shing sizzle slam slap slash slurp smack snap snick sniff snore sob splash splat squeak squish
+stomp swish swoosh tap thud thump thunk throb thwack tick tock tink twang vroom wham whack whap whir whoosh whump wobble
+yawn zap zip zoom'''.split())
 
 
 def _letters(s: str) -> int:
@@ -69,6 +80,35 @@ def merge_words(words: list[dict]) -> list[dict]:
     return regions
 
 
+def free_kind(text: str) -> str:
+    """Text without a box: 'sfx' when every word is a sound (left as drawn), else 'free-text' (translated)."""
+    words = re.findall(r'[A-Za-z]+', text)
+    sound = lambda w: w.lower() in SFX or re.search(r'([a-z])\1\1', w.lower()) is not None
+    return 'sfx' if words and all(sound(w) for w in words) else 'free-text'
+
+
+def split_touching(rgb: np.ndarray, box: list, groups: list[list[float]]) -> list[list[int]]:
+    """One changed blob holding 2+ word groups: each group's bubble (the closed paper region around it) is one box.
+    Groups in the same paper region (lobes joined by a neck) give one box. When a group has no closed bubble around it,
+    the blob is kept as it is."""
+    if len(groups) < 2:
+        return [list(box)]
+    H, W = rgb.shape[:2]
+    x, y, w, h = (int(round(v)) for v in box)
+    m = max(4, round(0.1 * max(w, h)))
+    cx, cy = max(0, x - m), max(0, y - m)
+    crop = rgb[cy:min(H, y + h + m), cx:min(W, x + w + m)]
+    out = []
+    for gx, gy, gw, gh in groups:
+        e = bubble_extent(crop, (gx - cx, gy - cy, gw, gh))
+        if e is None:
+            return [list(box)]
+        e = [cx + e[0], cy + e[1], e[2], e[3]]
+        if all(_inside_share(e, o) < 0.8 for o in out):
+            out.append(e)
+    return out
+
+
 def label_page(words: list[dict], detected: list[dict]) -> list[dict]:
     """Labels ({'bbox', 'category', 'text'}): detected boxes that hold English, plus confident English elsewhere."""
     regions = merge_words(words)
@@ -80,15 +120,18 @@ def label_page(words: list[dict], detected: list[dict]) -> list[dict]:
             continue
         letters = _letters(r['text'])
         conf = statistics.mean(w['conf'] for w in r['words'])
-        if letters >= FREE_MIN_LETTERS and conf >= FREE_MIN_CONF:
+        kind = free_kind(r['text'])
+        if (letters >= FREE_MIN_LETTERS or kind == 'sfx') and conf >= FREE_MIN_CONF:
             h = statistics.median(w['bbox'][3] for w in r['words'])
             x, y, w, hh = r['bbox']
             pad = 0.4 * h
             out.append({'bbox': [x - pad, y - pad, w + 2 * pad, hh + 2 * pad],
-                        'category': 'caption' if len(r['words']) >= 3 else 'art-text', 'text': r['text']})
+                        'category': 'sfx' if kind == 'sfx' else 'caption' if len(r['words']) >= 3 else 'free-text', 'text': r['text']})
     for d, rs in matched.values():
         rs.sort(key=lambda r: (r['bbox'][1], r['bbox'][0]))
-        out.insert(0, {'bbox': list(d['bbox']), 'category': d['category'], 'text': ' '.join(r['text'] for r in rs)})
+        text = ' '.join(r['text'] for r in rs)
+        # Round 2's art-text is sorted into sound effects and meaningful text.
+        out.insert(0, {'bbox': list(d['bbox']), 'category': free_kind(text) if d['category'] == 'art-text' else d['category'], 'text': text})
     return out
 
 
@@ -103,7 +146,7 @@ def main() -> None:
     from doctr.models import ocr_predictor
     from PIL import Image
 
-    from comic_diff import split_blob, text_boxes
+    from comic_diff import text_boxes
     from comic_evaluate import predict
 
     ocr = ocr_predictor(det_arch='db_resnet50', reco_arch='crnn_vgg16_bn', pretrained=True).cuda()
@@ -129,17 +172,19 @@ def main() -> None:
         detected = [{'bbox': b, 'category': c.CLASSES_V2[k], 'score': s} for k, s, b in predict(session, kind, im) if s >= 0.3]
         if a.source == 'pepper':  # exact bubble outlines from the text-vs-art comparison come first
             art = Image.open(c.DATA / 'art' / p.file).convert('RGB')
-            # Touching bubbles form one blob: split it into one box per separate word group (owner's request, 2026-10-24).
+            # Touching bubbles form one blob: one box per closed paper region (lobes joined by a neck stay one).
             regions = merge_words(words)
+            rgb = np.asarray(im)
             exact = [{'bbox': list(part), 'category': 'bubble', 'score': 1.0}
                      for b in text_boxes(im, art)
-                     for part in split_blob(im, art, b, [r['bbox'] for r in regions if _inside_share(r['bbox'], list(b)) >= INSIDE])]
+                     for part in split_touching(rgb, list(b), [r['bbox'] for r in regions if _inside_share(r['bbox'], list(b)) >= INSIDE])]
             detected = exact + [d for d in detected if all(_inside_share(d['bbox'], e['bbox']) < 0.3 for e in exact)]
         items.append((p.file, W, H, label_page(words, detected)))
         if n % 25 == 0:
             print(n, 'of', len(pages), flush=True)
-    out = c.DATA / f'{a.source}_labels.json'
-    out.write_text(json.dumps(c.coco_dict(items, c.CLASSES_V2)), encoding='utf8')
+    out = c.HERE / 'data/comic3' / a.source / 'labels.json'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(c.coco_dict(items)), encoding='utf8')
     print(len(items), 'pages,', sum(len(i[3]) for i in items), 'labels ->', out)
 
 

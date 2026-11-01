@@ -18,7 +18,7 @@ from PIL import Image
 from scipy import ndimage
 
 import comic_common as c
-from comic_bubble import bubble_extent
+from comic_bubble import grow
 
 DATA3 = c.HERE / 'data/comic3'
 ATTRIBUTION3 = c.HERE / 'attribution/comic-v3.csv'
@@ -128,20 +128,6 @@ def _read_masks(folder: Path) -> list[tuple[Path, list[tuple[str, list[float]]]]
 
 
 READERS = {'coco': _read_coco, 'yolo': _read_yolo, 'voc': _read_voc, 'masks': _read_masks}
-
-
-def grow(rgb: np.ndarray, box: list[float]) -> list[int] | None:
-    """A text-only box grown to the whole bubble around it, or None when there is no closed bubble. The crop reaches
-    1.5× the box's longer side on every side (a one-line box at the top of a tall bubble still sees the whole bubble)."""
-    H, W = rgb.shape[:2]
-    x, y, w, h = box
-    pad = 1.5 * max(w, h)
-    cx, cy = max(0, int(x - pad)), max(0, int(y - pad))
-    cw, ch = min(W, int(np.ceil(x + w + pad))) - cx, min(H, int(np.ceil(y + h + pad))) - cy
-    if cw < 8 or ch < 8:
-        return None
-    e = bubble_extent(rgb[cy:cy + ch, cx:cx + cw], (x - cx, y - cy, w, h))
-    return [cx + e[0], cy + e[1], e[2], e[3]] if e else None
 
 
 def import_source(src: Source, folder: Path) -> list[Imported]:
