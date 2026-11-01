@@ -8,6 +8,7 @@ never shown on the site.
 import argparse
 import datetime
 import json
+import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -49,6 +50,7 @@ class Imported:
     image: Path
     size: tuple[int, int]
     anns: list[dict]  # [{'bbox': [x, y, w, h], 'category': one of CLASSES}]
+    complete: bool = True  # False when a text box had no bubble to grow to: its bubble would be left unlabelled
 
 
 def _images(folder: Path) -> dict[str, Path]:
@@ -110,13 +112,15 @@ def _read_voc(folder: Path) -> list[tuple[Path, list[tuple[str, list[float]]]]]:
 
 
 def _read_masks(folder: Path) -> list[tuple[Path, list[tuple[str, list[float]]]]]:
-    """Each image has a mask of the same name in a folder whose name holds 'mask'; each connected region is a bubble."""
-    masks = {p.stem: p for p in folder.rglob('*') if p.suffix.lower() in EXTS and 'mask' in p.parent.name.lower()}
+    """Each image has a mask in a folder whose name holds 'mask', named the same or with Mask for Image
+    (Image_001.png / Mask_001.png); each connected region is a bubble."""
+    key = lambda stem: re.sub(r'(?i)^(image|mask)[_-]?', '', stem)
+    masks = {key(p.stem): p for p in folder.rglob('*') if p.suffix.lower() in EXTS and 'mask' in p.parent.name.lower()}
     out = []
     for path in _images(folder).values():
-        if path.stem not in masks:
+        if key(path.stem) not in masks:
             continue
-        m = np.asarray(Image.open(masks[path.stem]).convert('L')) > 127
+        m = np.asarray(Image.open(masks[key(path.stem)]).convert('L')) > 127
         lab, n = ndimage.label(m)
         anns = []
         for k, sl in enumerate(ndimage.find_objects(lab), start=1):
@@ -130,28 +134,35 @@ def _read_masks(folder: Path) -> list[tuple[Path, list[tuple[str, list[float]]]]
 READERS = {'coco': _read_coco, 'yolo': _read_yolo, 'voc': _read_voc, 'masks': _read_masks}
 
 
+def convert(src: Source, path: Path, raw: list[tuple[str, list[float]]], today: str = '') -> Imported:
+    """One page's raw labels (source class, [x, y, w, h]) in the one target."""
+    im = Image.open(path).convert('RGB')
+    rgb = None
+    anns = []
+    complete = True
+    for name, box in raw:
+        kind = 'bubble' if src.format == 'masks' else src.classes.get(name)
+        if kind == 'text':
+            rgb = np.asarray(im) if rgb is None else rgb
+            grown = grow(rgb, box)
+            if grown:
+                anns.append({'bbox': grown, 'category': 'bubble'})
+            else:
+                complete = False
+        elif kind in c.CLASSES:
+            anns.append({'bbox': [round(v, 1) for v in box], 'category': kind})
+    page = c.Page(file=f'{src.name}_{path.stem}.jpg', source=src.name, group=src.group or src.name, style=src.style,
+                  split='', author=src.author, licence=src.licence, link=src.link, date=today or datetime.date.today().isoformat())
+    c._check(page)
+    return Imported(page, path, im.size, _dedupe_boxes(anns), complete)
+
+
 def import_source(src: Source, folder: Path) -> list[Imported]:
-    """Every page of a downloaded source, with its boxes in the one target. Nothing is written."""
+    """Every page of a downloaded source, with its boxes in the one target. A page where a text box had no bubble to
+    grow to is left out whole: a bubble left unlabelled would teach the finder to skip it. Nothing is written."""
     today = datetime.date.today().isoformat()
-    out = []
-    for path, raw in READERS[src.format](Path(folder)):
-        im = Image.open(path).convert('RGB')
-        rgb = None
-        anns = []
-        for name, box in raw:
-            kind = 'bubble' if src.format == 'masks' else src.classes.get(name)
-            if kind == 'text':
-                rgb = np.asarray(im) if rgb is None else rgb
-                grown = grow(rgb, box)
-                if grown:
-                    anns.append({'bbox': grown, 'category': 'bubble'})
-            elif kind in c.CLASSES:
-                anns.append({'bbox': [round(v, 1) for v in box], 'category': kind})
-        page = c.Page(file=f'{src.name}_{path.stem}.jpg', source=src.name, group=src.group or src.name, style=src.style,
-                      split='', author=src.author, licence=src.licence, link=src.link, date=today)
-        c._check(page)
-        out.append(Imported(page, path, im.size, _dedupe_boxes(anns)))
-    return out
+    pages = (convert(src, path, raw, today) for path, raw in READERS[src.format](Path(folder)))
+    return [p for p in pages if p.complete]
 
 
 def _dedupe_boxes(anns: list[dict]) -> list[dict]:
@@ -193,8 +204,16 @@ def save(pages: list[Imported], name: str, out: Path = DATA3, attribution: Path 
     c.add_pages(attribution, [p.page for p in pages])
 
 
-# The sources in the round 3 design. Classes are filled in after looking at each download (comic_sources.md).
-SOURCES: dict[str, Source] = {}
+# The sources in the round 3 design; how each maps was decided by looking at its pages (comic_sources.md).
+K = 'https://www.kaggle.com/datasets/'
+SOURCES: dict[str, Source] = {s.name: s for s in [
+    Source('manga-text-detection', 'coco', 'manga', 'Apache 2.0 (labels); art belongs to its publishers', 'naufalahnaf17 (Kaggle)',
+           K + 'naufalahnaf17/manga-text-detection', {'textrotation': 'text', 'words': 'text'}),
+    Source('mangatextbox', 'yolo', 'manga', 'unknown (Kaggle); art belongs to its publishers', 'swm16a4 (Kaggle)',
+           K + 'swm16a4/mangatextbox-detection', {'text_bubble': 'bubble'}),
+    Source('lie-eater', 'yolo', 'manga', 'MIT (Kaggle; labels from Roboflow, CC BY 4.0); art belongs to its publishers', 'hieupham154 (Kaggle)',
+           K + 'hieupham154/lie-eater-speech-bubbles', {'bubble': 'bubble'}),
+]}
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()

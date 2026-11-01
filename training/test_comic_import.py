@@ -41,6 +41,11 @@ with tempfile.TemporaryDirectory() as d:
     boxes = sorted(a['bbox'] for a in got[0].anns)
     assert [a['category'] for a in got[0].anns] == ['bubble', 'bubble'], got[0].anns
     assert len(boxes) == 2 and abs(boxes[0][0] - 30) <= 2 and abs(boxes[1][0] - 210) <= 2 and abs(boxes[1][2] - 161) <= 2, boxes
+    # masks named apart from their pages (Images/Image_001.png beside Masks/Mask_001.png) still pair up
+    (d / 'm2/Images').mkdir(parents=True), (d / 'm2/Masks').mkdir()
+    bubble_page(bubbles=((100, 150, 70, 60),)).save(d / 'm2/Images/Image_001.png')
+    mask.save(d / 'm2/Masks/Mask_001.png')
+    assert len(import_source(kw('masks2', 'masks', {}), d / 'm2')[0].anns) == 2
 
     # text-only labels grow to their bubble or are dropped (a text box on busy art has no closed bubble)
     (d / 't/images').mkdir(parents=True)
@@ -54,7 +59,9 @@ with tempfile.TemporaryDirectory() as d:
     got = {p.page.file: p.anns for p in import_source(kw('text', 'coco', {'text': 'text'}), d / 't')}
     [a] = got['text_a.jpg']
     assert a['category'] == 'bubble' and 80 <= a['bbox'][0] <= 86 and 228 <= a['bbox'][2] <= 241 and a['bbox'][3] > 140, a  # the whole oval
-    assert got.get('text_b.jpg', []) == [], got  # no bubble around it: dropped, never kept as a bubble
+    # no bubble around it: never kept as a bubble, and the page is left out (a bubble left unlabelled would teach the
+    # finder to skip it)
+    assert 'text_b.jpg' not in got, got
 
     # sound-effect classes map to sfx; unknown classes are left out
     (d / 'y/images').mkdir(parents=True), (d / 'y/labels').mkdir()
@@ -74,7 +81,7 @@ with tempfile.TemporaryDirectory() as d:
     first = import_source(kw('text', 'coco', {'text': 'text'}), d / 't')
     second = import_source(kw('dup', 'coco', {'text': 'text'}), d / 'dup')
     kept = dedupe(first + second)
-    assert [p.page.file for p in kept] == ['text_a.jpg', 'text_b.jpg'], [p.page.file for p in kept]
+    assert [p.page.file for p in kept] == ['text_a.jpg'], [p.page.file for p in kept]
 
     # every imported page has a source, style and recorded licence (and a style the target knows)
     for p in first + second:
