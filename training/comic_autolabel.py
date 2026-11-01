@@ -126,7 +126,7 @@ def main() -> None:
             words = [{'bbox': [x0 * W, y0 * H, (x1 - x0) * W, (y1 - y0) * H], 'text': w.value, 'conf': float(w.confidence)}
                      for b in res.pages[0].blocks for l in b.lines for w in l.words for (x0, y0), (x1, y1) in [w.geometry]]
             cached.write_text(json.dumps(words), encoding='utf8')
-        detected = [{'bbox': b, 'category': c.CLASSES[k], 'score': s} for k, s, b in predict(session, kind, im) if s >= 0.3]
+        detected = [{'bbox': b, 'category': c.CLASSES_V2[k], 'score': s} for k, s, b in predict(session, kind, im) if s >= 0.3]
         if a.source == 'pepper':  # exact bubble outlines from the text-vs-art comparison come first
             art = Image.open(c.DATA / 'art' / p.file).convert('RGB')
             # Touching bubbles form one blob: split it into one box per separate word group (owner's request, 2026-10-24).
@@ -139,7 +139,7 @@ def main() -> None:
         if n % 25 == 0:
             print(n, 'of', len(pages), flush=True)
     out = c.DATA / f'{a.source}_labels.json'
-    out.write_text(json.dumps(c.coco_dict(items)), encoding='utf8')
+    out.write_text(json.dumps(c.coco_dict(items, c.CLASSES_V2)), encoding='utf8')
     print(len(items), 'pages,', sum(len(i[3]) for i in items), 'labels ->', out)
 
 

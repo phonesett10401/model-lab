@@ -76,7 +76,7 @@ def write_draft() -> None:
         text = Image.open(c.DATA / 'images' / p.file).convert('RGB')
         art = Image.open(c.DATA / 'art' / p.file).convert('RGB')
         items.append((p.file, text.width, text.height, [{'bbox': list(b), 'category': 'bubble'} for b in text_boxes(text, art)]))
-    c.write_coco(c.DATA / 'pepper_draft.json', items)
+    c.write_coco(c.DATA / 'pepper_draft.json', items, c.CLASSES_V2)
     print(len(items), 'pages in pepper_draft.json')
 
 

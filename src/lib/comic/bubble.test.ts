@@ -236,3 +236,15 @@ it('box growing and the OCR clean-up take only bubble paper, not a smooth painte
 	expect(bubbleExtent(px, w, h, { x: 50, y: 40, w: 100, h: 80 })).toBeNull();
 	expect(whitenOutside(px.slice(), w, h)).toBe(false);
 });
+
+it('gives the extents recorded in bubble-cases.json (the Python port is held to the same cases)', async () => {
+	const { bubbleExtent } = await import('./bubble');
+	const { inflateSync } = await import('node:zlib');
+	const cases = (await import('./bubble-cases.json')).default as { name: string; w: number; h: number; seed: { x: number; y: number; w: number; h: number } | null; rgb: string; extent: number[] | null }[];
+	for (const c of cases) {
+		const rgb = inflateSync(Buffer.from(c.rgb, 'base64')), px = new Uint8ClampedArray(c.w * c.h * 4);
+		for (let i = 0; i < c.w * c.h; i++) px.set([rgb[i * 3], rgb[i * 3 + 1], rgb[i * 3 + 2], 255], i * 4);
+		const e = bubbleExtent(px, c.w, c.h, c.seed ?? undefined);
+		expect(e && [e.x, e.y, e.w, e.h], c.name).toEqual(c.extent);
+	}
+});

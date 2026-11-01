@@ -48,7 +48,7 @@ def coco_from_export(export: list[dict]) -> dict:
         if W is None:
             W, H = Image.open(c.DATA / 'images' / file).size
         items.append((file, W, H, anns))
-    return c.coco_dict(items)
+    return c.coco_dict(items, c.CLASSES_V2)
 
 
 def _iou(a, b):
@@ -81,7 +81,7 @@ def main() -> None:
         name = {i['id']: i['file_name'] for i in coco['images']}
         for x in coco['annotations']:
             if name[x['image_id']] in boxes:
-                boxes[name[x['image_id']]][2].append({'bbox': x['bbox'], 'category': c.CLASSES[x['category_id']]})
+                boxes[name[x['image_id']]][2].append({'bbox': x['bbox'], 'category': c.CLASSES_V2[x['category_id']]})
     if a.run:
         import onnxruntime as ort
         from comic_evaluate import predict
@@ -91,7 +91,7 @@ def main() -> None:
         for f, (W, H, anns) in boxes.items():
             for k, score, b in predict(session, kind, Image.open(c.DATA / 'images' / f)):
                 if score >= 0.3 and all(_iou(b, x['bbox']) < 0.3 for x in anns):
-                    anns.append({'bbox': b, 'category': c.CLASSES[k]})
+                    anns.append({'bbox': b, 'category': c.CLASSES_V2[k]})
     TASKS.mkdir(parents=True, exist_ok=True)
     out = TASKS / f'{a.source}_tasks.json'
     out.write_text(json.dumps(tasks_from_boxes(boxes, a.run or a.from_coco or 'empty')), encoding='utf8')

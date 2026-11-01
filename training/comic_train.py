@@ -30,14 +30,14 @@ def build_annotations() -> dict[str, int]:
             anns.setdefault(a['image_id'], []).append(a)
         for im in coco['images']:
             labels[im['file_name']] = (im['width'], im['height'], [
-                {'bbox': a['bbox'], 'category': c.CLASSES[a['category_id']], **({'text': a['text']} if 'text' in a else {})}
+                {'bbox': a['bbox'], 'category': c.CLASSES_V2[a['category_id']], **({'text': a['text']} if 'text' in a else {})}
                 for a in anns.get(im['id'], [])])
     counts = {}
     gone = c.dropped()
     for split in ('train', 'val', 'test'):
         items = [(p.file, *labels[p.file]) for p in c.load_attribution()
                  if p.split == split and p.file in labels and p.file not in gone and (split == 'train' or not p.source.startswith('Synthetic'))]
-        c.write_coco(c.DATA / 'annotations' / f'{split}.json', items)
+        c.write_coco(c.DATA / 'annotations' / f'{split}.json', items, c.CLASSES_V2)
         counts[split] = len(items)
     return counts
 
@@ -48,7 +48,7 @@ def dfine_config(run: str, epochs: int) -> str:
     ann, imgs = (c.DATA / 'annotations').as_posix(), (c.DATA / 'images').as_posix()
     return f"""__include__: ['{(VENDOR / 'D-FINE/configs/dfine/custom/dfine_hgnetv2_n_custom.yml').as_posix()}']
 output_dir: {out.as_posix()}
-num_classes: {len(c.CLASSES)}
+num_classes: {len(c.CLASSES_V2)}
 epochs: {epochs}
 eval_spatial_size: [1024, 1024]
 train_dataloader:
@@ -101,7 +101,7 @@ class Exp(BaseExp):
     def __init__(self):
         super().__init__()
         self.depth, self.width = 0.33, 0.25
-        self.num_classes = {len(c.CLASSES)}
+        self.num_classes = {len(c.CLASSES_V2)}
         self.data_dir = r"{c.DATA}"
         self.train_ann, self.val_ann = 'train.json', 'val.json'
         self.input_size = self.test_size = (1024, 1024)

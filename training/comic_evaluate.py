@@ -48,11 +48,11 @@ def evaluate(gt: dict, pred: list[dict]) -> dict:
             e.params.iouThrs = np.array([IOU])
             e.evaluate()
             e.accumulate()
-            for k in range(len(c.CLASSES)):
+            for k in range(len(c.CLASSES_V2)):
                 p = e.eval['precision'][0, :, k, 0, -1]
                 ap[k] = float(p[p > -1].mean()) if (p > -1).any() else None
     all_hits = all_truth = 0
-    for k, name in enumerate(c.CLASSES):
+    for k, name in enumerate(c.CLASSES_V2):
         truth = collections.defaultdict(list)
         for a in gt['annotations']:
             if a['category_id'] == k:

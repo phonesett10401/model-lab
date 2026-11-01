@@ -12,6 +12,18 @@ def page(file, group, licence='CC BY 4.0'):
                   licence=licence, link='https://example.org', date='2026-10-24')
 
 
+# Round 3's one labelling target and five measured styles; round 2's data keeps its own class order.
+assert c.CLASSES == ['bubble', 'caption', 'free-text', 'sfx']
+assert c.CLASSES_V2 == ['bubble', 'caption', 'sfx', 'art-text']
+assert c.STYLES == ['modern-western', 'old-american', 'manga', 'manhua', 'webtoon']
+# Any recorded licence may be used for training (owner, 2026-10-25); an empty one may not.
+assert c.licence_status(page('a.png', 'g', licence='unknown (publisher art)')) == 'unknown (publisher art)'
+try:
+    c.licence_status(page('b.png', 'g', licence=''))
+    raise AssertionError('an empty licence passed')
+except ValueError:
+    pass
+
 with tempfile.TemporaryDirectory() as d:
     csv = Path(d) / 'a.csv'
 
@@ -29,14 +41,13 @@ with tempfile.TemporaryDirectory() as d:
     c.add_pages(csv, [page('new-1.png', 'brand-new-group')])
     assert csv.read_bytes().startswith(before), 'old rows changed'
 
-    # refuses NC and SA licences
-    for bad in ('CC BY-NC 4.0', 'CC BY-SA 4.0'):
-        try:
-            c.add_pages(csv, [page('bad.png', 'bad', bad)])
-        except ValueError:
-            pass
-        else:
-            raise AssertionError(f'accepted {bad}')
+    # refuses a page with no licence recorded
+    try:
+        c.add_pages(csv, [page('bad.png', 'bad', '')])
+    except ValueError:
+        pass
+    else:
+        raise AssertionError('accepted an empty licence')
     assert 'bad.png' not in csv.read_text(encoding='utf8')
 
 # split is stable, across processes too

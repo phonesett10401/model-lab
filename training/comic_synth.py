@@ -78,7 +78,7 @@ def make_page(art: Image.Image, rng: random.Random, fonts: list[Path]) -> tuple[
     page = art.convert('RGB').copy()
     W, H = page.size
     scale = W / 1600
-    kinds = rng.choices(c.CLASSES, weights=[5, 2, 2, 1], k=rng.randint(2, 6))
+    kinds = rng.choices(c.CLASSES_V2, weights=[5, 2, 2, 1], k=rng.randint(2, 6))
     labels, taken = [], []
     for kind in kinds:
         im, text = tile(kind, rng, fonts, scale)
@@ -118,7 +118,7 @@ def main() -> None:
         pages.append(c.Page(file=file, source='Synthetic lettering on Pepper&Carrot art', group=src.group,
                             style='modern-western', split='', author='David Revoy (art); synthetic lettering',
                             licence='CC BY 4.0', link=src.link, date=today))
-    c.write_coco(c.DATA / 'synth.json', items)
+    c.write_coco(c.DATA / 'synth.json', items, c.CLASSES_V2)
     c.add_pages(c.ATTRIBUTION, pages)
     print(len(items), 'synthetic pages')
 
