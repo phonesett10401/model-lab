@@ -99,6 +99,8 @@ describe('handleTranslate', () => {
 		expect(new Headers(init.headers).get('x-goog-api-key')).toBe('test-key');
 		const body = String(init.body);
 		expect(JSON.parse(body).generationConfig.responseMimeType).toBe('application/json');
+		// A schema, so Gemini can't send back broken JSON (it dropped a '{' between lines on a real page).
+		expect(JSON.parse(body).generationConfig.responseSchema.properties.lines.items.required).toEqual(['n', 'text']);
 		expect(body).toContain('HELLO');
 		expect(body).not.toContain('data:image');
 	});

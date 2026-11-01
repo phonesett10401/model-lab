@@ -65,6 +65,13 @@ function perDay(body: unknown): boolean {
 	return details.some((d) => d.violations?.some((v) => v.quotaId?.includes('PerDay')));
 }
 
+/** The reply Gemini must give: numbered lines of Burmese, with the English repaired when it was misread. */
+const SCHEMA = {
+	type: 'OBJECT',
+	properties: { lines: { type: 'ARRAY', items: { type: 'OBJECT', properties: { n: { type: 'INTEGER' }, text: { type: 'STRING' }, english: { type: 'STRING' } }, required: ['n', 'text'] } } },
+	required: ['lines']
+};
+
 const reply = (body: TranslateReply | { model: string; fallback?: string; tier: string }, status = 200) =>
 	new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
@@ -144,7 +151,8 @@ export async function handleTranslate(req: Request, env: ServerEnv, fetchImpl: t
 	const body = JSON.stringify({
 		systemInstruction: { parts: [{ text: system }] },
 		contents: [{ role: 'user', parts: [{ text: user }] }],
-		generationConfig: { responseMimeType: 'application/json' }
+		// The schema makes Gemini's JSON always valid: without it, it once dropped a '{' between lines, every time, on a real page.
+		generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA }
 	});
 	// The main model first; only when its free daily quota is used up does the fallback model get the same request.
 	const models = [env.model, env.fallback].filter((m): m is string => !!m);
