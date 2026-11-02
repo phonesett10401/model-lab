@@ -1,6 +1,6 @@
 """Round 3's splits: test pages never leak into training. Run: python test_comic_split3.py"""
 import comic_common as c
-from comic_split3 import MIN_TEST, assign, style_counts, to_test97
+from comic_split3 import MIN_TEST, assign, reviewed_test, style_counts, to_test97
 
 
 def page(file, source, group, style='manga', split=''):
@@ -27,6 +27,14 @@ assert {split[p.file] for p in pages if p.source == 'lie-eater'} == {'train', 'v
 # synthetic pages train only, even when their art page's episode is a test episode; reviewed drops are left out
 assert all(split[p.file] == 'train' for p in pages if p.file.startswith('synth3_'))
 assert 'bj1_0.jpg' not in split
+
+# Comix test pages are autolabels: only hand-reviewed ones stay test, with the reviewed labels; Comix train pages untouched
+cx = [page(f'cx{i}.jpg', 'Comix (Digital Comic Museum)', f'comix-c{i}', 'old-american', 'test' if i < 3 else 'train') for i in range(4)]
+cs = {p.file: p.split for p in cx}
+ci = {p.file: (p.file, 10, 10, [{'bbox': [0, 0, 9, 9], 'category': 'bubble'}]) for p in cx}
+reviewed_test(cx, cs, ci, {'cx0.jpg': [{'bbox': [1, 1, 2, 2], 'category': 'sfx'}], 'cx3.jpg': []})
+assert cs == {'cx0.jpg': 'test', 'cx3.jpg': 'train'}, cs
+assert ci['cx0.jpg'][3] == [{'bbox': [1, 1, 2, 2], 'category': 'sfx'}] and ci['cx3.jpg'][3][0]['category'] == 'bubble'
 
 # every style with data has a test set of at least MIN_TEST pages; styles without one are reported, not hidden
 counts = style_counts(pages, split)

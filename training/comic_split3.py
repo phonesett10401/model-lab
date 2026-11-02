@@ -27,6 +27,9 @@ OWN = {'pepper': 'Pepper&Carrot', 'blackjack': 'Black Jack', 'comix': 'Comix'}  
 HELD_OUT = {'manga-text-detection'}
 MIN_TEST = 30
 VAL = 10  # percent of an imported source's pages that go to val
+# Claude's hand-fixed labels for 42 Comix test pages (3 a book), file -> labels: Comix test pages are autolabels, too
+# rough to measure with (boxes over several bubbles or into panels on 106 of 168, looked at 2026-11-02).
+REVIEWED = c.HERE / 'attribution/comic-v3-reviewed.json'
 
 
 def assign(pages: list[c.Page], held_out: set[str], dropped: set[str]) -> dict[str, str]:
@@ -44,6 +47,17 @@ def assign(pages: list[c.Page], held_out: set[str], dropped: set[str]) -> dict[s
         else:
             out[p.file] = 'val' if int(hashlib.sha256(p.file.encode()).hexdigest(), 16) % 100 < VAL else 'train'
     return out
+
+
+def reviewed_test(pages: list[c.Page], split: dict[str, str], items: dict[str, tuple], reviewed: dict[str, list]) -> None:
+    """Comix test pages: the reviewed ones take their reviewed labels, the rest leave the test set (in place)."""
+    for p in pages:
+        if p.source.startswith(OWN['comix']) and split.get(p.file) == 'test':
+            if p.file in reviewed:
+                f, w, h, _ = items[p.file]
+                items[p.file] = (f, w, h, reviewed[p.file])
+            else:
+                del split[p.file]
 
 
 def style_counts(pages: list[c.Page], split: dict[str, str]) -> dict[str, int]:
@@ -96,6 +110,7 @@ def main() -> None:
             pages += [replace(p, split='') for p in imported if p.file in got]
         items.update(got)
     split = assign(pages, HELD_OUT, c.dropped())
+    reviewed_test(pages, split, items, json.loads(REVIEWED.read_text(encoding='utf8')))
     out = C3 / 'annotations'
     for s in ('train', 'val', 'test'):
         c.write_coco(out / f'{s}.json', [items[p.file] for p in pages if split.get(p.file) == s])
