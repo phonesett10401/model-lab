@@ -13,7 +13,11 @@ EPOCHS = 40
 RUN = f'r3-dfine-{SIZE}'
 RESUME_FROM = ''      # e.g. '/kaggle/input/comic-r3-run/r3-dfine-l' (a folder holding last.pth and config.yml)
 
-DATASET = next(Path('/kaggle/input').glob('*/code/comic_train.py')).parent.parent
+# Kaggle mounts inputs at /kaggle/input/<slug> or, on newer images, deeper (/kaggle/input/datasets/<owner>/<slug>).
+found = sorted(Path('/kaggle/input').glob('**/code/comic_train.py'))
+if not found:
+    sys.exit('dataset not found under /kaggle/input: ' + ', '.join(str(p) for p in Path('/kaggle/input').glob('*/*')))
+DATASET = found[0].parent.parent
 WORK = Path('/kaggle/working')
 VENDOR = WORK / 'D-FINE'
 RUNS = WORK / 'runs'
