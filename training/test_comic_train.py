@@ -44,7 +44,8 @@ assert 'torch==' in req and 'torchvision==' in req, req
 assert '956d170' in notebook and 'requirements.txt' in notebook and '--resume' in notebook
 
 if '--slow' in sys.argv:
-    # A 2-epoch toy run, stopped once epoch 1's last.pth exists, then resumed: it trains epoch 2 only, same config.
+    # A 10-epoch toy run, stopped once epoch 1's last.pth exists, then resumed: it carries on from epoch 2, same config.
+    # (D-FINE writes last.pth only before its last 8 epochs, the no-augmentation stage, so the toy run needs 10.)
     import json
     import random
 
@@ -65,7 +66,7 @@ if '--slow' in sys.argv:
             c.write_coco(d / f'data/comic3/annotations/{s}.json', items)
         run = d / 'runs/toy'
         run.mkdir(parents=True)
-        (run / 'config.yml').write_text(dfine_config('toy', 2, size='n', data='comic3', data_root=d / 'data', runs=d / 'runs', batch=2, workers=0))
+        (run / 'config.yml').write_text(dfine_config('toy', 10, size='n', data='comic3', data_root=d / 'data', runs=d / 'runs', batch=2, workers=0))
         before = hashlib.sha256((run / 'config.yml').read_bytes()).hexdigest()
         cmd, cwd = train_command('dfine', 'toy', runs=d / 'runs')
         p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
@@ -78,7 +79,8 @@ if '--slow' in sys.argv:
         cmd, cwd = train_command('dfine', 'toy', resume=True, runs=d / 'runs')
         out = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
         assert out.returncode == 0, out.stdout[-2000:] + out.stderr[-2000:]
-        assert torch.load(run / 'last.pth', map_location='cpu', weights_only=False)['last_epoch'] == 1
-        assert 'Epoch: [0]' not in out.stdout and 'Epoch: [1]' in out.stdout, out.stdout[-2000:]
+        got = torch.load(run / 'last.pth', map_location='cpu', weights_only=False)['last_epoch']
+        assert got == 1, (got, out.stdout[-3000:])
+        assert 'Epoch: [0/10]' not in out.stdout and 'Epoch: [1/10]' in out.stdout, out.stdout[-2000:]
         assert hashlib.sha256((run / 'config.yml').read_bytes()).hexdigest() == before
 print('comic train checks passed')

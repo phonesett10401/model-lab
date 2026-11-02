@@ -34,3 +34,6 @@ After the data changes: `kaggle datasets version -p ../../kaggle-comic3 --dir-mo
 - **Continue on the laptop:** download the output (`kaggle kernels output <you>/<notebook> -p runs/comic/`), then from
   `training/`: `python comic_train.py dfine <run> --data comic3 --resume`. The config is rewritten for the laptop's
   folders with the same settings (`settings.json`), and the same pinned versions are installed in `comictrain`.
+- D-FINE saves `last.pth` after every epoch except the last 8 (its no-augmentation finishing stage). A run stopped in
+  those 8 epochs resumes from just before them and redoes them (about a fifth of a 40-epoch run); its best checkpoint
+  so far (`best_stg1.pth`) is kept either way.
