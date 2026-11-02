@@ -13,6 +13,7 @@ left out.
 import hashlib
 import json
 from collections import Counter
+from dataclasses import replace
 
 import numpy as np
 from PIL import Image
@@ -84,7 +85,8 @@ def main() -> None:
             pages += [p for p in own if p.file in got and p.source.startswith(OWN[folder.name])]
         else:
             got = _items(coco, f'comic3/{folder.name}/images')
-            pages += [p for p in imported if p.file in got]
+            # The import log's split is the source's hash, not a decision: this script decides imported pages' splits.
+            pages += [replace(p, split='') for p in imported if p.file in got]
         items.update(got)
     split = assign(pages, HELD_OUT, c.dropped())
     out = C3 / 'annotations'
