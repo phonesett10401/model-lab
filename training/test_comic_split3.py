@@ -32,14 +32,23 @@ assert 'bj1_0.jpg' not in split
 counts = style_counts(pages, split)
 assert counts['manga'] >= MIN_TEST == 30 and counts['manhua'] == 0, counts
 
-# test97: a box for every round-2 labelled bubble (grown where a bubble is found, kept as found where not)
+# test97: a box for every round-2 labelled bubble (grown where a bubble a little bigger is found, kept as found where not)
 import numpy as np
 from PIL import Image, ImageDraw
 im = Image.new('RGB', (400, 300), (110, 110, 110))
 ImageDraw.Draw(im).ellipse([40, 40, 260, 220], fill='white', outline='black', width=3)
-old = [{'bbox': [100, 110, 100, 30], 'category': 'bubble', 'text': 'HI'}, {'bbox': [300, 250, 50, 20], 'category': 'art-text', 'text': 'CLAP'},
+old = [{'bbox': [48, 50, 205, 165], 'category': 'bubble', 'text': 'HI'}, {'bbox': [300, 250, 50, 20], 'category': 'art-text', 'text': 'CLAP'},
        {'bbox': [320, 20, 40, 20], 'category': 'bubble', 'text': 'x'}]
 new = to_test97(np.asarray(im), old)
 assert len([l for l in new if l['category'] == 'bubble']) == 2, new
 assert new[0]['bbox'][2] > 200 and [l['category'] for l in new][1] == 'sfx', new
+# two joined bubbles, each labelled: growing either takes in both, so each keeps its own box (never two copies of one)
+im = Image.new('RGB', (500, 300), (110, 110, 110))
+g = ImageDraw.Draw(im)
+for box in ([40, 60, 240, 240], [200, 80, 340, 220]):
+    g.ellipse(box, outline='black', width=3)
+for box in ([43, 63, 237, 237], [203, 83, 337, 217]):
+    g.ellipse(box, fill='white')
+old = [{'bbox': [80, 110, 110, 70], 'category': 'bubble'}, {'bbox': [230, 120, 90, 60], 'category': 'bubble'}]
+assert to_test97(np.asarray(im), old) == old, to_test97(np.asarray(im), old)
 print('comic split3 checks passed')

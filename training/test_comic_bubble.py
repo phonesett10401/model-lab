@@ -18,4 +18,16 @@ for c in CASES:
         assert got is None, f"{c['name']}: {got}, expected none"
     else:
         assert got is not None and all(abs(a - b) <= 1 for a, b in zip(got, want)), f"{c['name']}: {got}, expected {want}"
+
+# grow: a text box in a bubble grows to the bubble; one in a white panel (a closed paper area much bigger than any
+# bubble around that text) is not a bubble when the box is meant to be near a bubble's size
+from PIL import Image, ImageDraw
+from comic_bubble import grow
+im = Image.new('RGB', (600, 500), (110, 110, 110))
+g = ImageDraw.Draw(im)
+g.ellipse([40, 40, 240, 200], fill='white', outline='black', width=3)
+g.rectangle([300, 40, 580, 300], fill='white', outline='black', width=4)
+got = grow(np.asarray(im), [80, 80, 120, 80])
+assert got and got[2] > 190 and got[3] > 150, got
+assert grow(np.asarray(im), [380, 100, 100, 60], most=4) is None and grow(np.asarray(im), [380, 100, 100, 60]), "panel"
 print('ok', len(CASES), 'cases')

@@ -54,13 +54,20 @@ def style_counts(pages: list[c.Page], split: dict[str, str]) -> dict[str, int]:
 
 def to_test97(rgb: np.ndarray, labels: list[dict]) -> list[dict]:
     """Round 2's reviewed test labels in round 3's target: bubbles and captions grown to the whole bubble where one is
-    found (else kept as found), art-text sorted into free-text or sfx."""
+    found (else kept as found), art-text sorted into free-text or sfx. A grown box that takes in another label's middle
+    has run into joined bubbles: that label keeps its own box."""
+    def holds(b, o):
+        return b[0] <= o[0] + o[2] / 2 <= b[0] + b[2] and b[1] <= o[1] + o[3] / 2 <= b[1] + b[3]
     out = []
     for l in labels:
         if l['category'] == 'art-text':
             out.append({**l, 'category': free_kind(l.get('text', ''))})
         elif l['category'] in ('bubble', 'caption'):
-            out.append({**l, 'bbox': grow(rgb, l['bbox']) or l['bbox']})
+            # Reviewed round-2 boxes are near whole bubbles already: growing more than a quarter ran into the panel
+            # (black-and-white bubbles open onto it) in ~50 of 57 such boxes when looked at, 2026-11-02.
+            g = grow(rgb, l['bbox'], most=1.25)
+            ok = g and not any(holds(g, o['bbox']) for o in labels if o is not l)
+            out.append({**l, 'bbox': g if ok else l['bbox']})
         else:
             out.append(l)
     return out

@@ -103,8 +103,10 @@ def bubble_extent(rgb: np.ndarray, seed: tuple | None = None) -> tuple[int, int,
     return int(x0), int(y0), int(x1 - x0 + 1), int(y1 - y0 + 1)
 
 
-def grow(rgb: np.ndarray, box: list[float]) -> list[int] | None:
-    """A text-only box grown to the whole bubble around it, or None when there is no closed bubble. The crop reaches
+def grow(rgb: np.ndarray, box: list[float], most: float | None = None) -> list[int] | None:
+    """A text-only box grown to the whole bubble around it, or None when there is no closed bubble (or, with `most`, only
+    one over `most` times the box's area: for boxes already near a bubble's size, a white panel or joined bubbles; tight
+    line boxes can't use it, a one-line bubble is often 4× its text). The crop reaches
     1.5× the box's longer side on every side (a one-line box at the top of a tall bubble still sees the whole bubble)."""
     H, W = rgb.shape[:2]
     x, y, w, h = box
@@ -114,4 +116,6 @@ def grow(rgb: np.ndarray, box: list[float]) -> list[int] | None:
     if cw < 8 or ch < 8:
         return None
     e = bubble_extent(rgb[cy:cy + ch, cx:cx + cw], (x - cx, y - cy, w, h))
-    return [cx + e[0], cy + e[1], e[2], e[3]] if e else None
+    if not e or (most and e[2] * e[3] > most * w * h):
+        return None
+    return [cx + e[0], cy + e[1], e[2], e[3]]
