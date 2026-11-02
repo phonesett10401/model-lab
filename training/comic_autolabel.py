@@ -3,7 +3,7 @@
 The owner chose this over hand labelling (2026-10-24). The report card says so: test labels are machine-made and
 reviewed by Claude, not by a person.
 
-Run: python comic_autolabel.py <pepper|blackjack|commons> --run final2-dfine
+Run: python comic_autolabel.py <pepper|blackjack|commons|comix> --run final2-dfine
 Writes data/comic3/<source>/labels.json in round 3's target (comic_common.CLASSES; pages stay in data/comic/images)
 and caches OCR words in data/comic/ocr/.
 """
@@ -21,7 +21,7 @@ MIN_CONF = 0.5  # OCR words below this are noise
 FREE_MIN_LETTERS = 4  # English outside any detected box needs at least this many letters...
 FREE_MIN_CONF = 0.6  # ...read this confidently, or it is junk from the art
 INSIDE = 0.6  # a region belongs to a detected box when this share of it lies inside
-SOURCES = {'pepper': 'Pepper&Carrot', 'blackjack': 'Black Jack', 'commons': 'Wikimedia Commons'}
+SOURCES = {'pepper': 'Pepper&Carrot', 'blackjack': 'Black Jack', 'commons': 'Wikimedia Commons', 'comix': 'Comix'}
 # Sound-effect words (left as drawn on the page); any word with a letter drawn out 3+ times ("Grooo", "Shhh") is one too.
 SFX = set('''aah argh ba bam bang bash beep blam blip bloop bonk boom bop brr bzz chomp chug clack clang clank clap
 clatter click clink clomp clonk crack crash creak crunch ding dong doki drip fwoosh fwip gasp glug gong grr growl gulp

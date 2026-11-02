@@ -28,8 +28,8 @@ SPEECH = PHRASES[:10] + PHRASES[15:]
 NARRATION = PHRASES[10:15]
 
 # What a page can hold, each labelled by the one-target rule.
-KINDS = ['bubble', 'big', 'round', 'joined', 'touching', 'border', 'caption', 'tinted', 'free', 'sfx']
-WEIGHTS = [4, 3, 2, 2, 2, 2, 1, 2, 2, 2]
+KINDS = ['bubble', 'big', 'round', 'joined', 'touching', 'overlapping', 'border', 'caption', 'tinted', 'free', 'sfx']
+WEIGHTS = [4, 3, 2, 2, 2, 2, 2, 1, 2, 2, 2]
 CATEGORY = {'caption': 'caption', 'tinted': 'caption', 'free': 'free-text', 'sfx': 'sfx'}  # the rest are bubbles
 
 
@@ -88,17 +88,20 @@ def tile(kind: str, rng: random.Random, fonts: list[Path], scale: float) -> tupl
         text = rng.choice(SPEECH)
         im = _oval(text, size(20, 30), rng.randint(6, 9), scale, rng, tail=False, round_=True)
         return im, _whole(im, kind, text)
-    if kind in ('joined', 'touching'):
+    if kind in ('joined', 'touching', 'overlapping'):
         f = size(22, 32)
         texts = [rng.choice(PHRASES[:10]), rng.choice(PHRASES[15:])]
         parts = [_oval(t, f, 11, scale, rng, tail=False) for t in texts]
         (w1, h1), (w2, h2) = parts[0].size, parts[1].size
-        # joined: the lobes overlap by a quarter (one paper region, one box); touching: the outlines just meet (two boxes)
-        dx = w1 - (w1 // 4 if kind == 'joined' else 3)
-        dy = rng.randint(0, max(0, abs(h1 - h2) // 2))
+        # joined: the lobes overlap by a quarter (one paper region, one box); touching: the outlines just meet (two boxes);
+        # overlapping: the second bubble is drawn partly over the first, its outline crossing the first's paper (two boxes,
+        # which overlap)
+        # (only over the first's lower corner, so no words are hidden)
+        dx = w1 - (w1 // 4 if kind == 'joined' else round(w1 * rng.uniform(0.15, 0.25)) if kind == 'overlapping' else 3)
+        dy = rng.randint(0, max(0, abs(h1 - h2) // 2)) if kind != 'overlapping' else round(h1 * rng.uniform(0.5, 0.65))
         spots = ((0, 0, w1, h1), (dx, dy, w2, h2))
         im = Image.new('RGBA', (dx + w2, max(h1, dy + h2)))
-        if kind == 'touching':
+        if kind in ('touching', 'overlapping'):
             labels = []
             for (x0, y0, _, _), part, t in zip(spots, parts, texts):
                 im.alpha_composite(part, (x0, y0))

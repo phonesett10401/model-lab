@@ -31,7 +31,7 @@ for s, (page, labels) in enumerate(pages):
         assert not (changed & ~inside & ~border).any(), f'seed {s}: drawing outside its boxes'
 
 # each new kind appears in a 50-page sample, and all four classes do
-assert {l['kind'] for _, ls in pages for l in ls} == set(KINDS), {l['kind'] for _, ls in pages for l in ls}
+assert 'overlapping' in KINDS and {l['kind'] for _, ls in pages for l in ls} == set(KINDS), {l['kind'] for _, ls in pages for l in ls}
 assert {l['category'] for _, ls in pages for l in ls} == set(c.CLASSES)
 
 # the one-target rule: joined lobes are one box (the bubble finder agrees), touching bubbles are two
@@ -46,6 +46,12 @@ for page, labels in pages:
             assert e is not None and abs(e[2] - w) <= 0.12 * w and abs(e[3] - h) <= 0.12 * h, (l, e)
 touching = [l for _, ls in pages for l in ls if l['kind'] == 'touching']
 assert len(touching) % 2 == 0 and touching, 'touching bubbles come in pairs, each its own box'
+
+# overlapping bubbles (one drawn partly over the other): two boxes, and the boxes overlap
+for _, ls in pages:
+    ov = [l['bbox'] for l in ls if l['kind'] == 'overlapping']
+    for a, b in zip(ov[::2], ov[1::2]):
+        assert a[0] < b[0] < a[0] + a[2] and b[1] < a[1] + a[3] and a[1] < b[1] + b[3], (a, b)
 
 # tall webtoon pages
 page, labels = make_page(art(1), random.Random(1), [], tall=True)
