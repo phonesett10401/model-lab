@@ -2,7 +2,7 @@
 import numpy as np
 from PIL import Image, ImageDraw
 
-from comic_autolabel import free_kind, label_page, merge_words, split_touching
+from comic_autolabel import free_kind, label_page, merge_words, refine, split_touching
 
 H = 30  # word height in these tests
 
@@ -65,4 +65,21 @@ lobes = page(lambda d: (d.ellipse([20, 60, 250, 240], fill='black'), d.ellipse([
                         d.rectangle([200, 120, 280, 180], fill='white')))
 boxes = split_touching(lobes, [20, 60, 461, 181], [[90, 140, 90, 20], [320, 140, 90, 20]])
 assert len(boxes) == 1 and boxes[0][2] > 400, boxes
+
+# refine: a text-tight box grows to its whole bubble and stays a bubble; a rectangular box becomes a caption; one box
+# over two bubbles becomes two; a box with no closed bubble around it is kept as it is
+scene = page(lambda d: (d.ellipse([20, 40, 230, 260], fill='white', outline='black', width=3),
+                        d.rectangle([300, 40, 480, 140], fill=(250, 244, 220), outline='black', width=3),
+                        d.ellipse([260, 170, 380, 290], fill='white', outline='black', width=3),
+                        d.ellipse([383, 170, 495, 290], fill='white', outline='black', width=3)))
+labels = [{'bbox': [80, 130, 90, 30], 'category': 'caption', 'text': 'HELLO THERE'},
+          {'bbox': [330, 70, 120, 30], 'category': 'bubble', 'text': 'Later that day'},
+          {'bbox': [280, 200, 200, 60], 'category': 'bubble', 'text': 'Hi Yes'},
+          {'bbox': [5, 5, 10, 10], 'category': 'bubble', 'text': 'x'}]
+words = [[80, 130, 90, 30], [330, 70, 120, 30], [290, 215, 60, 20], [410, 215, 60, 20], [5, 5, 10, 10]]
+out = refine(scene, labels, words)
+got = sorted((l['category'], l['bbox'][0] // 10) for l in out)
+assert got == [('bubble', 0), ('bubble', 2), ('bubble', 26), ('bubble', 38), ('caption', 30)], (got, out)
+oval = [l for l in out if 15 < l['bbox'][0] < 30][0]['bbox']
+assert oval[2] > 190 and oval[3] > 200, oval  # the whole oval, not the text
 print('comic autolabel checks passed')

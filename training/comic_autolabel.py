@@ -95,7 +95,7 @@ def split_touching(rgb: np.ndarray, box: list, groups: list[list[float]]) -> lis
         return [list(box)]
     H, W = rgb.shape[:2]
     x, y, w, h = (int(round(v)) for v in box)
-    m = max(4, round(0.1 * max(w, h)))
+    m = max(w, h)  # room for the whole bubble around a box that holds only part of it
     cx, cy = max(0, x - m), max(0, y - m)
     crop = rgb[cy:min(H, y + h + m), cx:min(W, x + w + m)]
     out = []
@@ -106,6 +106,43 @@ def split_touching(rgb: np.ndarray, box: list, groups: list[list[float]]) -> lis
         e = [cx + e[0], cy + e[1], e[2], e[3]]
         if all(_inside_share(e, o) < 0.8 for o in out):
             out.append(e)
+    return out
+
+
+def _square(rgb: np.ndarray, box: list) -> bool:
+    """A grown box whose four corners are its paper is a rectangular narration box; an oval's corners are not paper."""
+    x, y, w, h = (int(v) for v in box)
+    px = rgb[y:y + h, x:x + w].reshape(-1, 3).astype(int)
+    if len(px) == 0:
+        return False
+    keys, counts = np.unique(px // 16, axis=0, return_counts=True)
+    paper = px[(px // 16 == keys[counts.argmax()]).all(1)].mean(0)
+    i = 3
+    corners = [rgb[y + i, x + i], rgb[y + i, x + w - 1 - i], rgb[y + h - 1 - i, x + i], rgb[y + h - 1 - i, x + w - 1 - i]]
+    return all((np.abs(c.astype(int) - paper) <= 40).all() for c in corners)
+
+
+def refine(rgb: np.ndarray, labels: list[dict], words: list[list[float]]) -> list[dict]:
+    """Round 3's target for the finder's bubble and caption boxes: one box over several bubbles is split (one per word
+    group's closed paper region), each is grown to its whole bubble, and a grown box is a caption when it is square
+    (paper in its corners), else a bubble. A box with no closed bubble around it is kept as found."""
+    from comic_bubble import grow
+    out = []
+    for l in labels:
+        if l['category'] not in ('bubble', 'caption'):
+            out.append(l)
+            continue
+        groups = [g for g in words if _inside_share(g, l['bbox']) >= INSIDE]
+        parts = split_touching(rgb, l['bbox'], groups) if len(groups) >= 2 else [l['bbox']]
+        if parts == [list(l['bbox'])]:
+            grown = grow(rgb, l['bbox'])
+            parts = [grown] if grown else []
+        if not parts:
+            out.append(l)
+            continue
+        for p in parts:
+            if all(_inside_share(p, o['bbox']) < 0.8 or _inside_share(o['bbox'], p) < 0.8 for o in out):
+                out.append({**l, 'bbox': list(p), 'category': 'caption' if _square(rgb, p) else 'bubble'})
     return out
 
 
@@ -179,7 +216,7 @@ def main() -> None:
                      for b in text_boxes(im, art)
                      for part in split_touching(rgb, list(b), [r['bbox'] for r in regions if _inside_share(r['bbox'], list(b)) >= INSIDE])]
             detected = exact + [d for d in detected if all(_inside_share(d['bbox'], e['bbox']) < 0.3 for e in exact)]
-        items.append((p.file, W, H, label_page(words, detected)))
+        items.append((p.file, W, H, refine(np.asarray(im), label_page(words, detected), [r['bbox'] for r in merge_words(words)])))
         if n % 25 == 0:
             print(n, 'of', len(pages), flush=True)
     out = c.HERE / 'data/comic3' / a.source / 'labels.json'
