@@ -42,13 +42,42 @@ left, right = (90, 140, 90, 20), (320, 140, 90, 20)
 whole = bubble_extent(lobes, left)
 assert whole and whole[2] > 400, whole  # without others: the whole joined region, as before
 got = bubble_extent(lobes, left, others=[right])
-assert got and got[0] < 30 and got[0] + got[2] < 260 and got[2] > 180, got
+assert got and got[0] < 30 and got[0] + got[2] < 280 and got[2] > 180, got
 got = bubble_extent(lobes, right, others=[left])
-assert got and got[0] > 210 and got[0] + got[2] > 470, got
+assert got and got[0] > 200 and got[0] + got[2] > 470, got
+# a chain with a small bubble in it (its piece vanishes before the necks break) still splits
+im = Image.new('RGB', (600, 300), (110, 110, 110))
+g = ImageDraw.Draw(im)
+for e in ([20, 60, 230, 240], [250, 120, 330, 180], [350, 60, 580, 240]):
+    g.ellipse(e, fill='black')
+for e in ([23, 63, 227, 237], [253, 123, 327, 177], [353, 63, 577, 237]):
+    g.ellipse(e, fill='white')
+g.rectangle([215, 142, 365, 158], fill='white')
+chain = np.asarray(im)
+got = bubble_extent(chain, (80, 140, 90, 20), others=[(270, 145, 40, 10), (410, 140, 110, 20)])
+assert got and got[0] < 30 and got[0] + got[2] < 250, got
+# a chain whose first bubble opens onto the page margin (no outlines, as in Pepper&Carrot): the others still split off
+im = Image.new('RGB', (600, 300), (110, 110, 110))
+g = ImageDraw.Draw(im)
+g.ellipse([20, 60, 260, 240], fill='white'); g.ellipse([300, 60, 580, 240], fill='white')
+g.rectangle([240, 140, 320, 160], fill='white'); g.rectangle([100, 0, 180, 80], fill='white')
+open_chain = np.asarray(im)
+got = bubble_extent(open_chain, (390, 140, 110, 20), others=[(90, 140, 90, 20)])
+assert got and got[0] > 260 and got[0] + got[2] > 570, got
+got = bubble_extent(open_chain, (90, 140, 90, 20), others=[(390, 140, 110, 20)])  # the bubble, not the margin strip
+assert got and got[1] > 20 and got[0] < 30 and got[0] + got[2] < 300, got
+# ...and when that first bubble is small and joined wide (a spiky "What?!" on a bigger bubble), its piece vanishes before
+# anything comes apart: the bigger bubble is still found on its own, without the small one and the margin
+im = Image.new('RGB', (600, 300), (110, 110, 110))
+g = ImageDraw.Draw(im)
+g.ellipse([200, 50, 560, 260], fill='white'); g.rectangle([40, 130, 260, 170], fill='white'); g.rectangle([60, 0, 100, 150], fill='white')
+spiky = np.asarray(im)
+got = bubble_extent(spiky, (300, 140, 160, 30), others=[(110, 140, 60, 20)])
+assert got and got[0] > 150 and got[1] > 30 and got[0] + got[2] > 550, got
 # grow passes others through (a wide text box: its crop holds the whole chain)
 assert grow(lobes, [40, 100, 220, 80])[2] > 400
 got = grow(lobes, [40, 100, 220, 80], others=[list(right)])
-assert got and got[0] < 30 and got[0] + got[2] < 260, got
+assert got and got[0] < 30 and got[0] + got[2] < 280, got
 im = Image.new('RGB', (500, 300), (110, 110, 110))
 ImageDraw.Draw(im).ellipse([20, 20, 480, 280], fill='white', outline='black', width=3)
 got = bubble_extent(np.asarray(im), (150, 90, 200, 30), others=[(150, 170, 200, 30)])

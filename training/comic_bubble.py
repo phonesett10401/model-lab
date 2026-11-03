@@ -59,8 +59,10 @@ def _hull_rows(marked: np.ndarray) -> list:
 
 def _lobe(mask: np.ndarray, seed: tuple, others: list) -> np.ndarray:
     """The part of a filled bubble that holds `seed` when it is joined to other bubbles (whose text boxes are `others`)
-    by narrow necks: the bubble is shrunk until the texts sit in separate pieces, then each pixel goes to the nearest
-    piece. A single bubble holding several paragraphs never comes apart before a text's piece vanishes: kept whole."""
+    by necks: the bubble is shrunk until the seed's piece holds no other text and doesn't reach the crop edge (a bubble
+    open onto the page margin), then that piece is grown back by as much. Small bubbles vanish on the way (a spiky
+    "What?!" joined wide to the next one) and are left out. A single bubble holding several paragraphs shrinks
+    evenly, so it comes back about whole; when the seed's piece vanishes first, the bubble is kept whole."""
     def ids(lab, b):
         x, y, w, h = (int(round(v)) for v in b)
         got = np.unique(lab[max(0, y):max(0, y + h), max(0, x):max(0, x + w)])
@@ -68,12 +70,16 @@ def _lobe(mask: np.ndarray, seed: tuple, others: list) -> np.ndarray:
     dist = ndimage.distance_transform_edt(mask)
     for r in range(2, int(dist.max()), 2):
         lab, _ = ndimage.label(dist > r, FOUR)
-        own, rest = ids(lab, seed), [ids(lab, o) for o in others]
-        if not own or not all(rest):
+        own = ids(lab, seed)
+        if not own:
             return mask
-        if len(own) == 1 and all(own.isdisjoint(s) for s in rest):
-            near = lab[tuple(ndimage.distance_transform_edt(lab == 0, return_distances=False, return_indices=True))]
-            return mask & (near == own.pop())
+        if len(own) > 1:
+            continue
+        o = own.pop()
+        edge = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]])).tolist())
+        if o in edge or any(o in ids(lab, b) for b in others):
+            continue
+        return mask & (ndimage.distance_transform_edt(lab != o) <= r + 1)
     return mask
 
 
