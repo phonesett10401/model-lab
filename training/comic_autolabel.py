@@ -89,8 +89,9 @@ def free_kind(text: str) -> str:
 
 def split_touching(rgb: np.ndarray, box: list, groups: list[list[float]]) -> list[list[int]]:
     """One changed blob holding 2+ word groups: each group's bubble (the closed paper region around it) is one box.
-    Bubbles joined by a neck are split at it, one box per lobe; groups in one bubble without a neck give one box. When
-    a group has no closed bubble around it, the blob is kept as it is."""
+    When a group's bubble takes in another group (bubbles joined into a chain), that group gets its own text box,
+    padded a little, instead: round 3 counts each bubble, and one box over the chain taught the finder to box chains.
+    So does a group with no closed bubble around it (a chain opening onto the page margin, as in Pepper&Carrot)."""
     if len(groups) < 2:
         return [list(box)]
     H, W = rgb.shape[:2]
@@ -99,15 +100,25 @@ def split_touching(rgb: np.ndarray, box: list, groups: list[list[float]]) -> lis
     cx, cy = max(0, x - m), max(0, y - m)
     crop = rgb[cy:min(H, y + h + m), cx:min(W, x + w + m)]
     out = []
-    local = [(gx - cx, gy - cy, gw, gh) for gx, gy, gw, gh in groups]
-    for i, g in enumerate(local):
-        e = bubble_extent(crop, g, local[:i] + local[i + 1:])
-        if e is None:
-            return [list(box)]
-        e = [cx + e[0], cy + e[1], e[2], e[3]]
+    for i, (gx, gy, gw, gh) in enumerate(groups):
+        e = bubble_extent(crop, (gx - cx, gy - cy, gw, gh))
+        e = e and [cx + e[0], cy + e[1], e[2], e[3]]
+        if e is None or any(_holds(e, o) for j, o in enumerate(groups) if j != i):
+            e = _padded([gx, gy, gw, gh])
         if all(_inside_share(e, o) < 0.8 for o in out):
             out.append(e)
     return out
+
+
+def _holds(b, o) -> bool:
+    """Box b holds box o's middle."""
+    return b[0] <= o[0] + o[2] / 2 <= b[0] + b[2] and b[1] <= o[1] + o[3] / 2 <= b[1] + b[3]
+
+
+def _padded(b) -> list[int]:
+    """A text box padded by a fifth of its shorter side (about a bubble's margin round its text)."""
+    p = 0.2 * min(b[2], b[3])
+    return [round(b[0] - p), round(b[1] - p), round(b[2] + 2 * p), round(b[3] + 2 * p)]
 
 
 def _square(rgb: np.ndarray, box: list) -> bool:
@@ -136,7 +147,9 @@ def refine(rgb: np.ndarray, labels: list[dict], words: list[list[float]]) -> lis
         groups = [g for g in words if _inside_share(g, l['bbox']) >= INSIDE]
         parts = split_touching(rgb, l['bbox'], groups) if len(groups) >= 2 else [l['bbox']]
         if parts == [list(l['bbox'])]:
-            grown = grow(rgb, l['bbox'], others=[w for w in words if _inside_share(w, l['bbox']) < INSIDE])
+            grown = grow(rgb, l['bbox'])
+            if grown and any(_holds(grown, w) for w in words if _inside_share(w, l['bbox']) < INSIDE):
+                grown = None  # joined to another bubble: kept as found
             parts = [grown] if grown else []
         if not parts:
             out.append(l)

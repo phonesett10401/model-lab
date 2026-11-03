@@ -7,7 +7,6 @@ NEAR = 40        # how far (per channel) a pixel may be from the paper colour an
 SATURATION = 45  # most a paper colour's channels may differ (cream ~40; a lilac window or painted sky is art)
 GAP = 2          # outline gaps up to twice this wide are closed before flooding
 FOUR = ndimage.generate_binary_structure(2, 1)
-LETTER = 8       # letters' strokes are closed over at this many pixels when splitting joined bubbles
 
 
 def _spread(m: np.ndarray, r: int, shrink: bool) -> np.ndarray:
@@ -58,37 +57,10 @@ def _hull_rows(marked: np.ndarray) -> list:
     return rows
 
 
-def _lobe(mask: np.ndarray, seed: tuple, others: list) -> np.ndarray:
-    """The part of a filled bubble that holds `seed` when it is joined to other bubbles (whose text boxes are `others`)
-    by necks: the bubble is shrunk until the seed's piece holds no other text and doesn't reach the crop edge (a bubble
-    open onto the page margin), then that piece is grown back by as much. Small bubbles vanish on the way (a spiky
-    "What?!" joined wide to the next one) and are left out. A single bubble holding several paragraphs shrinks
-    evenly, so it comes back about whole; when the seed's piece vanishes first, the bubble is kept whole."""
-    def ids(lab, b):
-        x, y, w, h = (int(round(v)) for v in b)
-        got = np.unique(lab[max(0, y):max(0, y + h), max(0, x):max(0, x + w)])
-        return set(got[got > 0].tolist())
-    dist = ndimage.distance_transform_edt(mask)
-    for r in range(2, int(dist.max()), 2):
-        lab, _ = ndimage.label(dist > r, FOUR)
-        own = ids(lab, seed)
-        if not own:
-            return mask
-        if len(own) > 1:
-            continue
-        o = own.pop()
-        edge = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]])).tolist())
-        if o in edge or any(o in ids(lab, b) for b in others):
-            continue
-        return mask & (ndimage.distance_transform_edt(lab != o) <= r + 1)
-    return mask
-
-
-def bubble_extent(rgb: np.ndarray, seed: tuple | None = None, others: list = ()) -> tuple[int, int, int, int] | None:
+def bubble_extent(rgb: np.ndarray, seed: tuple | None = None) -> tuple[int, int, int, int] | None:
     """The whole bubble around a box in an RGB crop (h×w×3): (x, y, w, h) in crop pixels, or None when there is no
     closed bubble of paper (paper running off the crop, painted art, busy art). `seed` (x, y, w, h) is where the paper
-    is looked for; default the middle half of the crop. `others`: other bubbles' text boxes (crop pixels); when one lies
-    in the same paper, only the seed's own lobe is kept (training labels only; bubble.ts has no such step)."""
+    is looked for; default the middle half of the crop."""
     h, w = rgb.shape[:2]
     px = rgb.astype(np.int16)
     sx, sy, sw, sh = seed if seed else (w / 4, h / 4, w / 2, h / 2)
@@ -117,14 +89,6 @@ def bubble_extent(rgb: np.ndarray, seed: tuple | None = None, others: list = ())
     edge = np.zeros((h, w), bool)
     edge[0, :] = edge[-1, :] = edge[:, 0] = edge[:, -1] = True
     mask = ~_reached(edge, ~inside)
-    # Other bubbles' text in this paper: keep the seed's own lobe (before the hull, which would fill the necks).
-    held = [o for o in others if seed and 0 <= o[1] + o[3] / 2 < h and 0 <= o[0] + o[2] / 2 < w
-            and mask[int(o[1] + o[3] / 2), int(o[0] + o[2] / 2)]]
-    if held:
-        # The paper itself with its letters closed over: `mask` would also hold panel art the page margin encloses.
-        lobe = _lobe(ndimage.binary_closing(inside, FOUR, iterations=LETTER) | inside, seed, held)
-        mask &= lobe
-        inside &= lobe
     rows = _hull_rows(inside)
     if sum(r1 - r0 + 1 for r0, r1 in filter(None, rows)) <= mask.sum() * 1.3:
         for y, row in enumerate(rows):
@@ -139,7 +103,7 @@ def bubble_extent(rgb: np.ndarray, seed: tuple | None = None, others: list = ())
     return int(x0), int(y0), int(x1 - x0 + 1), int(y1 - y0 + 1)
 
 
-def grow(rgb: np.ndarray, box: list[float], most: float | None = None, others: list = ()) -> list[int] | None:
+def grow(rgb: np.ndarray, box: list[float], most: float | None = None) -> list[int] | None:
     """A text-only box grown to the whole bubble around it, or None when there is no closed bubble (or, with `most`, only
     one over `most` times the box's area: for boxes already near a bubble's size, a white panel or joined bubbles; tight
     line boxes can't use it, a one-line bubble is often 4× its text). The crop reaches
@@ -151,7 +115,7 @@ def grow(rgb: np.ndarray, box: list[float], most: float | None = None, others: l
     cw, ch = min(W, int(np.ceil(x + w + pad))) - cx, min(H, int(np.ceil(y + h + pad))) - cy
     if cw < 8 or ch < 8:
         return None
-    e = bubble_extent(rgb[cy:cy + ch, cx:cx + cw], (x - cx, y - cy, w, h), [(o[0] - cx, o[1] - cy, o[2], o[3]) for o in others])
+    e = bubble_extent(rgb[cy:cy + ch, cx:cx + cw], (x - cx, y - cy, w, h))
     if not e or (most and e[2] * e[3] > most * w * h):
         return None
     return [cx + e[0], cy + e[1], e[2], e[3]]

@@ -140,12 +140,11 @@ def convert(src: Source, path: Path, raw: list[tuple[str, list[float]]], today: 
     rgb = None
     anns = []
     complete = True
-    texts = [box for name, box in raw if src.format != 'masks' and src.classes.get(name) == 'text']
     for name, box in raw:
         kind = 'bubble' if src.format == 'masks' else src.classes.get(name)
         if kind == 'text':
             rgb = np.asarray(im) if rgb is None else rgb
-            grown = grow(rgb, box, others=[t for t in texts if t is not box])  # joined bubbles split at the neck
+            grown = grow(rgb, box)
             if grown:
                 anns.append({'bbox': grown, 'category': 'bubble'})
             else:
