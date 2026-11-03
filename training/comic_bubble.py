@@ -7,6 +7,7 @@ NEAR = 40        # how far (per channel) a pixel may be from the paper colour an
 SATURATION = 45  # most a paper colour's channels may differ (cream ~40; a lilac window or painted sky is art)
 GAP = 2          # outline gaps up to twice this wide are closed before flooding
 FOUR = ndimage.generate_binary_structure(2, 1)
+LETTER = 8       # letters' strokes are closed over at this many pixels when splitting joined bubbles
 
 
 def _spread(m: np.ndarray, r: int, shrink: bool) -> np.ndarray:
@@ -120,8 +121,10 @@ def bubble_extent(rgb: np.ndarray, seed: tuple | None = None, others: list = ())
     held = [o for o in others if seed and 0 <= o[1] + o[3] / 2 < h and 0 <= o[0] + o[2] / 2 < w
             and mask[int(o[1] + o[3] / 2), int(o[0] + o[2] / 2)]]
     if held:
-        mask = _lobe(mask, seed, held)
-        inside &= mask
+        # The paper itself with its letters closed over: `mask` would also hold panel art the page margin encloses.
+        lobe = _lobe(ndimage.binary_closing(inside, FOUR, iterations=LETTER) | inside, seed, held)
+        mask &= lobe
+        inside &= lobe
     rows = _hull_rows(inside)
     if sum(r1 - r0 + 1 for r0, r1 in filter(None, rows)) <= mask.sum() * 1.3:
         for y, row in enumerate(rows):

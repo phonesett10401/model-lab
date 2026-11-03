@@ -74,6 +74,17 @@ g.ellipse([200, 50, 560, 260], fill='white'); g.rectangle([40, 130, 260, 170], f
 spiky = np.asarray(im)
 got = bubble_extent(spiky, (300, 140, 160, 30), others=[(110, 140, 60, 20)])
 assert got and got[0] > 150 and got[1] > 30 and got[0] + got[2] > 550, got
+# ...and on a real page, where white page margin runs all round the crop (so the panel art inside it is enclosed too)
+im = Image.new('RGB', (640, 360), 'white')
+g = ImageDraw.Draw(im)
+g.rectangle([20, 20, 620, 340], fill=(110, 110, 110))
+g.ellipse([40, 80, 280, 260], fill='white'); g.ellipse([320, 80, 600, 260], fill='white')
+g.rectangle([260, 160, 340, 180], fill='white'); g.rectangle([120, 0, 200, 100], fill='white')
+for x in range(120, 200, 12):
+    g.text((x, 165), 'W', fill='black')
+paged = np.asarray(im)
+got = bubble_extent(paged, (410, 160, 110, 20), others=[(110, 160, 90, 20)])
+assert got and got[0] > 280 and got[0] + got[2] < 625 and got[1] > 50, got
 # grow passes others through (a wide text box: its crop holds the whole chain)
 assert grow(lobes, [40, 100, 220, 80])[2] > 400
 got = grow(lobes, [40, 100, 220, 80], others=[list(right)])
