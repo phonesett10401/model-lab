@@ -1,7 +1,7 @@
 """Scoring for the comic text detector. Run: python test_comic_evaluate.py"""
 import comic_common as c
 from pathlib import Path
-from comic_evaluate import by_style, evaluate
+from comic_evaluate import bubbles_found, by_style, evaluate, found_by_set, grow_preds
 
 
 def gt_for(n_images, style_files=None):
@@ -79,4 +79,39 @@ with tempfile.TemporaryDirectory() as d:
     m = missed_text(p)
     assert m['owner_checked'] == 2 and m['owner_agreed'] == 1, m
     assert m['missed'] == 3, 'an owner correction replaces Claude count'
+
+# Round 3's measure: the share of proper bubbles (bubble, caption) a box at or above CONF covers at least half of;
+# one predicted box finds one bubble at most (a box over a whole row of bubbles finds one of them, not all).
+fg = {'images': [{'id': 1, 'file_name': 'a.jpg', 'width': 600, 'height': 400}],
+      'categories': [{'id': i, 'name': n} for i, n in enumerate(c.CLASSES)],
+      'annotations': [{'id': 1, 'image_id': 1, 'category_id': 0, 'bbox': [0, 0, 100, 100]},
+                      {'id': 2, 'image_id': 1, 'category_id': 1, 'bbox': [200, 0, 90, 90]},
+                      {'id': 3, 'image_id': 1, 'category_id': 3, 'bbox': [400, 0, 50, 50]}]}  # sfx: not a proper bubble
+half = {'image_id': 1, 'category_id': 0, 'bbox': [0, 0, 50, 100], 'score': 0.9}
+third = {'image_id': 1, 'category_id': 0, 'bbox': [200, 0, 30, 90], 'score': 0.9}
+r = bubbles_found(fg, [half, third], c.CLASSES)
+assert (r['found'], r['total']) == (1, 2), r
+low = {**half, 'score': 0.1}
+assert bubbles_found(fg, [low], c.CLASSES)['found'] == 0
+wide = {'image_id': 1, 'category_id': 0, 'bbox': [0, 0, 300, 100], 'score': 0.9}
+assert bubbles_found(fg, [wide], c.CLASSES)['found'] == 1
+# a sound-effect box doesn't find a bubble (the page would leave it in the art)
+assert bubbles_found(fg, [{**half, 'category_id': 3}], c.CLASSES)['found'] == 0
+
+# old (round 2) boxes are text-sized: grown to the bubble around them before scoring
+import numpy as np
+from PIL import Image, ImageDraw
+im = Image.new('RGB', (600, 400), (110, 110, 110))
+ImageDraw.Draw(im).ellipse([20, 20, 300, 250], fill='white', outline='black', width=3)
+og = {**fg, 'annotations': [{'id': 1, 'image_id': 1, 'category_id': 0, 'bbox': [20, 20, 281, 231]}]}
+text = {'image_id': 1, 'category_id': 0, 'bbox': [110, 110, 100, 40], 'score': 0.9}
+assert bubbles_found(og, [text], c.CLASSES_V2)['found'] == 0
+grown = grow_preds([text], {1: np.asarray(im)}, c.CLASSES_V2)
+assert bubbles_found(og, grown, c.CLASSES_V2)['found'] == 1, grown
+
+# results come per set: each style's test file and test97
+sets = {'manga': og, 'test97': fg}
+res = found_by_set(sets, lambda name, gt: [text] if name == 'manga' else [half])
+assert res['manga']['share'] == 0.0 and res['test97']['share'] == 0.5, res
+assert found_by_set(sets, lambda name, gt: grow_preds([text], {1: np.asarray(im)}, c.CLASSES_V2))['manga']['share'] == 1.0
 print('comic owner-check checks passed')

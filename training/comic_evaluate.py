@@ -162,6 +162,77 @@ def run_model(run: str, gt: dict) -> list[dict]:
     return preds
 
 
+PROPER = ('bubble', 'caption')  # what the page translates; sound effects stay in the art
+
+
+def bubbles_found(gt: dict, pred: list[dict], classes: list[str]) -> dict:
+    """Round 3's measure: proper bubbles with a box at or above CONF covering at least half of each (bubble or caption
+    either way: both get translated). One box finds one bubble at most, so a box over a row of bubbles finds one."""
+    names = {k['id']: k['name'] for k in gt['categories']}
+    found = total = 0
+    for img in gt['images']:
+        want = [a['bbox'] for a in gt['annotations'] if a['image_id'] == img['id'] and names[a['category_id']] in PROPER]
+        boxes = [p['bbox'] for p in pred if p['image_id'] == img['id'] and p['score'] >= CONF and classes[p['category_id']] in PROPER]
+        pairs = sorted(((_covered(g, b), i, j) for i, g in enumerate(want) for j, b in enumerate(boxes)), reverse=True)
+        used_g, used_b = set(), set()
+        for cov, i, j in pairs:
+            if cov >= 0.5 and i not in used_g and j not in used_b:
+                used_g.add(i)
+                used_b.add(j)
+        found += len(used_g)
+        total += len(want)
+    return {'found': found, 'total': total, 'share': found / total if total else None, 'pages': len(gt['images'])}
+
+
+def _covered(g, b) -> float:
+    """Share of box g inside box b."""
+    iw = max(0, min(g[0] + g[2], b[0] + b[2]) - max(g[0], b[0]))
+    ih = max(0, min(g[1] + g[3], b[1] + b[3]) - max(g[1], b[1]))
+    return iw * ih / (g[2] * g[3])
+
+
+def grow_preds(pred: list[dict], rgbs: dict, classes: list[str]) -> list[dict]:
+    """Round 2's text-sized bubble and caption boxes grown to the whole bubble around them, where one is found."""
+    from comic_bubble import grow
+    out = []
+    for p in pred:
+        g = grow(rgbs[p['image_id']], p['bbox']) if p['score'] >= CONF and classes[p['category_id']] in PROPER else None
+        out.append({**p, 'bbox': g} if g else p)
+    return out
+
+
+def found_by_set(sets: dict, predict, classes: list[str] = c.CLASSES) -> dict:
+    """{set name: bubbles_found} for each test set; predict(name, gt) gives that set's predicted boxes."""
+    return {name: bubbles_found(gt, predict(name, gt), classes) for name, gt in sets.items()}
+
+
+def found_main(run: str, old: bool) -> None:
+    """python comic_evaluate.py found <run> [--old]: found share on round 3's test sets, per style and test97.
+    --old: a round 2 model (its class order; boxes grown to the bubble first)."""
+    import onnxruntime as ort
+    d = c.RUNS / run
+    session = ort.InferenceSession(str(d / 'model.onnx'), providers=['CPUExecutionProvider'])
+    kind = (d / 'kind.txt').read_text().strip()
+    classes = c.CLASSES_V2 if old else c.CLASSES
+    ann = c.HERE / 'data/comic3/annotations'
+    sets = {f.stem.removeprefix('test-'): json.loads(f.read_text(encoding='utf8')) for f in sorted(ann.glob('test-*.json'))}
+    sets['test97'] = json.loads((ann / 'test97-bubbles.json').read_text(encoding='utf8'))
+
+    def boxes_for(name, gt):
+        preds, rgbs = [], {}
+        for img in gt['images']:
+            im = Image.open(c.HERE / 'data' / img['file_name']).convert('RGB')
+            if old:
+                rgbs[img['id']] = np.asarray(im)
+            preds += [{'image_id': img['id'], 'category_id': k, 'bbox': b, 'score': s} for k, s, b in predict(session, kind, im)]
+        return grow_preds(preds, rgbs, classes) if old else preds
+
+    res = found_by_set(sets, boxes_for, classes)
+    (d / 'found3.json').write_text(json.dumps(res, indent=1), encoding='utf8')
+    for name, r in res.items():
+        print(f"{run} {name}: {r['found']}/{r['total']} proper bubbles found ({r['share']:.3f}) on {r['pages']} pages")
+
+
 def table(r: dict) -> str:
     rows = [f'{n:<9} ' + ('-' if m is None else f"AP50 {m['ap50']:.3f}  P {m['precision']:.3f}  R {m['recall']:.3f}")
             for n, m in r['per_class'].items()]
@@ -197,6 +268,8 @@ def build_report(run: str, gt: dict, result: dict, styles: dict, pages: list[c.P
 
 
 def main() -> None:
+    if sys.argv[1] == 'found':
+        return found_main(sys.argv[2], '--old' in sys.argv)
     run, split = sys.argv[1:3]
     gt = json.loads((c.DATA / 'annotations' / f'{split}.json').read_text(encoding='utf8'))
     pred = run_model(run, gt)
