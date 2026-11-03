@@ -104,7 +104,7 @@ def split_touching(rgb: np.ndarray, box: list, groups: list[list[float]]) -> lis
         e = bubble_extent(crop, (gx - cx, gy - cy, gw, gh))
         e = e and [cx + e[0], cy + e[1], e[2], e[3]]
         if e is None or any(_holds(e, o) for j, o in enumerate(groups) if j != i):
-            e = _padded([gx, gy, gw, gh])
+            e = _padded([gx, gy, gw, gh], W, H)
         if all(_inside_share(e, o) < 0.8 for o in out):
             out.append(e)
     return out
@@ -115,10 +115,12 @@ def _holds(b, o) -> bool:
     return b[0] <= o[0] + o[2] / 2 <= b[0] + b[2] and b[1] <= o[1] + o[3] / 2 <= b[1] + b[3]
 
 
-def _padded(b) -> list[int]:
-    """A text box padded by a fifth of its shorter side (about a bubble's margin round its text)."""
+def _padded(b, W: int, H: int) -> list[int]:
+    """A text box padded by a fifth of its shorter side (about a bubble's margin round its text), kept on the page."""
     p = 0.2 * min(b[2], b[3])
-    return [round(b[0] - p), round(b[1] - p), round(b[2] + 2 * p), round(b[3] + 2 * p)]
+    x0, y0 = max(0, round(b[0] - p)), max(0, round(b[1] - p))
+    x1, y1 = min(W, round(b[0] + b[2] + p)), min(H, round(b[1] + b[3] + p))
+    return [x0, y0, x1 - x0, y1 - y0]
 
 
 def _square(rgb: np.ndarray, box: list) -> bool:

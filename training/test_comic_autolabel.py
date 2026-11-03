@@ -93,4 +93,8 @@ assert len(boxes) == 2 and boxes[0][0] + boxes[0][2] < 200 and boxes[1][0] > 300
 joined = [{'bbox': [90, 140, 90, 20], 'category': 'bubble', 'text': 'Hi'}]
 out = refine(lobes, joined, [[90, 140, 90, 20], [320, 140, 90, 20]])
 assert len(out) == 1 and out[0]['bbox'][2] < 150, out
+# a padded text box at the page edge stays on the page
+edge = sorted(split_touching(open_chain, [20, 60, 461, 181], [[90, 140, 90, 20], [400, 140, 99, 20]]))
+assert all(b[0] >= 0 and b[0] + b[2] <= 500 for b in edge), edge
+refine(open_chain, [{'bbox': [20, 60, 461, 181], 'category': 'bubble', 'text': 'a b'}], [[90, 140, 90, 20], [400, 140, 99, 20]])
 print('comic autolabel checks passed')
