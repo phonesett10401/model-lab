@@ -89,8 +89,8 @@ def free_kind(text: str) -> str:
 
 def split_touching(rgb: np.ndarray, box: list, groups: list[list[float]]) -> list[list[int]]:
     """One changed blob holding 2+ word groups: each group's bubble (the closed paper region around it) is one box.
-    Groups in the same paper region (lobes joined by a neck) give one box. When a group has no closed bubble around it,
-    the blob is kept as it is."""
+    Bubbles joined by a neck are split at it, one box per lobe; groups in one bubble without a neck give one box. When
+    a group has no closed bubble around it, the blob is kept as it is."""
     if len(groups) < 2:
         return [list(box)]
     H, W = rgb.shape[:2]
@@ -99,8 +99,9 @@ def split_touching(rgb: np.ndarray, box: list, groups: list[list[float]]) -> lis
     cx, cy = max(0, x - m), max(0, y - m)
     crop = rgb[cy:min(H, y + h + m), cx:min(W, x + w + m)]
     out = []
-    for gx, gy, gw, gh in groups:
-        e = bubble_extent(crop, (gx - cx, gy - cy, gw, gh))
+    local = [(gx - cx, gy - cy, gw, gh) for gx, gy, gw, gh in groups]
+    for i, g in enumerate(local):
+        e = bubble_extent(crop, g, local[:i] + local[i + 1:])
         if e is None:
             return [list(box)]
         e = [cx + e[0], cy + e[1], e[2], e[3]]
@@ -135,7 +136,7 @@ def refine(rgb: np.ndarray, labels: list[dict], words: list[list[float]]) -> lis
         groups = [g for g in words if _inside_share(g, l['bbox']) >= INSIDE]
         parts = split_touching(rgb, l['bbox'], groups) if len(groups) >= 2 else [l['bbox']]
         if parts == [list(l['bbox'])]:
-            grown = grow(rgb, l['bbox'])
+            grown = grow(rgb, l['bbox'], others=[w for w in words if _inside_share(w, l['bbox']) < INSIDE])
             parts = [grown] if grown else []
         if not parts:
             out.append(l)

@@ -57,10 +57,31 @@ def _hull_rows(marked: np.ndarray) -> list:
     return rows
 
 
-def bubble_extent(rgb: np.ndarray, seed: tuple | None = None) -> tuple[int, int, int, int] | None:
+def _lobe(mask: np.ndarray, seed: tuple, others: list) -> np.ndarray:
+    """The part of a filled bubble that holds `seed` when it is joined to other bubbles (whose text boxes are `others`)
+    by narrow necks: the bubble is shrunk until the texts sit in separate pieces, then each pixel goes to the nearest
+    piece. A single bubble holding several paragraphs never comes apart before a text's piece vanishes: kept whole."""
+    def ids(lab, b):
+        x, y, w, h = (int(round(v)) for v in b)
+        got = np.unique(lab[max(0, y):max(0, y + h), max(0, x):max(0, x + w)])
+        return set(got[got > 0].tolist())
+    dist = ndimage.distance_transform_edt(mask)
+    for r in range(2, int(dist.max()), 2):
+        lab, _ = ndimage.label(dist > r, FOUR)
+        own, rest = ids(lab, seed), [ids(lab, o) for o in others]
+        if not own or not all(rest):
+            return mask
+        if len(own) == 1 and all(own.isdisjoint(s) for s in rest):
+            near = lab[tuple(ndimage.distance_transform_edt(lab == 0, return_distances=False, return_indices=True))]
+            return mask & (near == own.pop())
+    return mask
+
+
+def bubble_extent(rgb: np.ndarray, seed: tuple | None = None, others: list = ()) -> tuple[int, int, int, int] | None:
     """The whole bubble around a box in an RGB crop (h×w×3): (x, y, w, h) in crop pixels, or None when there is no
     closed bubble of paper (paper running off the crop, painted art, busy art). `seed` (x, y, w, h) is where the paper
-    is looked for; default the middle half of the crop."""
+    is looked for; default the middle half of the crop. `others`: other bubbles' text boxes (crop pixels); when one lies
+    in the same paper, only the seed's own lobe is kept (training labels only; bubble.ts has no such step)."""
     h, w = rgb.shape[:2]
     px = rgb.astype(np.int16)
     sx, sy, sw, sh = seed if seed else (w / 4, h / 4, w / 2, h / 2)
@@ -89,6 +110,12 @@ def bubble_extent(rgb: np.ndarray, seed: tuple | None = None) -> tuple[int, int,
     edge = np.zeros((h, w), bool)
     edge[0, :] = edge[-1, :] = edge[:, 0] = edge[:, -1] = True
     mask = ~_reached(edge, ~inside)
+    # Other bubbles' text in this paper: keep the seed's own lobe (before the hull, which would fill the necks).
+    held = [o for o in others if seed and 0 <= o[1] + o[3] / 2 < h and 0 <= o[0] + o[2] / 2 < w
+            and mask[int(o[1] + o[3] / 2), int(o[0] + o[2] / 2)]]
+    if held:
+        mask = _lobe(mask, seed, held)
+        inside &= mask
     rows = _hull_rows(inside)
     if sum(r1 - r0 + 1 for r0, r1 in filter(None, rows)) <= mask.sum() * 1.3:
         for y, row in enumerate(rows):
@@ -103,7 +130,7 @@ def bubble_extent(rgb: np.ndarray, seed: tuple | None = None) -> tuple[int, int,
     return int(x0), int(y0), int(x1 - x0 + 1), int(y1 - y0 + 1)
 
 
-def grow(rgb: np.ndarray, box: list[float], most: float | None = None) -> list[int] | None:
+def grow(rgb: np.ndarray, box: list[float], most: float | None = None, others: list = ()) -> list[int] | None:
     """A text-only box grown to the whole bubble around it, or None when there is no closed bubble (or, with `most`, only
     one over `most` times the box's area: for boxes already near a bubble's size, a white panel or joined bubbles; tight
     line boxes can't use it, a one-line bubble is often 4× its text). The crop reaches
@@ -115,7 +142,7 @@ def grow(rgb: np.ndarray, box: list[float], most: float | None = None) -> list[i
     cw, ch = min(W, int(np.ceil(x + w + pad))) - cx, min(H, int(np.ceil(y + h + pad))) - cy
     if cw < 8 or ch < 8:
         return None
-    e = bubble_extent(rgb[cy:cy + ch, cx:cx + cw], (x - cx, y - cy, w, h))
+    e = bubble_extent(rgb[cy:cy + ch, cx:cx + cw], (x - cx, y - cy, w, h), [(o[0] - cx, o[1] - cy, o[2], o[3]) for o in others])
     if not e or (most and e[2] * e[3] > most * w * h):
         return None
     return [cx + e[0], cy + e[1], e[2], e[3]]

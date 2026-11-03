@@ -59,12 +59,17 @@ touching = page(lambda d: (d.ellipse([20, 60, 250, 240], fill='white', outline='
 boxes = sorted(split_touching(touching, [20, 60, 461, 181], [[90, 140, 90, 20], [320, 140, 90, 20]]))
 assert len(boxes) == 2 and boxes[0][0] < 30 and boxes[0][0] + boxes[0][2] < 255 and boxes[1][0] > 240, boxes
 
-# a bubble with joined lobes (one paper region, a neck between) stays one box
+# joined bubbles (one paper region, a neck between, each lobe its own text) become one box per lobe: a chain of
+# speech bubbles is several bubbles, and round 3's target is one box per bubble (was one box until 2026-11-03)
 lobes = page(lambda d: (d.ellipse([20, 60, 250, 240], fill='black'), d.ellipse([230, 60, 480, 240], fill='black'),
                         d.ellipse([23, 63, 247, 237], fill='white'), d.ellipse([233, 63, 477, 237], fill='white'),
-                        d.rectangle([200, 120, 280, 180], fill='white')))
-boxes = split_touching(lobes, [20, 60, 461, 181], [[90, 140, 90, 20], [320, 140, 90, 20]])
-assert len(boxes) == 1 and boxes[0][2] > 400, boxes
+                        d.rectangle([200, 130, 280, 170], fill='white')))
+boxes = sorted(split_touching(lobes, [20, 60, 461, 181], [[90, 140, 90, 20], [320, 140, 90, 20]]))
+assert len(boxes) == 2 and boxes[0][0] + boxes[0][2] < 260 and boxes[1][0] > 210, boxes
+# ...and one oval holding two paragraphs stays one box
+oval2 = page(lambda d: d.ellipse([20, 20, 480, 280], fill='white', outline='black', width=3))
+boxes = split_touching(oval2, [20, 20, 461, 261], [[150, 90, 200, 30], [150, 170, 200, 30]])
+assert len(boxes) == 1 and boxes[0][2] > 440, boxes
 
 # refine: a text-tight box grows to its whole bubble and stays a bubble; a rectangular box becomes a caption; one box
 # over two bubbles becomes two; a box with no closed bubble around it is kept as it is
