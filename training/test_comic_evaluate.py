@@ -1,7 +1,7 @@
 """Scoring for the comic text detector. Run: python test_comic_evaluate.py"""
 import comic_common as c
 from pathlib import Path
-from comic_evaluate import bubbles_found, by_style, evaluate, found_by_set, grow_preds, text_gt
+from comic_evaluate import bubbles_found, by_style, check_found, evaluate, found_by_set, page_boxes, text_gt
 
 
 def gt_for(n_images, style_files=None):
@@ -98,22 +98,13 @@ assert bubbles_found(fg, [wide], c.CLASSES)['found'] == 1
 # a sound-effect box doesn't find a bubble (the page would leave it in the art)
 assert bubbles_found(fg, [{**half, 'category_id': 3}], c.CLASSES)['found'] == 0
 
-# old (round 2) boxes are text-sized: grown to the bubble around them before scoring
-import numpy as np
-from PIL import Image, ImageDraw
-im = Image.new('RGB', (600, 400), (110, 110, 110))
-ImageDraw.Draw(im).ellipse([20, 20, 300, 250], fill='white', outline='black', width=3)
-og = {**fg, 'annotations': [{'id': 1, 'image_id': 1, 'category_id': 0, 'bbox': [20, 20, 281, 231]}]}
-text = {'image_id': 1, 'category_id': 0, 'bbox': [110, 110, 100, 40], 'score': 0.9}
-assert bubbles_found(og, [text], c.CLASSES_V2)['found'] == 0
-grown = grow_preds([text], {1: np.asarray(im)}, c.CLASSES_V2)
-assert bubbles_found(og, grown, c.CLASSES_V2)['found'] == 1, grown
-
 # results come per set: each style's test file and test97
+og = {**fg, 'annotations': [{'id': 1, 'image_id': 1, 'category_id': 0, 'bbox': [20, 20, 281, 231]}]}
 sets = {'manga': og, 'test97': fg}
-res = found_by_set(sets, lambda name, gt: [text] if name == 'manga' else [half])
+res = found_by_set(sets, lambda name, gt: [third] if name == 'manga' else [half, third, low])
 assert res['manga']['share'] == 0.0 and res['test97']['share'] == 0.5, res
-assert found_by_set(sets, lambda name, gt: grow_preds([text], {1: np.asarray(im)}, c.CLASSES_V2))['manga']['share'] == 1.0
+# extra: boxes the page would show (bubble or caption, at or above CONF) that find nothing
+assert res['test97']['extra'] == 1 and res['manga']['extra'] == 1, res
 
 # text found: each answer box stands for the text inside it (the union of the text boxes whose middles it holds); a
 # tight box on the words of a big bubble finds it, though it covers under half of the bubble's box
@@ -132,16 +123,43 @@ from comic_evaluate import build_report3
 pg = lambda f, src, style: c.Page(file=f, source=src, group=src, style=style, split='', author='A ' + src, licence='L', link='https://x/' + src, date='d')
 pages = [pg('a.jpg', 'Pepper&Carrot', 'modern-western'), pg('b.jpg', 'Comix', 'old-american'), pg('m.jpg', 'manga-text-detection', 'manga')]
 train = {'images': [{'file_name': 'comic/images/a.jpg'}, {'file_name': 'comic3/comix/images/b.jpg'}]}
-found = {'new': {'manga': {'found': 9, 'total': 10, 'pages': 3}, 'test97': {'found': 4, 'total': 5, 'pages': 2}},
-         'old': {'manga': {'found': 8, 'total': 10, 'pages': 3}, 'test97': {'found': 5, 'total': 5, 'pages': 2}},
+found = {'new': {'manga': {'found': 9, 'total': 10, 'pages': 3, 'extra': 3}, 'test97': {'found': 4, 'total': 5, 'pages': 2, 'extra': 0}},
+         'old': {'manga': {'found': 8, 'total': 10, 'pages': 3, 'extra': 6}, 'test97': {'found': 5, 'total': 5, 'pages': 2, 'extra': 1}},
          'new_text': {'manga': {'found': 10, 'total': 10, 'pages': 3}, 'test97': {'found': 5, 'total': 5, 'pages': 2}},
          'old_text': {'manga': {'found': 7, 'total': 10, 'pages': 3}, 'test97': {'found': 4, 'total': 5, 'pages': 2}}}
 pages.append(pg('old.jpg', 'Wikimedia Commons', 'old-american'))  # in the log, but in no split this round: not credited
 rep = build_report3('r3', 'r2', found, train, pages, used={'a.jpg', 'b.jpg', 'm.jpg'})
 assert rep['run'] == 'r3' and rep['old_run'] == 'r2'
-assert rep['styles']['manga'] == {'pages': 3, 'bubbles': {'new': 0.9, 'old': 0.8}, 'texts': {'new': 1.0, 'old': 0.7}}, rep['styles']
+assert rep['styles']['manga'] == {'pages': 3, 'bubbles': {'new': 0.9, 'old': 0.8}, 'texts': {'new': 1.0, 'old': 0.7},
+                                  'extra_per_page': {'new': 1.0, 'old': 2.0}}, rep['styles']
 assert rep['styles']['test97']['bubbles'] == {'new': 0.8, 'old': 1.0}
 assert {'label': 'Training pages: Pepper&Carrot', 'value': 1} in rep['data'] and {'label': 'Training pages: Comix', 'value': 1} in rep['data']
 assert sorted(x['source'] for x in rep['credits']) == ['Comix', 'Pepper&Carrot', 'manga-text-detection'], rep['credits']
 assert rep['credits'][0].keys() == {'source', 'author', 'licence', 'link'}
+# the scorer sees what each finder's page keeps. Round 3 (detect.ts cleanUp): boxes under CONF and sound effects gone,
+# of two boxes with IoU >= 0.5 the more confident kept, nothing joined. Round 2 (as on master): wrappers of two
+# same-kind boxes dropped, twins dropped, then boxes overlapping by 15% of the smaller joined into one.
+P = lambda x, y, w, h, s, k=0: {'image_id': 1, 'category_id': k, 'bbox': [x, y, w, h], 'score': s}
+raw = [P(0, 0, 100, 50, 0.9), P(120, 0, 100, 50, 0.8), P(-5, -5, 230, 60, 0.7), P(2, 0, 100, 50, 0.6), P(400, 0, 50, 50, 0.1),
+       P(500, 0, 50, 50, 0.9, k=3), P(0, 300, 100, 60, 0.9), P(0, 350, 100, 60, 0.8)]
+kept = page_boxes(raw, old=False)
+assert sorted(b['bbox'][:2] for b in kept) == [[-5, -5], [0, 0], [0, 300], [0, 350], [120, 0]], kept  # sfx (class 3) gone
+old_kept = page_boxes(raw, old=True)
+assert sorted(b['bbox'] for b in old_kept) == [[0, 0, 100, 50], [0, 300, 100, 110], [120, 0, 100, 50], [500, 0, 50, 50]], old_kept  # V2 class 3 is art-text
+# text found: a word group in two overlapping answers counts for the smaller one only
+two = {**fg, 'annotations': [{'id': 1, 'image_id': 1, 'category_id': 0, 'bbox': [0, 0, 300, 200]},
+                             {'id': 2, 'image_id': 1, 'category_id': 0, 'bbox': [200, 100, 200, 200]}]}
+tg2 = text_gt(two, {1: [[20, 20, 100, 30], [230, 130, 60, 20]]})
+assert [a['bbox'] for a in tg2['annotations']] == [[20, 20, 100, 30], [230, 130, 60, 20]], tg2['annotations']
+# the report only takes found files scored on the same test sets, each in the mode it is read for
+ok = {'new': {'sets': 'h1', 'old': False, 'text': False}, 'old': {'sets': 'h1', 'old': True, 'text': False},
+      'new_text': {'sets': 'h1', 'old': False, 'text': True}, 'old_text': {'sets': 'h1', 'old': True, 'text': True}}
+check_found(ok)
+for bad in ({**ok, 'old': {**ok['old'], 'sets': 'h0'}}, {**ok, 'new_text': {**ok['new_text'], 'text': False}}):
+    try:
+        check_found(bad)
+    except SystemExit:
+        pass
+    else:
+        raise AssertionError(bad)
 print('comic report3 checks passed')

@@ -89,6 +89,10 @@ open_chain = page(lambda d: (d.ellipse([20, 60, 250, 240], fill='white'), d.elli
                              d.rectangle([100, 0, 160, 80], fill='white')))
 boxes = sorted(split_touching(open_chain, [20, 60, 461, 181], [[90, 140, 90, 20], [320, 140, 90, 20]]))
 assert len(boxes) == 2 and boxes[0][0] + boxes[0][2] < 200 and boxes[1][0] > 300, boxes
+# ...but a caption with two paragraphs and no closed outline stays one box (narration isn't a chain of bubbles)
+assert split_touching(open_chain, [20, 60, 461, 181], [[90, 140, 90, 20], [320, 140, 90, 20]], pad_open=False) == [[20, 60, 461, 181]]
+cap = refine(open_chain, [{'bbox': [20, 60, 461, 181], 'category': 'caption', 'text': 'a b'}], [[90, 140, 90, 20], [320, 140, 90, 20]])
+assert len(cap) == 1 and cap[0]['bbox'] == [20, 60, 461, 181], cap
 # refine: a text box whose bubble would take in another text (joined bubbles) is not grown
 joined = [{'bbox': [90, 140, 90, 20], 'category': 'bubble', 'text': 'Hi'}]
 out = refine(lobes, joined, [[90, 140, 90, 20], [320, 140, 90, 20]])

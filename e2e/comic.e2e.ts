@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { STYLE_NAMES } from '../src/lib/comic/styles';
 import { comicKindPng, comicPdf, comicPng, drawBox, fakeTranslate, fakeTranslateAll, openFile, openFiles } from './comic-fake';
 
 // Tall enough that the whole test page is on screen for mouse drags.
@@ -652,7 +653,7 @@ test('the report card says how it was measured', async ({ page }) => {
 	await expect(page.getByText('Text found per style')).toBeVisible();
 	await expect(page.getByText('Grey shows round 2’s finder.')).toBeVisible();
 	await expect(page.locator('.bars > li')).toHaveCount(Object.keys(comic.styles).length);
-	for (const name of ['manga', 'modern western', 'old American', '97 original test pages']) await expect(page.locator('.bars').getByText(name, { exact: true })).toBeVisible();
+	for (const style of Object.keys(comic.styles)) await expect(page.locator('.bars').getByText(STYLE_NAMES[style] ?? style, { exact: true })).toBeVisible();
 	for (const credit of comic.credits) await expect(page.getByText(`Source: ${credit.source}`)).toBeVisible();
 	// Measured only by the round-2 evaluation (`fitInBox`); the old "without covering the art" number never shows here.
 	const fit = (pipeline as { fitInBox?: number | null }).fitInBox ?? null;

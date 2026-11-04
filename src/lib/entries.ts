@@ -2,6 +2,7 @@ import sea from './data/sea-creature-detector.json';
 import sounds from './data/sound-detective.json';
 import comic from './data/comic-translator.json';
 import comicPipeline from './data/comic-translator-pipeline.json';
+import { STYLE_NAMES } from './comic/styles';
 import type { AuditEntry, Entry, Failure, ModelEntry, Sample } from './types';
 
 const span = (text: string, phrase: string): [number, number] => {
@@ -61,10 +62,6 @@ const gender: ModelEntry = {
 // Numbers come from the detector's test run (training/comic_evaluate.py) and the page's own run over the test pages
 // (pnpm eval:comic), never typed by hand. null shows "not yet measured".
 const share = (v: number | null) => (v === null ? null : `${Math.round(v * 100)}%`);
-/** The report card's names for the test sets in comic-translator.json (training/comic_evaluate.py report3). */
-export const STYLE_NAMES: Record<string, string> = {
-	manga: 'manga', 'modern-western': 'modern western', 'old-american': 'old American', test97: '97 original test pages'
-};
 const comicStyles = Object.entries(comic.styles);
 const comicTranslator: ModelEntry = {
 	kind: 'model', slug: 'comic-translator', no: 5, name: 'Comic translator',
@@ -75,7 +72,7 @@ const comicTranslator: ModelEntry = {
 		data: [
 			...comic.data.map((d) => ({ label: d.label, value: String(d.value) })),
 			...comicStyles.map(([s, r]) => ({ label: `Bubbles found: ${STYLE_NAMES[s] ?? s} (${r.pages} pages)`,
-				value: `${share(r.bubbles.new)} (round 2: ${share(r.bubbles.old)})` })),
+				value: `${share(r.bubbles.new)} (round 2: ${share(r.bubbles.old)}); extra boxes a page ${r.extra_per_page.new} (round 2: ${r.extra_per_page.old})` })),
 			...comic.credits.map((c) => ({ label: `Source: ${c.source}`, value: `${c.author}; ${c.licence}; ${c.link}` })),
 			{ label: 'OCR words read (before / after Gemini repair)', value: comicPipeline.ocrBefore === null || comicPipeline.ocrAfter === null ? null
 				: `${share(comicPipeline.ocrBefore)} / ${share(comicPipeline.ocrAfter)} (on ${comicPipeline.ocrPages} Pepper&Carrot pages with their own text files)` },

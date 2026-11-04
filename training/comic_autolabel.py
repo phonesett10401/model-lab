@@ -87,11 +87,12 @@ def free_kind(text: str) -> str:
     return 'sfx' if words and all(sound(w) for w in words) else 'free-text'
 
 
-def split_touching(rgb: np.ndarray, box: list, groups: list[list[float]]) -> list[list[int]]:
+def split_touching(rgb: np.ndarray, box: list, groups: list[list[float]], pad_open: bool = True) -> list[list[int]]:
     """One changed blob holding 2+ word groups: each group's bubble (the closed paper region around it) is one box.
     When a group's bubble takes in another group (bubbles joined into a chain), that group gets its own text box,
     padded a little, instead: round 3 counts each bubble, and one box over the chain taught the finder to box chains.
-    So does a group with no closed bubble around it (a chain opening onto the page margin, as in Pepper&Carrot)."""
+    So does a group with no closed bubble around it (a chain opening onto the page margin, as in Pepper&Carrot), unless
+    pad_open is off (a caption's paragraphs: there the blob is kept as it is)."""
     if len(groups) < 2:
         return [list(box)]
     H, W = rgb.shape[:2]
@@ -102,6 +103,8 @@ def split_touching(rgb: np.ndarray, box: list, groups: list[list[float]]) -> lis
     out = []
     for i, (gx, gy, gw, gh) in enumerate(groups):
         e = bubble_extent(crop, (gx - cx, gy - cy, gw, gh))
+        if e is None and not pad_open:
+            return [list(box)]
         e = e and [cx + e[0], cy + e[1], e[2], e[3]]
         if e is None or any(_holds(e, o) for j, o in enumerate(groups) if j != i):
             e = _padded([gx, gy, gw, gh], W, H)
@@ -147,7 +150,7 @@ def refine(rgb: np.ndarray, labels: list[dict], words: list[list[float]]) -> lis
             out.append(l)
             continue
         groups = [g for g in words if _inside_share(g, l['bbox']) >= INSIDE]
-        parts = split_touching(rgb, l['bbox'], groups) if len(groups) >= 2 else [l['bbox']]
+        parts = split_touching(rgb, l['bbox'], groups, pad_open=l['category'] == 'bubble') if len(groups) >= 2 else [l['bbox']]
         if parts == [list(l['bbox'])]:
             grown = grow(rgb, l['bbox'])
             if grown and any(_holds(grown, w) for w in words if _inside_share(w, l['bbox']) < INSIDE):

@@ -28,52 +28,68 @@
   },
   {
    "label": "Test labels",
-   "value": "Not checked by a person. Pepper&Carrot and Black Jack test pages: labelled automatically, reviewed by Claude. Old American: 42 Comix pages whose boxes Claude corrected by hand. Manga: an outside dataset's own labels (manga-text-detection, Indonesian scanlations). Found = a box covers at least half of the bubble; text found = covers at least half of the words in it."
+   "value": "Not checked by a person. Pepper&Carrot and Black Jack test pages: labelled automatically, reviewed by Claude. Old American: 42 Comix pages whose boxes Claude corrected by hand. Manga: an outside dataset's own labels (manga-text-detection, Indonesian scanlations). Each finder is scored on the boxes its page shows. Found = a box covers at least half of the bubble; text found = covers at least half of the words in it; extra boxes = boxes that find nothing (repeats, or boxes on art)."
   }
  ],
  "styles": {
   "manga": {
    "pages": 170,
    "bubbles": {
-    "new": 0.945,
-    "old": 0.892
+    "new": 0.936,
+    "old": 0.819
    },
    "texts": {
-    "new": 0.957,
-    "old": 0.876
+    "new": 0.951,
+    "old": 0.844
+   },
+   "extra_per_page": {
+    "new": 1.8,
+    "old": 1.0
    }
   },
   "modern-western": {
    "pages": 47,
    "bubbles": {
-    "new": 0.962,
-    "old": 0.983
+    "new": 0.948,
+    "old": 0.838
    },
    "texts": {
-    "new": 0.976,
-    "old": 0.983
+    "new": 0.969,
+    "old": 0.869
+   },
+   "extra_per_page": {
+    "new": 1.9,
+    "old": 1.0
    }
   },
   "old-american": {
    "pages": 42,
    "bubbles": {
-    "new": 0.962,
-    "old": 0.879
+    "new": 0.883,
+    "old": 0.812
    },
    "texts": {
-    "new": 0.958,
-    "old": 0.833
+    "new": 0.867,
+    "old": 0.775
+   },
+   "extra_per_page": {
+    "new": 2.1,
+    "old": 0.8
    }
   },
   "test97": {
    "pages": 97,
    "bubbles": {
-    "new": 0.935,
-    "old": 0.956
+    "new": 0.924,
+    "old": 0.895
    },
    "texts": {
-    "new": 0.975,
-    "old": 0.962
+    "new": 0.97,
+    "old": 0.907
+   },
+   "extra_per_page": {
+    "new": 3.6,
+    "old": 1.1
    }
   }
  },

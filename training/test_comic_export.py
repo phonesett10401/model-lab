@@ -27,4 +27,12 @@ import onnxruntime as ort
 x = np.random.default_rng(1).standard_normal((1, 64)).astype(np.float32)
 y = ort.InferenceSession(m.SerializeToString(), providers=['CPUExecutionProvider']).run(None, {'x': x})[0]
 assert y.dtype == np.float32 and np.abs(y - x @ w).max() < 0.05, np.abs(y - x @ w).max()
+# a model that also lists its weights as inputs (older exports) stays valid: the renamed weight leaves the input list
+g2 = helper.make_graph([helper.make_node('MatMul', ['x', 'W'], ['y'])], 'g2',
+                       [helper.make_tensor_value_info('x', TensorProto.FLOAT, [1, 64]), helper.make_tensor_value_info('W', TensorProto.FLOAT, [64, 64])],
+                       [helper.make_tensor_value_info('y', TensorProto.FLOAT, [1, 64])], [numpy_helper.from_array(w, 'W')])
+m2 = weights_fp16(helper.make_model(g2, opset_imports=[helper.make_opsetid('', 17)], ir_version=8))
+assert [i.name for i in m2.graph.input] == ['x'], [i.name for i in m2.graph.input]
+y2 = ort.InferenceSession(m2.SerializeToString(), providers=['CPUExecutionProvider']).run(None, {'x': x})[0]
+assert np.abs(y2 - x @ w).max() < 0.05
 print('comic export checks passed')

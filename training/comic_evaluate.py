@@ -167,9 +167,10 @@ PROPER = ('bubble', 'caption')  # what the page translates; sound effects stay i
 
 def bubbles_found(gt: dict, pred: list[dict], classes: list[str]) -> dict:
     """Round 3's measure: proper bubbles with a box at or above CONF covering at least half of each (bubble or caption
-    either way: both get translated). One box finds one bubble at most, so a box over a row of bubbles finds one."""
+    either way: both get translated). One box finds one bubble at most, so a box over a row of bubbles finds one.
+    extra: the page's bubble and caption boxes that find nothing (repeats, or boxes on art)."""
     names = {k['id']: k['name'] for k in gt['categories']}
-    found = total = 0
+    found = total = extra = 0
     for img in gt['images']:
         want = [a['bbox'] for a in gt['annotations'] if a['image_id'] == img['id'] and names[a['category_id']] in PROPER]
         boxes = [p['bbox'] for p in pred if p['image_id'] == img['id'] and p['score'] >= CONF and classes[p['category_id']] in PROPER]
@@ -181,7 +182,8 @@ def bubbles_found(gt: dict, pred: list[dict], classes: list[str]) -> dict:
                 used_b.add(j)
         found += len(used_g)
         total += len(want)
-    return {'found': found, 'total': total, 'share': found / total if total else None, 'pages': len(gt['images'])}
+        extra += len(boxes) - len(used_b)
+    return {'found': found, 'total': total, 'share': found / total if total else None, 'pages': len(gt['images']), 'extra': extra}
 
 
 def _covered(g, b) -> float:
@@ -191,25 +193,62 @@ def _covered(g, b) -> float:
     return iw * ih / (g[2] * g[3])
 
 
-def grow_preds(pred: list[dict], rgbs: dict, classes: list[str]) -> list[dict]:
-    """Round 2's text-sized bubble and caption boxes grown to the whole bubble around them, where one is found."""
-    from comic_bubble import grow
+def page_boxes(pred: list[dict], old: bool) -> list[dict]:
+    """The boxes a finder's page shows, per page: those under CONF and sound effects dropped, then for round 3 (detect.ts
+    cleanUp) of two boxes with IoU >= 0.5 the more confident kept, nothing joined; for round 2 (detect.ts as on master)
+    wrappers of two or more same-kind boxes dropped first and, after the twins, boxes overlapping by 15% of the smaller
+    joined into one."""
+    sfx = (c.CLASSES_V2 if old else c.CLASSES).index('sfx')
+
+    def share(a, b):  # share of the smaller of a and b inside the other
+        iw = max(0, min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0]))
+        ih = max(0, min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1]))
+        return iw * ih / min(a[2] * a[3], b[2] * b[3])
     out = []
-    for p in pred:
-        g = grow(rgbs[p['image_id']], p['bbox']) if p['score'] >= CONF and classes[p['category_id']] in PROPER else None
-        out.append({**p, 'bbox': g} if g else p)
+    for img in sorted({p['image_id'] for p in pred}):
+        ps = [p for p in pred if p['image_id'] == img and p['score'] >= CONF and p['category_id'] != sfx]
+        if old:
+            ps = [p for p in ps if sum(o is not p and o['category_id'] == p['category_id'] and share(o['bbox'], p['bbox']) >= 0.8
+                                       and o['bbox'][2] * o['bbox'][3] < p['bbox'][2] * p['bbox'][3] for o in ps) < 2]
+        kept = []
+        for p in sorted(ps, key=lambda p: -p['score']):
+            if all(_iou(k['bbox'], p['bbox']) < 0.5 for k in kept):
+                kept.append(dict(p))
+        if old:
+            i = 0
+            while i < len(kept):
+                j = i + 1
+                while j < len(kept):
+                    a, b = kept[i]['bbox'], kept[j]['bbox']
+                    if share(a, b) >= 0.15:
+                        x, y = min(a[0], b[0]), min(a[1], b[1])
+                        kept[i]['bbox'] = [x, y, max(a[0] + a[2], b[0] + b[2]) - x, max(a[1] + a[3], b[1] + b[3]) - y]
+                        kept.pop(j)
+                        j = i + 1  # the grown box may now overlap one already passed
+                    else:
+                        j += 1
+                i += 1
+        out += kept
     return out
 
 
 def text_gt(gt: dict, texts: dict) -> dict:
     """The answers with each proper box shrunk to the text inside it: the union of the text boxes (image id -> boxes)
-    whose middles it holds; a box with none keeps its own size. Scores whether the words were found, however tight."""
+    whose middles it holds, each text box counted for the smallest answer holding it (overlapping answers of joined
+    bubbles don't share words); a box with none keeps its own size. Scores whether the words were found, however tight."""
     names = {k['id']: k['name'] for k in gt['categories']}
+    holds = lambda b, t: b[0] <= t[0] + t[2] / 2 <= b[0] + b[2] and b[1] <= t[1] + t[3] / 2 <= b[1] + b[3]
+    owner = {}
+    for img, ts in texts.items():
+        boxes = [a for a in gt['annotations'] if a['image_id'] == img and names[a['category_id']] in PROPER]
+        for t in ts:
+            mine = [a for a in boxes if holds(a['bbox'], t)]
+            if mine:
+                owner.setdefault(min(mine, key=lambda a: a['bbox'][2] * a['bbox'][3])['id'], []).append(t)
     anns = []
     for a in gt['annotations']:
-        x, y, w, h = a['bbox']
-        inner = [t for t in texts.get(a['image_id'], []) if x <= t[0] + t[2] / 2 <= x + w and y <= t[1] + t[3] / 2 <= y + h]
-        if inner and names[a['category_id']] in PROPER:
+        inner = owner.get(a['id'], [])
+        if inner:
             x0, y0 = min(t[0] for t in inner), min(t[1] for t in inner)
             x1, y1 = max(t[0] + t[2] for t in inner), max(t[1] + t[3] for t in inner)
             a = {**a, 'bbox': [x0, y0, x1 - x0, y1 - y0]}
@@ -236,7 +275,7 @@ def found_by_set(sets: dict, predict, classes: list[str] = c.CLASSES) -> dict:
 
 def found_main(run: str, old: bool, text: bool = False) -> None:
     """python comic_evaluate.py found <run> [--old] [--text]: found share on round 3's test sets, per style and test97.
-    --old: a round 2 model (its class order; boxes grown to the bubble first, except with --text).
+    Each finder is scored on the boxes its page shows (page_boxes). --old: round 2's model and page.
     --text: whether each bubble's words were found (answers shrunk to their text, see text_gt)."""
     import onnxruntime as ort
     d = c.RUNS / run
@@ -244,24 +283,25 @@ def found_main(run: str, old: bool, text: bool = False) -> None:
     kind = (d / 'kind.txt').read_text().strip()
     classes = c.CLASSES_V2 if old else c.CLASSES
     ann = c.HERE / 'data/comic3/annotations'
-    sets = {f.stem.removeprefix('test-'): json.loads(f.read_text(encoding='utf8')) for f in sorted(ann.glob('test-*.json'))}
-    sets['test97'] = json.loads((ann / 'test97-bubbles.json').read_text(encoding='utf8'))
+    files = sorted(ann.glob('test-*.json')) + [ann / 'test97-bubbles.json']
+    sets = {f.stem.removeprefix('test-').replace('97-bubbles', '97'): json.loads(f.read_text(encoding='utf8')) for f in files}
 
     def boxes_for(name, gt):
-        preds, rgbs = [], {}
+        preds = []
         for img in gt['images']:
             im = Image.open(c.HERE / 'data' / img['file_name']).convert('RGB')
-            if old:
-                rgbs[img['id']] = np.asarray(im)
             preds += [{'image_id': img['id'], 'category_id': k, 'bbox': b, 'score': s} for k, s, b in predict(session, kind, im)]
-        return grow_preds(preds, rgbs, classes) if old and not text else preds
+        return page_boxes(preds, old)
 
     if text:
         sets = {name: text_gt(gt, page_texts(gt)) for name, gt in sets.items()}
     res = found_by_set(sets, boxes_for, classes)
-    (d / ('found3-text.json' if text else 'found3.json')).write_text(json.dumps(res, indent=1), encoding='utf8')
+    # Which test sets and mode these are, so the report never mixes numbers from different labels or modes.
+    meta = {'sets': sets_hash(files), 'old': old, 'text': text}
+    (d / ('found3-text.json' if text else 'found3.json')).write_text(json.dumps({'meta': meta, 'results': res}, indent=1), encoding='utf8')
     for name, r in res.items():
-        print(f"{run} {name}: {r['found']}/{r['total']} {'texts' if text else 'proper bubbles'} found ({r['share']:.3f}) on {r['pages']} pages")
+        print(f"{run} {name}: {r['found']}/{r['total']} {'texts' if text else 'proper bubbles'} found ({r['share']:.3f}), "
+              f"{r['extra'] / r['pages']:.1f} extra boxes a page, on {r['pages']} pages")
 
 
 def table(r: dict) -> str:
@@ -300,14 +340,16 @@ def build_report(run: str, gt: dict, result: dict, styles: dict, pages: list[c.P
 
 LABELS3 = ('Not checked by a person. Pepper&Carrot and Black Jack test pages: labelled automatically, reviewed by Claude. '
            "Old American: 42 Comix pages whose boxes Claude corrected by hand. Manga: an outside dataset's own labels "
-           '(manga-text-detection, Indonesian scanlations). Found = a box covers at least half of the bubble; text found = '
-           'covers at least half of the words in it.')
+           '(manga-text-detection, Indonesian scanlations). Each finder is scored on the boxes its page shows. Found = a box '
+           'covers at least half of the bubble; text found = covers at least half of the words in it; extra boxes = boxes '
+           'that find nothing (repeats, or boxes on art).')
 
 
 def build_report3(run: str, old_run: str, found: dict, train_coco: dict, pages: list[c.Page], used: set[str]) -> dict:
     """Round 3's report-card numbers. found: {'new'|'old'|'new_text'|'old_text': found_by_set result}; used: the page
     files in round 3's training and test sets (only their sources are credited). Nothing is typed by hand."""
     share = lambda r: round(r['found'] / r['total'], 3) if r and r['total'] else None
+    per_page = lambda r: round(r['extra'] / r['pages'], 1) if r and r['pages'] else None
     trained = {Path(i['file_name']).name for i in train_coco['images']}
     per_source = collections.Counter(p.source for p in pages if p.file in trained)
     by_source = {}
@@ -319,10 +361,29 @@ def build_report3(run: str, old_run: str, found: dict, train_coco: dict, pages: 
                 + [{'label': 'Test labels', 'value': LABELS3}],
         'styles': {name: {'pages': r['pages'],
                           'bubbles': {'new': share(r), 'old': share(found['old'].get(name))},
-                          'texts': {'new': share(found['new_text'].get(name)), 'old': share(found['old_text'].get(name))}}
+                          'texts': {'new': share(found['new_text'].get(name)), 'old': share(found['old_text'].get(name))},
+                          'extra_per_page': {'new': per_page(r), 'old': per_page(found['old'].get(name))}}
                    for name, r in found['new'].items()},
         'credits': sorted(by_source.values(), key=lambda x: x['source']),
     }
+
+
+def sets_hash(files: list[Path]) -> str:
+    import hashlib
+    h = hashlib.sha256()
+    for f in files:
+        h.update(f.name.encode() + f.read_bytes())
+    return h.hexdigest()[:16]
+
+
+def check_found(metas: dict) -> None:
+    """metas: {'new'|'old'|'new_text'|'old_text': a found file's meta}. Stops unless all were scored on the same test
+    sets, each in the mode it is read for."""
+    if len({m['sets'] for m in metas.values()}) != 1:
+        raise SystemExit('found files were scored on different test sets: rerun `found` (and `found --text`) for both runs')
+    for key, m in metas.items():
+        if m['old'] != key.startswith('old') or m['text'] != key.endswith('text'):
+            raise SystemExit(f'{key}: found file is in the wrong mode {m}')
 
 
 def report3_main(run: str, old_run: str) -> None:
@@ -332,6 +393,10 @@ def report3_main(run: str, old_run: str) -> None:
     for key, r, text in (('new', run, False), ('old', old_run, False), ('new_text', run, True), ('old_text', old_run, True)):
         found[key] = json.loads((c.RUNS / r / ('found3-text.json' if text else 'found3.json')).read_text(encoding='utf8'))
     ann = c.HERE / 'data/comic3/annotations'
+    check_found({k: f['meta'] for k, f in found.items()})
+    if found['new']['meta']['sets'] != sets_hash(sorted(ann.glob('test-*.json')) + [ann / 'test97-bubbles.json']):
+        raise SystemExit('the test sets changed since `found` ran: rerun it for both runs')
+    found = {k: f['results'] for k, f in found.items()}
     used = {Path(i['file_name']).name for s in ('train', 'test', 'test97-bubbles')
             for i in json.loads((ann / f'{s}.json').read_text(encoding='utf8'))['images']}
     pages = c.load_attribution() + c.load_attribution(c.HERE / 'attribution/comic-v3.csv')

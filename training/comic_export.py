@@ -72,6 +72,11 @@ def weights_fp16(model, min_size: int = 1024):
             keep.append(init)
     del model.graph.initializer[:]
     model.graph.initializer.extend(keep)
+    # Older exports also list weights as graph inputs: a cast weight is now made inside the graph, so it can't be one.
+    cast = {n.output[0] for n in casts}
+    inputs = [i for i in model.graph.input if i.name not in cast]
+    del model.graph.input[:]
+    model.graph.input.extend(inputs)
     nodes = casts + list(model.graph.node)
     del model.graph.node[:]
     model.graph.node.extend(nodes)
