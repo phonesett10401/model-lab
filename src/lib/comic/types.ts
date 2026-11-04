@@ -1,7 +1,7 @@
 /** A rectangle in page pixels. */
 export interface Box { x: number; y: number; w: number; h: number }
 
-export type RegionClass = 'bubble' | 'caption' | 'sfx' | 'art-text';
+export type RegionClass = 'bubble' | 'caption' | 'free-text' | 'sfx';
 export type Speaker = 'man' | 'woman' | 'child' | 'narrator' | 'unknown';
 
 /** One numbered English line sent for translation. Text only: never image data. */

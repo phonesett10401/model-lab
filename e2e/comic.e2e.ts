@@ -317,7 +317,7 @@ test('a dark caption keeps its colour and gets light Burmese', async ({ page }) 
 });
 
 test('text on the art is lettered in place without a box', async ({ page }) => {
-	const { before, after } = await letterKind(page, 'art', 'art-text');
+	const { before, after } = await letterKind(page, 'art', 'free-text');
 	let changed = 0, kept = 0, total = 0;
 	for (let y = 0; y < 800; y++)
 		for (let x = 0; x < 600; x++) {
@@ -637,6 +637,7 @@ test('the free-tier warning stays when the server check fails', async ({ page })
 // ---------- Plan 3: report card, examples, home entry ----------
 
 const pipeline = JSON.parse(readFileSync('src/lib/data/comic-translator-pipeline.json', 'utf8'));
+const comic = JSON.parse(readFileSync('src/lib/data/comic-translator.json', 'utf8'));
 
 test('the home page lists the comic translator', async ({ page }) => {
 	await page.goto('/');
@@ -646,14 +647,17 @@ test('the home page lists the comic translator', async ({ page }) => {
 test('the report card says how it was measured', async ({ page }) => {
 	await page.goto('/models/comic-translator');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Comic translator');
-	await expect(page.getByText('reviewed by Claude, not by a person').first()).toBeVisible();
-	await expect(page.getByText('Worst case (of all text)')).toBeVisible();
+	await expect(page.getByText('Not checked by a person.').first()).toBeVisible();
+	// Round 3: found share per style, this finder against round 2's (grey), and every data source credited
+	await expect(page.getByText('Text found per style')).toBeVisible();
+	await expect(page.getByText('Grey shows round 2’s finder.')).toBeVisible();
+	await expect(page.locator('.bars > li')).toHaveCount(Object.keys(comic.styles).length);
+	for (const name of ['manga', 'modern western', 'old American', '97 original test pages']) await expect(page.locator('.bars').getByText(name, { exact: true })).toBeVisible();
+	for (const credit of comic.credits) await expect(page.getByText(`Source: ${credit.source}`)).toBeVisible();
 	// Measured only by the round-2 evaluation (`fitInBox`); the old "without covering the art" number never shows here.
 	const fit = (pipeline as { fitInBox?: number | null }).fitInBox ?? null;
 	await expect(page.locator('dt', { hasText: 'Burmese fitted inside its box' }).locator('xpath=following-sibling::dd'))
 		.toHaveText(fit === null ? 'not yet measured' : `${Math.round(fit * 100)}%`);
-	await expect(page.getByText('counted by Claude on 20 pages; owner checked 4 and agreed with 4')).toBeVisible();
-	await expect(page.getByText('not measured (the automatic labels contain no sound effects)')).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Open the translator' })).toHaveAttribute('href', '/comic-translator');
 	const examples = page.locator('.comic-examples figure');
 	await expect(examples).toHaveCount(pipeline.examples.length);

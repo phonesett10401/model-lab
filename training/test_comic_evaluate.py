@@ -125,3 +125,23 @@ tg = text_gt(big, {1: [[110, 110, 80, 20], [110, 125, 60, 10]]})
 assert tg['annotations'][0]['bbox'] == [110, 110, 80, 25] and tg['annotations'][1]['bbox'] == [400, 0, 100, 100], tg
 assert bubbles_found(tg, [tight], c.CLASSES)['found'] == 1
 print('comic owner-check checks passed')
+
+# round 3's report card: per style, the share found by the new and the old finder (bubbles and texts), test pages per
+# style, training pages per source, and every source credited once
+from comic_evaluate import build_report3
+pg = lambda f, src, style: c.Page(file=f, source=src, group=src, style=style, split='', author='A ' + src, licence='L', link='https://x/' + src, date='d')
+pages = [pg('a.jpg', 'Pepper&Carrot', 'modern-western'), pg('b.jpg', 'Comix', 'old-american'), pg('m.jpg', 'manga-text-detection', 'manga')]
+train = {'images': [{'file_name': 'comic/images/a.jpg'}, {'file_name': 'comic3/comix/images/b.jpg'}]}
+found = {'new': {'manga': {'found': 9, 'total': 10, 'pages': 3}, 'test97': {'found': 4, 'total': 5, 'pages': 2}},
+         'old': {'manga': {'found': 8, 'total': 10, 'pages': 3}, 'test97': {'found': 5, 'total': 5, 'pages': 2}},
+         'new_text': {'manga': {'found': 10, 'total': 10, 'pages': 3}, 'test97': {'found': 5, 'total': 5, 'pages': 2}},
+         'old_text': {'manga': {'found': 7, 'total': 10, 'pages': 3}, 'test97': {'found': 4, 'total': 5, 'pages': 2}}}
+pages.append(pg('old.jpg', 'Wikimedia Commons', 'old-american'))  # in the log, but in no split this round: not credited
+rep = build_report3('r3', 'r2', found, train, pages, used={'a.jpg', 'b.jpg', 'm.jpg'})
+assert rep['run'] == 'r3' and rep['old_run'] == 'r2'
+assert rep['styles']['manga'] == {'pages': 3, 'bubbles': {'new': 0.9, 'old': 0.8}, 'texts': {'new': 1.0, 'old': 0.7}}, rep['styles']
+assert rep['styles']['test97']['bubbles'] == {'new': 0.8, 'old': 1.0}
+assert {'label': 'Training pages: Pepper&Carrot', 'value': 1} in rep['data'] and {'label': 'Training pages: Comix', 'value': 1} in rep['data']
+assert sorted(x['source'] for x in rep['credits']) == ['Comix', 'Pepper&Carrot', 'manga-text-detection'], rep['credits']
+assert rep['credits'][0].keys() == {'source', 'author', 'licence', 'link'}
+print('comic report3 checks passed')

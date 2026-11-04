@@ -38,7 +38,8 @@ async function fetchBytes(url: string, onBytes: (got: number) => void): Promise<
 export async function openSession(modelUrl: string, modelMB: number, onProgress: (p: number | null) => void): Promise<{ ort: Ort; session: Session }> {
 	const ort = await import('onnxruntime-web/wasm');
 	ort.env.wasm.wasmPaths = { mjs: engineGlueUrl, wasm: engineUrl };
-	ort.env.wasm.numThreads = globalThis.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
+	// Up to 16 threads: the comic finder (D-FINE L) takes about 4 s a page on 4 and about 2 s on 16 (owner's laptop).
+	ort.env.wasm.numThreads = globalThis.crossOriginIsolated ? Math.min(16, navigator.hardwareConcurrency || 1) : 1;
 	const total = (modelMB + (engineReady ? 0 : ENGINE_MB)) * 1e6; // sizes are checked against the real files by unit tests
 	const got = { model: 0, engine: 0 };
 	const report = () => onProgress(Math.min(1, (got.model + got.engine) / total));

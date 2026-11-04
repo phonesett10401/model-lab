@@ -1,6 +1,8 @@
 """Exports a trained comic text detector to ONNX at 1024 px: runs/comic/<run>/model.onnx.
 
-Run: python comic_export.py <run>
+Run: python comic_export.py <run> [--check] [--fp16]
+--fp16 also writes model-fp16.onnx: weights stored at half size, cast back to float32 inside the model (the browser
+still computes in float32); round 3's larger sizes need it to stay under GitHub's 100 MB file limit.
 Uses plain torch.onnx.export: the vendors' own export scripts don't work here (D-FINE's is fixed at 640 px,
 YOLOX's calls a torch function PyTorch 2.11 removed). See comic_vendor.md.
 """
@@ -56,6 +58,26 @@ def export(run: str) -> None:
     print(f'{out} ({out.stat().st_size / 1e6:.1f} MB)')
 
 
+def weights_fp16(model, min_size: int = 1024):
+    """The model with every float32 weight of min_size+ values stored as float16 plus a Cast back to float32."""
+    import numpy as np
+    from onnx import helper, numpy_helper, TensorProto
+    casts, keep = [], []
+    for init in model.graph.initializer:
+        if init.data_type == TensorProto.FLOAT and np.prod(init.dims) >= min_size:
+            half = numpy_helper.from_array(numpy_helper.to_array(init).astype(np.float16), init.name + '_fp16')
+            keep.append(half)
+            casts.append(helper.make_node('Cast', [half.name], [init.name], to=TensorProto.FLOAT))
+        else:
+            keep.append(init)
+    del model.graph.initializer[:]
+    model.graph.initializer.extend(keep)
+    nodes = casts + list(model.graph.node)
+    del model.graph.node[:]
+    model.graph.node.extend(nodes)
+    return model
+
+
 def boxes_match(torch_boxes, onnx_boxes, min_score=0.3) -> bool:
     """(class, score, [x, y, w, h]) lists agree: every box at or above min_score has a twin, same class, IoU >= 0.98,
     score within 0.01."""
@@ -101,7 +123,31 @@ def check(run: str, pages: int = 20) -> None:
     print('onnx matches torch on', min(pages, len(val['images'])), 'validation pages')
 
 
+def export_fp16(run: str, pages: int = 20) -> None:
+    """model-fp16.onnx beside model.onnx, checked against it on validation pages (same boxes, classes and scores)."""
+    import json
+
+    import onnx
+    import onnxruntime as ort
+    from PIL import Image
+
+    from comic_evaluate import predict
+    d = c.RUNS / run
+    out = d / 'model-fp16.onnx'
+    onnx.save(weights_fp16(onnx.load(str(d / 'model.onnx'))), str(out))
+    full, half = (ort.InferenceSession(str(f), providers=['CPUExecutionProvider']) for f in (d / 'model.onnx', out))
+    val = json.loads((c.DATA / 'annotations/val.json').read_text(encoding='utf8'))
+    differ = [img['file_name'] for img in val['images'][:pages]
+              if not boxes_match(*(predict(s, 'dfine', Image.open(c.DATA / 'images' / img['file_name']).convert('RGB')) for s in (full, half)))]
+    # A duplicate box's score can move (0.91 -> 0.82 seen): the page drops duplicates, so judge by comic_evaluate's scores.
+    print(f'{out} ({out.stat().st_size / 1e6:.1f} MB): boxes differ from model.onnx on {len(differ)} of {min(pages, len(val["images"]))} '
+          f'validation pages {differ}; compare `comic_evaluate.py found` before shipping it')
+
+
 if __name__ == '__main__':
-    export(sys.argv[1])
+    if '--fp16-only' not in sys.argv:
+        export(sys.argv[1])
     if '--check' in sys.argv:
         check(sys.argv[1])
+    if '--fp16' in sys.argv or '--fp16-only' in sys.argv:
+        export_fp16(sys.argv[1])

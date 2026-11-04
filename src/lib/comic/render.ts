@@ -41,7 +41,7 @@ export async function renderPage(ctx: CanvasRenderingContext2D, page: ImageBitma
 		// Bubbles and captions: the box's inside (any colour), outline kept. Text on the art, or no clear box: the
 		// whole found rectangle is the inside.
 		// A bubble packed with text has no clear paper in its middle: look for its paper over the whole box then.
-		const shape = r.cls === 'art-text' ? null : (bubbleShape(img.data, rw, rh) ?? bubbleShape(img.data, rw, rh, { x: 0, y: 0, w: rw, h: rh }));
+		const shape = r.cls === 'free-text' ? null : (bubbleShape(img.data, rw, rh) ?? bubbleShape(img.data, rw, rh, { x: 0, y: 0, w: rw, h: rh }));
 		const area = shape?.mask ?? new Uint8Array(rw * rh).fill(1);
 		const hole = letterPixels(img.data, rw, rh, area);
 		inpaint(img.data, rw, rh, hole);
@@ -80,7 +80,7 @@ export async function renderPage(ctx: CanvasRenderingContext2D, page: ImageBitma
 		ctx.textBaseline = 'middle';
 		ctx.fillStyle = ink;
 		// Text on the art gets a thin outline in the opposite colour so it reads without a box.
-		const outline = r.cls === 'art-text';
+		const outline = r.cls === 'free-text';
 		if (outline) {
 			ctx.strokeStyle = ink === '#000' ? '#fff' : '#000';
 			ctx.lineWidth = 4;

@@ -2,7 +2,7 @@ import type { GotLine, RegionClass, SentLine, ServerEnv, Speaker, TranslateReply
 
 export const LIMITS = { maxLines: 200, maxLineChars: 500, maxBodyBytes: 20_000 };
 
-const CLASSES: RegionClass[] = ['bubble', 'caption', 'sfx', 'art-text'];
+const CLASSES: RegionClass[] = ['bubble', 'caption', 'free-text', 'sfx'];
 const SPEAKERS: Speaker[] = ['man', 'woman', 'child', 'narrator', 'unknown'];
 
 /** Accepts exactly { lines: SentLine[] } and nothing else, so no image data can ride along. */

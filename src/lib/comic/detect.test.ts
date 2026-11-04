@@ -105,3 +105,11 @@ it('boxes that grew into the same bubble become one', async () => {
 	// A box that grew over a group of joined bubbles swallows the small boxes inside it.
 	expect(joinSame([d(400, 700, 260, 480, 0.6), d(410, 705, 150, 60, 0.8), d(420, 1110, 170, 70, 0.7)])).toHaveLength(1);
 });
+
+it('reads the round 3 model: its four classes, free text kept, sound effects dropped', async () => {
+	const { CLASSES, cleanUp } = await import('./detect');
+	expect(CLASSES).toEqual(['bubble', 'caption', 'free-text', 'sfx']);
+	const b = (x: number) => ({ x, y: 0, w: 100, h: 60 });
+	const kept = cleanUp([2, 3, 0].map((k, i) => ({ box: b(200 * i), cls: CLASSES[k], score: 0.9, tile: 0 })));
+	expect(kept.map((d) => d.cls).sort()).toEqual(['bubble', 'free-text']);
+});

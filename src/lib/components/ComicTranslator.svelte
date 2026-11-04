@@ -12,7 +12,7 @@
 	import '@fontsource/noto-sans-myanmar/400.css';
 	import type { Box, LineProblem, Region, RegionClass, SentLine, Speaker } from '$lib/comic/types';
 
-	const CLASSES: RegionClass[] = ['bubble', 'caption', 'sfx', 'art-text'];
+	const CLASSES: RegionClass[] = ['bubble', 'caption', 'free-text', 'sfx'];
 	const SPEAKERS: Speaker[] = ['unknown', 'man', 'woman', 'child', 'narrator'];
 	const PROBLEMS: Record<LineProblem, string> = {
 		missing: 'Didn’t come back. Retry or type your own.',

@@ -33,6 +33,9 @@ describe('validateLines', () => {
 	it('accepts numbered text lines', () => {
 		expect(validateLines({ lines: [line] })).toEqual([line]);
 	});
+	it('accepts free text, the round 3 name for text on the art', () => {
+		expect(validateLines({ lines: [{ ...line, cls: 'free-text' }] })).not.toBeNull();
+	});
 
 	it('rejects images and unknown fields', () => {
 		expect(validateLines({ lines: [line], image: 'data:image/png;base64,AAAA' })).toBeNull();

@@ -37,7 +37,7 @@
 		</ol>
 		<p class="mono faint note">
 			{report.metrics.lowerIsBetter ? 'Lower is better.' : 'Worst category first.'}
-			{rows.some((r) => r.before !== undefined) ? 'Grey shows before defences.' : ''}
+			{rows.some((r) => r.before !== undefined) ? (report.metrics.beforeNote ?? 'Grey shows before defences.') : ''}
 			{rows.every((r) => r.value === null) ? 'Values appear once measured on held-out test data.' : ''}
 		</p>
 	</section>

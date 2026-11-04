@@ -298,9 +298,53 @@ def build_report(run: str, gt: dict, result: dict, styles: dict, pages: list[c.P
     }
 
 
+LABELS3 = ('Not checked by a person. Pepper&Carrot and Black Jack test pages: labelled automatically, reviewed by Claude. '
+           "Old American: 42 Comix pages whose boxes Claude corrected by hand. Manga: an outside dataset's own labels "
+           '(manga-text-detection, Indonesian scanlations). Found = a box covers at least half of the bubble; text found = '
+           'covers at least half of the words in it.')
+
+
+def build_report3(run: str, old_run: str, found: dict, train_coco: dict, pages: list[c.Page], used: set[str]) -> dict:
+    """Round 3's report-card numbers. found: {'new'|'old'|'new_text'|'old_text': found_by_set result}; used: the page
+    files in round 3's training and test sets (only their sources are credited). Nothing is typed by hand."""
+    share = lambda r: round(r['found'] / r['total'], 3) if r and r['total'] else None
+    trained = {Path(i['file_name']).name for i in train_coco['images']}
+    per_source = collections.Counter(p.source for p in pages if p.file in trained)
+    by_source = {}
+    for p in (p for p in pages if p.file in used):
+        by_source.setdefault(p.source, {'source': p.source, 'author': p.author, 'licence': p.licence, 'link': p.link})
+    return {
+        'run': run, 'old_run': old_run,
+        'data': [{'label': f'Training pages: {s}', 'value': n} for s, n in sorted(per_source.items())]
+                + [{'label': 'Test labels', 'value': LABELS3}],
+        'styles': {name: {'pages': r['pages'],
+                          'bubbles': {'new': share(r), 'old': share(found['old'].get(name))},
+                          'texts': {'new': share(found['new_text'].get(name)), 'old': share(found['old_text'].get(name))}}
+                   for name, r in found['new'].items()},
+        'credits': sorted(by_source.values(), key=lambda x: x['source']),
+    }
+
+
+def report3_main(run: str, old_run: str) -> None:
+    """python comic_evaluate.py report3 <run> <old run>: writes the report card's numbers (after `found` and `found --text`
+    have run for both)."""
+    found = {}
+    for key, r, text in (('new', run, False), ('old', old_run, False), ('new_text', run, True), ('old_text', old_run, True)):
+        found[key] = json.loads((c.RUNS / r / ('found3-text.json' if text else 'found3.json')).read_text(encoding='utf8'))
+    ann = c.HERE / 'data/comic3/annotations'
+    used = {Path(i['file_name']).name for s in ('train', 'test', 'test97-bubbles')
+            for i in json.loads((ann / f'{s}.json').read_text(encoding='utf8'))['images']}
+    pages = c.load_attribution() + c.load_attribution(c.HERE / 'attribution/comic-v3.csv')
+    train = json.loads((ann / 'train.json').read_text(encoding='utf8'))
+    OUT.write_text(json.dumps(build_report3(run, old_run, found, train, pages, used), indent=1, ensure_ascii=False) + '\n', encoding='utf8')
+    print('wrote', OUT)
+
+
 def main() -> None:
     if sys.argv[1] == 'found':
         return found_main(sys.argv[2], '--old' in sys.argv, '--text' in sys.argv)
+    if sys.argv[1] == 'report3':
+        return report3_main(sys.argv[2], sys.argv[3])
     run, split = sys.argv[1:3]
     gt = json.loads((c.DATA / 'annotations' / f'{split}.json').read_text(encoding='utf8'))
     pred = run_model(run, gt)
