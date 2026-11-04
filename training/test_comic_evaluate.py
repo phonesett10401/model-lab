@@ -1,7 +1,7 @@
 """Scoring for the comic text detector. Run: python test_comic_evaluate.py"""
 import comic_common as c
 from pathlib import Path
-from comic_evaluate import bubbles_found, by_style, evaluate, found_by_set, grow_preds
+from comic_evaluate import bubbles_found, by_style, evaluate, found_by_set, grow_preds, text_gt
 
 
 def gt_for(n_images, style_files=None):
@@ -114,4 +114,14 @@ sets = {'manga': og, 'test97': fg}
 res = found_by_set(sets, lambda name, gt: [text] if name == 'manga' else [half])
 assert res['manga']['share'] == 0.0 and res['test97']['share'] == 0.5, res
 assert found_by_set(sets, lambda name, gt: grow_preds([text], {1: np.asarray(im)}, c.CLASSES_V2))['manga']['share'] == 1.0
+
+# text found: each answer box stands for the text inside it (the union of the text boxes whose middles it holds); a
+# tight box on the words of a big bubble finds it, though it covers under half of the bubble's box
+big = {**fg, 'annotations': [{'id': 1, 'image_id': 1, 'category_id': 0, 'bbox': [0, 0, 300, 300]},
+                             {'id': 2, 'image_id': 1, 'category_id': 0, 'bbox': [400, 0, 100, 100]}]}
+tight = {'image_id': 1, 'category_id': 0, 'bbox': [100, 100, 100, 40], 'score': 0.9}
+assert bubbles_found(big, [tight], c.CLASSES)['found'] == 0
+tg = text_gt(big, {1: [[110, 110, 80, 20], [110, 125, 60, 10]]})
+assert tg['annotations'][0]['bbox'] == [110, 110, 80, 25] and tg['annotations'][1]['bbox'] == [400, 0, 100, 100], tg
+assert bubbles_found(tg, [tight], c.CLASSES)['found'] == 1
 print('comic owner-check checks passed')

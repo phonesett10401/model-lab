@@ -201,14 +201,43 @@ def grow_preds(pred: list[dict], rgbs: dict, classes: list[str]) -> list[dict]:
     return out
 
 
+def text_gt(gt: dict, texts: dict) -> dict:
+    """The answers with each proper box shrunk to the text inside it: the union of the text boxes (image id -> boxes)
+    whose middles it holds; a box with none keeps its own size. Scores whether the words were found, however tight."""
+    names = {k['id']: k['name'] for k in gt['categories']}
+    anns = []
+    for a in gt['annotations']:
+        x, y, w, h = a['bbox']
+        inner = [t for t in texts.get(a['image_id'], []) if x <= t[0] + t[2] / 2 <= x + w and y <= t[1] + t[3] / 2 <= y + h]
+        if inner and names[a['category_id']] in PROPER:
+            x0, y0 = min(t[0] for t in inner), min(t[1] for t in inner)
+            x1, y1 = max(t[0] + t[2] for t in inner), max(t[1] + t[3] for t in inner)
+            a = {**a, 'bbox': [x0, y0, x1 - x0, y1 - y0]}
+        anns.append(a)
+    return {**gt, 'annotations': anns}
+
+
+def page_texts(gt: dict) -> dict:
+    """Image id -> text boxes: the OCR word groups saved by comic_autolabel.py, where there are any. (Round 2's reviewed
+    test boxes are not used: on Pepper&Carrot many hold a tail or two joined bubbles, so they aren't where the words are.)"""
+    from comic_autolabel import merge_words
+    out = {}
+    for i in gt['images']:
+        f = c.DATA / 'ocr' / f"{Path(i['file_name']).name}.json"
+        if f.exists():
+            out[i['id']] = [r['bbox'] for r in merge_words(json.loads(f.read_text(encoding='utf8')))]
+    return out
+
+
 def found_by_set(sets: dict, predict, classes: list[str] = c.CLASSES) -> dict:
     """{set name: bubbles_found} for each test set; predict(name, gt) gives that set's predicted boxes."""
     return {name: bubbles_found(gt, predict(name, gt), classes) for name, gt in sets.items()}
 
 
-def found_main(run: str, old: bool) -> None:
-    """python comic_evaluate.py found <run> [--old]: found share on round 3's test sets, per style and test97.
-    --old: a round 2 model (its class order; boxes grown to the bubble first)."""
+def found_main(run: str, old: bool, text: bool = False) -> None:
+    """python comic_evaluate.py found <run> [--old] [--text]: found share on round 3's test sets, per style and test97.
+    --old: a round 2 model (its class order; boxes grown to the bubble first, except with --text).
+    --text: whether each bubble's words were found (answers shrunk to their text, see text_gt)."""
     import onnxruntime as ort
     d = c.RUNS / run
     session = ort.InferenceSession(str(d / 'model.onnx'), providers=['CPUExecutionProvider'])
@@ -225,12 +254,14 @@ def found_main(run: str, old: bool) -> None:
             if old:
                 rgbs[img['id']] = np.asarray(im)
             preds += [{'image_id': img['id'], 'category_id': k, 'bbox': b, 'score': s} for k, s, b in predict(session, kind, im)]
-        return grow_preds(preds, rgbs, classes) if old else preds
+        return grow_preds(preds, rgbs, classes) if old and not text else preds
 
+    if text:
+        sets = {name: text_gt(gt, page_texts(gt)) for name, gt in sets.items()}
     res = found_by_set(sets, boxes_for, classes)
-    (d / 'found3.json').write_text(json.dumps(res, indent=1), encoding='utf8')
+    (d / ('found3-text.json' if text else 'found3.json')).write_text(json.dumps(res, indent=1), encoding='utf8')
     for name, r in res.items():
-        print(f"{run} {name}: {r['found']}/{r['total']} proper bubbles found ({r['share']:.3f}) on {r['pages']} pages")
+        print(f"{run} {name}: {r['found']}/{r['total']} {'texts' if text else 'proper bubbles'} found ({r['share']:.3f}) on {r['pages']} pages")
 
 
 def table(r: dict) -> str:
@@ -269,7 +300,7 @@ def build_report(run: str, gt: dict, result: dict, styles: dict, pages: list[c.P
 
 def main() -> None:
     if sys.argv[1] == 'found':
-        return found_main(sys.argv[2], '--old' in sys.argv)
+        return found_main(sys.argv[2], '--old' in sys.argv, '--text' in sys.argv)
     run, split = sys.argv[1:3]
     gt = json.loads((c.DATA / 'annotations' / f'{split}.json').read_text(encoding='utf8'))
     pred = run_model(run, gt)
