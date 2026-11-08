@@ -119,3 +119,132 @@ it('whitens everything outside the bubble for the OCR, keeping the letters', asy
 	const busy = new Uint8ClampedArray(40 * 40 * 4).map((_, i) => (i * 37) % 256);
 	expect(whitenOutside(busy, 40, 40)).toBe(false); // no bubble: left as it is
 });
+
+it('finds the whole bubble around a box that covers only part of it', async () => {
+	const { bubbleExtent } = await import('./bubble');
+	// A 200×160 crop: the found box is its middle half; the bubble (an ellipse) reaches well beyond that box.
+	const w = 200, h = 160, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const d = ((x - 100) / 80) ** 2 + ((y - 80) / 60) ** 2;
+			const v = d > 1.1 ? 110 : d > 1 ? 0 : 255;
+			px.set([v, v, v, 255], (y * w + x) * 4);
+		}
+	const e = bubbleExtent(px, w, h)!;
+	expect(e.x).toBeLessThan(25);
+	expect(e.x + e.w).toBeGreaterThan(175);
+	expect(e.y).toBeLessThan(25);
+	expect(e.y + e.h).toBeGreaterThan(135);
+	// Paper that runs off the crop (no closed bubble around the box): no answer, the box stays as found.
+	const open = new Uint8ClampedArray(w * h * 4).fill(255);
+	expect(bubbleExtent(open, w, h)).toBeNull();
+});
+
+it('grows a small box to a much bigger bubble, looking for paper only inside the box', async () => {
+	const { bubbleExtent } = await import('./bubble');
+	// "See?" sits at the top of a bubble three times its height; a patch of light art lies near the box but outside the
+	// bubble. Only paper connected to the box itself may count.
+	const w = 400, h = 320, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const d = ((x - 200) / 120) ** 2 + ((y - 200) / 80) ** 2;
+			const patch = x >= 105 && x < 125 && y >= 85 && y < 100;
+			const v = patch ? 252 : d > 1.05 ? 110 : d > 1 ? 0 : 255;
+			px.set([v, v, v, 255], (y * w + x) * 4);
+		}
+	const e = bubbleExtent(px, w, h, { x: 170, y: 128, w: 60, h: 36 })!;
+	expect(e.y).toBeGreaterThan(110); // the patch above is not part of it
+	expect(e.y + e.h).toBeGreaterThan(260); // the bubble's lower part is
+});
+
+/** The 100×80 ellipse of `page()`, its paper painted row by row by `paint(y)`, a 30×8 bar of letters in the middle. */
+function ellipse(paint: (y: number) => readonly number[], { letters }: { letters: number[] }) {
+	const w = 100, h = 80, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const d = ((x - 50) / 40) ** 2 + ((y - 40) / 30) ** 2;
+			const text = x >= 35 && x < 65 && y >= 36 && y < 44;
+			const c = d > 1.1 ? [110, 110, 110] : d > 1 ? [0, 0, 0] : text ? letters : paint(y);
+			px.set([...c, 255], (y * w + x) * 4);
+		}
+	return { px, w, h };
+}
+
+it('finds the inside of a tinted, a gradient and a dark box', () => {
+	for (const [name, paint] of [
+		['tinted', () => [250, 235, 190]],
+		['gradient', (y: number) => [255 - y, 255 - y, 255]], // top white, bottom light blue
+		['dark', () => [30, 30, 40]]
+	] as const) {
+		const { px, w, h } = ellipse(paint, { letters: name === 'dark' ? [240, 240, 240] : [0, 0, 0] });
+		const s = bubbleShape(px, w, h)!;
+		expect(s, name).not.toBeNull();
+		expect(s.mask[40 * w + 50], `${name}: letter`).toBe(1);
+		expect(s.inside[40 * w + 50], `${name}: letter is not background`).toBe(0);
+		expect(s.inside[20 * w + 50], `${name}: paper is background`).toBe(1);
+		expect(s.mask[40 * w + 9], `${name}: outline`).toBe(0);
+		expect(s.mask[1 * w + 1], `${name}: art outside`).toBe(0);
+	}
+});
+
+it('stays fast on a big crop full of round letters (each letter hole is not a bubble)', () => {
+	// A 660×270 OCR crop: a white oval packed with "O"s whose holes (10 px) survive the gap closing.
+	const w = 660, h = 270, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const d = ((x - 330) / 320) ** 2 + ((y - 135) / 130) ** 2;
+			const lx = (x - 90) % 26, ly = (y - 60) % 30, r = Math.hypot(lx - 13, ly - 15);
+			const letter = x >= 90 && x < 570 && y >= 60 && y < 210 && r >= 5 && r < 10;
+			const v = d > 1.06 ? 110 : d > 1 ? 0 : letter ? 0 : 255;
+			px.set([v, v, v, 255], (y * w + x) * 4);
+		}
+	bubbleShape(px, w, h); // warm up
+	const t = performance.now();
+	const s = bubbleShape(px, w, h)!;
+	expect(performance.now() - t).toBeLessThan(250);
+	expect(s.color).toBe('rgb(255,255,255)');
+	expect(s.mask[75 * w + 103]).toBe(1); // a letter hole is part of the bubble
+});
+
+it('a found box does not grow onto a closed dark blob beside it when its own bubble runs off the crop', async () => {
+	const { bubbleExtent } = await import('./bubble');
+	// The bubble holding the box runs off the crop's left edge (so the box stays as found); a flat black fill sits
+	// beside the box, closed and big enough, but away from the box's middle.
+	const w = 200, h = 160, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const d = ((x - 40) / 95) ** 2 + ((y - 80) / 70) ** 2;
+			const blob = x >= 146 && x < 195 && y >= 45 && y < 115;
+			const v = blob ? 0 : d > 1.08 ? 110 : d > 1 ? 0 : 255;
+			px.set([v, v, v, 255], (y * w + x) * 4);
+		}
+	expect(bubbleExtent(px, w, h, { x: 50, y: 40, w: 100, h: 80 })).toBeNull();
+});
+
+it('box growing and the OCR clean-up take only bubble paper, not a smooth painted patch of the art', async () => {
+	const { bubbleExtent, whitenOutside } = await import('./bubble');
+	// A closed, smoothly painted blue-green patch (like Pepper&Carrot's painted sky) on busy art: lettering may take it as a
+	// box's inside, but growing a found box onto it, or whitening around it for the OCR, would lose the text.
+	const w = 200, h = 160, px = new Uint8ClampedArray(w * h * 4);
+	for (let y = 0; y < h; y++)
+		for (let x = 0; x < w; x++) {
+			const d = ((x - 100) / 80) ** 2 + ((y - 80) / 60) ** 2;
+			const c = d > 1.1 ? [(x * 37 + y * 91) % 256, (x * 53) % 256, (y * 71) % 256] : d > 1 ? [0, 0, 0] : [60, 120 + y / 4, 190];
+			px.set([...c, 255], (y * w + x) * 4);
+		}
+	expect(bubbleShape(px, w, h)).not.toBeNull(); // lettering still finds it
+	expect(bubbleExtent(px, w, h, { x: 50, y: 40, w: 100, h: 80 })).toBeNull();
+	expect(whitenOutside(px.slice(), w, h)).toBe(false);
+});
+
+it('gives the extents recorded in bubble-cases.json (the Python port is held to the same cases)', async () => {
+	const { bubbleExtent } = await import('./bubble');
+	const { inflateSync } = await import('node:zlib');
+	const cases = (await import('./bubble-cases.json')).default as { name: string; w: number; h: number; seed: { x: number; y: number; w: number; h: number } | null; rgb: string; extent: number[] | null }[];
+	for (const c of cases) {
+		const rgb = inflateSync(Buffer.from(c.rgb, 'base64')), px = new Uint8ClampedArray(c.w * c.h * 4);
+		for (let i = 0; i < c.w * c.h; i++) px.set([rgb[i * 3], rgb[i * 3 + 1], rgb[i * 3 + 2], 255], i * 4);
+		const e = bubbleExtent(px, c.w, c.h, c.seed ?? undefined);
+		expect(e && [e.x, e.y, e.w, e.h], c.name).toEqual(c.extent);
+	}
+});

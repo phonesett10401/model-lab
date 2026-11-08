@@ -40,14 +40,10 @@ it('states the real model size', async () => {
 	expect(MODEL_MB).toBe(Math.round(statSync(`static${MODEL_URL}`).size / 1e5) / 10);
 });
 
-it('drops a box that only wraps two others of the same kind', async () => {
-	const { dropContainers } = await import('./detect');
-	const a = { box: { x: 900, y: 80, w: 100, h: 50 }, cls: 'bubble' as const, score: 0.9 };
-	const b = { box: { x: 1060, y: 120, w: 140, h: 70 }, cls: 'bubble' as const, score: 0.9 };
-	const wrap = { box: { x: 890, y: 70, w: 320, h: 130 }, cls: 'bubble' as const, score: 0.6 };
-	expect(dropContainers([a, b, wrap])).toEqual([a, b]);
-	expect(dropContainers([a, wrap]), 'one box inside is a big bubble with a small one, not a wrapper').toHaveLength(2);
-	expect(dropContainers([a, b, { ...wrap, cls: 'caption' as const }]), 'different kind stays').toHaveLength(3);
+it('keeps a box that holds two others: round 3 dropping it lost more bubbles than it saved repeats (measured)', async () => {
+	const { cleanUp } = await import('./detect');
+	const d = (x: number, y: number, w: number, h: number, score: number) => ({ box: { x, y, w, h }, cls: 'bubble' as const, score, tile: 0 });
+	expect(cleanUp([d(900, 80, 100, 50, 0.9), d(1060, 120, 140, 70, 0.9), d(890, 70, 320, 130, 0.6)])).toHaveLength(3);
 });
 
 it('keeps one box when two sit on the same text, of any kind', async () => {
@@ -74,14 +70,20 @@ it('skips sound effects, even when one sits on a bubble', async () => {
 	expect(kept.map((d) => d.cls)).toEqual(['bubble']);
 });
 
-it('joins boxes stacked in one bubble (two lines boxed apart) but keeps neighbours apart', async () => {
+it('keeps two overlapping boxes of a bubble chain apart: round 3 finds one box per bubble, the page joins nothing', async () => {
 	const { cleanUp } = await import('./detect');
-	const kept = cleanUp([
-		{ box: { x: 330, y: 97, w: 248, h: 78 }, cls: 'bubble', score: 0.8, tile: 0 }, // line 1 of a verse
-		{ box: { x: 343, y: 157, w: 273, h: 90 }, cls: 'bubble', score: 0.7, tile: 0 }, // line 2, overlapping it
-		{ box: { x: 100, y: 400, w: 200, h: 100 }, cls: 'bubble', score: 0.6, tile: 0 },
-		{ box: { x: 295, y: 495, w: 200, h: 100 }, cls: 'bubble', score: 0.6, tile: 0 } // a neighbour touching a corner
-	]);
+	const b = (x: number, y: number, w: number, h: number, score: number) => ({ box: { x, y, w, h }, cls: 'bubble' as const, score, tile: 0 });
+	// "What?!" and "Make you cry?!" (Pepper&Carrot 37, page 5): joined bubbles, boxes overlapping
+	const kept = cleanUp([b(134, 1174, 138, 59, 0.8), b(220, 1225, 176, 120, 0.7), b(331, 1322, 197, 148, 0.7)]);
 	expect(kept).toHaveLength(3);
-	expect(kept[0].box).toEqual({ x: 330, y: 97, w: 286, h: 150 });
+	// "…well, what are you waiting for?" over "Try to make me cry.": two joined bubbles of about the same width, stacked
+	expect(cleanUp([b(560, 300, 200, 90, 0.8), b(570, 370, 190, 80, 0.7)])).toHaveLength(2);
+});
+
+it('reads the round 3 model: its four classes, free text kept, sound effects dropped', async () => {
+	const { CLASSES, cleanUp } = await import('./detect');
+	expect(CLASSES).toEqual(['bubble', 'caption', 'free-text', 'sfx']);
+	const b = (x: number) => ({ x, y: 0, w: 100, h: 60 });
+	const kept = cleanUp([2, 3, 0].map((k, i) => ({ box: b(200 * i), cls: CLASSES[k], score: 0.9, tile: 0 })));
+	expect(kept.map((d) => d.cls).sort()).toEqual(['bubble', 'free-text']);
 });

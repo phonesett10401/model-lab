@@ -1,10 +1,10 @@
 import { ENGINE_MB, openSession, type Ort } from '$lib/runtime/engine';
 import type { Box, RegionClass } from './types';
 
-/** Our D-FINE text detector (plan 2, Apache-2.0), exported at 1024 px. Runs on the visitor's device. */
+/** Our D-FINE text detector (round 3: size L, weights stored at half size), exported at 1024 px. Runs on the visitor's device. */
 export const MODEL_URL = '/models/comic-text-detector.onnx';
-export const MODEL_MB = 15.8;
-export const CLASSES: RegionClass[] = ['bubble', 'caption', 'sfx', 'art-text'];
+export const MODEL_MB = 63.5;
+export const CLASSES: RegionClass[] = ['bubble', 'caption', 'free-text', 'sfx'];
 export const MIN_SCORE = 0.3;
 const SIZE = 1024;
 
@@ -45,12 +45,6 @@ export function mergeBoxes(dets: (Detection & { tile: number })[], minOverlap = 
 	return out.map(({ box, cls, score }) => ({ box, cls, score }));
 }
 
-/** A box that wraps two or more boxes of its own kind (each 80%+ inside it) is a duplicate of them: drop it. */
-export function dropContainers(dets: Detection[]): Detection[] {
-	return dets.filter((d) => dets.filter((o) => o !== d && o.cls === d.cls && overlapOfSmaller(o.box, d.box) >= 0.8
-		&& o.box.w * o.box.h < d.box.w * d.box.h).length < 2);
-}
-
 /** The detector has no overlap removal of its own and often boxes one piece of text twice (as a bubble and as a
  * caption, or twice as a bubble). Keeps the more confident of any two boxes that overlap by IoU >= 0.5. */
 export function dropTwins(dets: Detection[]): Detection[] {
@@ -63,28 +57,12 @@ export function dropTwins(dets: Detection[]): Detection[] {
 	return kept;
 }
 
-/** Everything after the model: merge across tiles, drop wrappers, skip sound effects (the owner leaves them in the
- * art), then keep one box per piece of text. Sound effects go before the twins, so one can't win over a bubble. */
+/** Everything after the model: merge across tiles, skip sound effects (the owner leaves them in the art), then keep one
+ * box per piece of text. Sound effects go before the twins, so one can't win over a bubble. Round 3's finder draws one
+ * box per whole bubble, so nothing is joined, grown or dropped as a wrapper here: on round 3's test pages those steps
+ * lost more bubbles than they saved repeats (training/comic_evaluate.py page_boxes mirrors this). */
 export function cleanUp(found: (Detection & { tile: number })[]): Detection[] {
-	return joinStacked(dropTwins(dropContainers(mergeBoxes(found)).filter((d) => d.cls !== 'sfx')));
-}
-
-/** Lines of one bubble are sometimes boxed apart (a song verse split in two): boxes overlapping by at least 15% of
- * the smaller become one, so the bubble is read, translated and lettered once, as a whole sentence. Separate
- * bubbles' boxes barely touch. */
-export function joinStacked(dets: Detection[]): Detection[] {
-	const out = dets.map((d) => ({ ...d, box: { ...d.box } }));
-	for (let i = 0; i < out.length; i++)
-		for (let j = i + 1; j < out.length; j++) {
-			if (overlapOfSmaller(out[i].box, out[j].box) < 0.15) continue;
-			const [a, b] = [out[i].box, out[j].box];
-			const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
-			out[i].box = { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
-			if (out[j].score > out[i].score) { out[i].cls = out[j].cls; out[i].score = out[j].score; }
-			out.splice(j, 1);
-			j = i; // the grown box may now overlap one already passed
-		}
-	return out;
+	return dropTwins(mergeBoxes(found).filter((d) => d.cls !== 'sfx'));
 }
 
 function tensorOf(bmp: ImageBitmap, t: Box): Float32Array {
@@ -110,7 +88,8 @@ function create() {
 		sizeLabel: `${MODEL_MB} MB model + ${ENGINE_MB} MB engine`,
 		async load(onProgress: (p: number | null) => void) {
 			if (session) return;
-			({ ort, session } = await openSession(MODEL_URL, MODEL_MB, onProgress));
+			// Up to 16 threads: D-FINE L takes about 4 s a page on 4 and about 2 s on 16 (owner's laptop).
+			({ ort, session } = await openSession(MODEL_URL, MODEL_MB, onProgress, 16));
 		},
 		async detect(bmp: ImageBitmap): Promise<Detection[]> {
 			if (!ort || !session) throw new Error('model not loaded');

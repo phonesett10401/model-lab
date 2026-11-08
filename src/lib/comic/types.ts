@@ -1,11 +1,12 @@
 /** A rectangle in page pixels. */
 export interface Box { x: number; y: number; w: number; h: number }
 
-export type RegionClass = 'bubble' | 'caption' | 'sfx' | 'art-text';
+export type RegionClass = 'bubble' | 'caption' | 'free-text' | 'sfx';
 export type Speaker = 'man' | 'woman' | 'child' | 'narrator' | 'unknown';
 
 /** One numbered English line sent for translation. Text only: never image data. */
-export interface SentLine { n: number; text: string; cls: RegionClass; speaker: Speaker }
+/** `short`: the last Burmese was too long for its box; ask for a shorter one. */
+export interface SentLine { n: number; text: string; cls: RegionClass; speaker: Speaker; short?: true }
 /** english: the English as Gemini read it (OCR slips fixed), when it returns one. */
 export interface GotLine { n: number; text: string; english?: string }
 
@@ -13,7 +14,7 @@ export type TranslateReply =
 	| { ok: true; lines: GotLine[]; model: string }
 	| { ok: false; error: 'bad-request' | 'forbidden' | 'quota' | 'busy' | 'upstream' | 'blocked' | 'not-configured' | 'rate-limited' };
 
-export type LineProblem = 'missing' | 'not-burmese' | 'zawgyi' | 'length' | 'unread' | 'blocked';
+export type LineProblem = 'missing' | 'not-burmese' | 'zawgyi' | 'length' | 'unread' | 'blocked' | 'too-long';
 
 /** One text area the visitor marked on a page. */
 export interface Region {

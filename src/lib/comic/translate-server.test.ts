@@ -25,8 +25,16 @@ function fakeGemini(status: number, text: string) {
 const burmeseReply = JSON.stringify({ lines: [{ n: 1, text: 'မင်္ဂလာပါ' }] });
 
 describe('validateLines', () => {
+	it('accepts short: true and nothing else extra', () => {
+		expect(validateLines({ lines: [{ ...line, short: true }] })).not.toBeNull();
+		expect(validateLines({ lines: [{ ...line, short: 'yes' }] })).toBeNull();
+		expect(validateLines({ lines: [{ ...line, short: false }] })).toBeNull();
+	});
 	it('accepts numbered text lines', () => {
 		expect(validateLines({ lines: [line] })).toEqual([line]);
+	});
+	it('accepts free text, the round 3 name for text on the art', () => {
+		expect(validateLines({ lines: [{ ...line, cls: 'free-text' }] })).not.toBeNull();
 	});
 
 	it('rejects images and unknown fields', () => {
@@ -40,6 +48,15 @@ describe('validateLines', () => {
 });
 
 describe('buildPrompt', () => {
+	it('a line asked to be shorter is marked in the prompt', () => {
+		const p = buildPrompt([{ ...line, short: true }, { ...line, n: 2 }]);
+		expect(p.user).toContain('1 [man] [bubble] [shorter] HELLO');
+		expect(p.user).toContain('2 [man] [bubble] HELLO');
+		expect(p.system).toContain('Lines marked [shorter] came out too long for their space: give a shorter Burmese line with the same meaning.');
+	});
+	it('says nothing about shorter lines when none is asked', () => {
+		expect(buildPrompt([line]).system).not.toContain('[shorter]');
+	});
 	it('prompt carries speaker and order', () => {
 		const p = buildPrompt([{ n: 2, text: 'BOOM', cls: 'sfx', speaker: 'unknown' }, line]);
 		expect(p.user.indexOf('1 [man]')).toBeGreaterThanOrEqual(0);
@@ -85,6 +102,8 @@ describe('handleTranslate', () => {
 		expect(new Headers(init.headers).get('x-goog-api-key')).toBe('test-key');
 		const body = String(init.body);
 		expect(JSON.parse(body).generationConfig.responseMimeType).toBe('application/json');
+		// A schema, so Gemini can't send back broken JSON (it dropped a '{' between lines on a real page).
+		expect(JSON.parse(body).generationConfig.responseSchema.properties.lines.items.required).toEqual(['n', 'text']);
 		expect(body).toContain('HELLO');
 		expect(body).not.toContain('data:image');
 	});

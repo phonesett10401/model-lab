@@ -2,7 +2,7 @@ import type { GotLine, RegionClass, SentLine, ServerEnv, Speaker, TranslateReply
 
 export const LIMITS = { maxLines: 200, maxLineChars: 500, maxBodyBytes: 20_000 };
 
-const CLASSES: RegionClass[] = ['bubble', 'caption', 'sfx', 'art-text'];
+const CLASSES: RegionClass[] = ['bubble', 'caption', 'free-text', 'sfx'];
 const SPEAKERS: Speaker[] = ['man', 'woman', 'child', 'narrator', 'unknown'];
 
 /** Accepts exactly { lines: SentLine[] } and nothing else, so no image data can ride along. */
@@ -14,8 +14,9 @@ export function validateLines(body: unknown): SentLine[] | null {
 	if (!Array.isArray(lines) || lines.length === 0 || lines.length > LIMITS.maxLines) return null;
 	const seen = new Set<number>();
 	for (const l of lines) {
-		if (!l || typeof l !== 'object' || Object.keys(l).length !== 4) return null;
-		const { n, text, cls, speaker } = l as SentLine;
+		if (!l || typeof l !== 'object') return null;
+		const { n, text, cls, speaker, short } = l as SentLine;
+		if (Object.keys(l).length !== ('short' in l ? 5 : 4) || ('short' in l && short !== true)) return null;
 		if (!Number.isInteger(n) || n < 1 || seen.has(n)) return null;
 		if (typeof text !== 'string' || text.length > LIMITS.maxLineChars) return null;
 		if (!CLASSES.includes(cls) || !SPEAKERS.includes(speaker)) return null;
@@ -34,11 +35,12 @@ export function buildPrompt(lines: SentLine[]): { system: string; user: string }
 		'Write Myanmar Unicode only, never Zawgyi. Write every word in Burmese: only names may stay in English letters.',
 		'The English comes from OCR and may contain reading mistakes (0 for O, missing letters, joined words): fix them from context.',
 		'Fix only clear reading mistakes: never add words or finish a sentence that is not there, and drop stray symbols (| = a—— and the like). If a line is mostly junk, translate only the words you can read.',
+		...(lines.some((l) => l.short) ? ['Lines marked [shorter] came out too long for their space: give a shorter Burmese line with the same meaning.'] : []),
 		'Reply with JSON only, exactly {"lines":[{"n":<number>,"text":"<Burmese>","english":"<the English, corrected>"}]}, with the same numbers you were given, one entry each.'
 	].join('\n');
 	const user = [...lines]
 		.sort((a, b) => a.n - b.n)
-		.map((l) => `${l.n} [${l.speaker}] [${l.cls}] ${l.text}`)
+		.map((l) => `${l.n} [${l.speaker}] [${l.cls}] ${l.short ? '[shorter] ' : ''}${l.text}`)
 		.join('\n');
 	return { system, user };
 }
@@ -62,6 +64,13 @@ function perDay(body: unknown): boolean {
 	const details = (body as { error?: { details?: { violations?: { quotaId?: string }[] }[] } })?.error?.details ?? [];
 	return details.some((d) => d.violations?.some((v) => v.quotaId?.includes('PerDay')));
 }
+
+/** The reply Gemini must give: numbered lines of Burmese, with the English repaired when it was misread. */
+const SCHEMA = {
+	type: 'OBJECT',
+	properties: { lines: { type: 'ARRAY', items: { type: 'OBJECT', properties: { n: { type: 'INTEGER' }, text: { type: 'STRING' }, english: { type: 'STRING' } }, required: ['n', 'text'] } } },
+	required: ['lines']
+};
 
 const reply = (body: TranslateReply | { model: string; fallback?: string; tier: string }, status = 200) =>
 	new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -142,7 +151,8 @@ export async function handleTranslate(req: Request, env: ServerEnv, fetchImpl: t
 	const body = JSON.stringify({
 		systemInstruction: { parts: [{ text: system }] },
 		contents: [{ role: 'user', parts: [{ text: user }] }],
-		generationConfig: { responseMimeType: 'application/json' }
+		// The schema makes Gemini's JSON always valid: without it, it once dropped a '{' between lines, every time, on a real page.
+		generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA }
 	});
 	// The main model first; only when its free daily quota is used up does the fallback model get the same request.
 	const models = [env.model, env.fallback].filter((m): m is string => !!m);

@@ -18,9 +18,9 @@ it('counts a labelled region as replaced when a translated box covers half of it
 	expect(replacedShare([], [])).toBeNull();
 });
 
-it('fit share counts only boxes that fit without growing or covering', async () => {
+it('fit share counts only boxes that fit at the usual size', async () => {
 	const { fitShare } = await import('./score');
-	expect(fitShare(['fit', 'fit', 'cover', 'grown'])).toBe(0.5);
+	expect(fitShare(['fit', 'fit', 'small', 'too-long'])).toBe(0.5);
 	expect(fitShare([])).toBeNull();
 });
 

@@ -1,85 +1,52 @@
 import type { Box } from './types.ts';
 
-/** How far (per colour channel) a pixel may be from the paper colour and still count as paper. */
-const NEAR = 40;
+/** Most a pixel's channels may differ from each of its neighbours for it to count as smooth background (gradients
+ * pass; outlines, letter edges and halftone dots do not). */
+const STEP = 20;
 /** A small margin inside the largest rectangle that fits in the bubble. */
 const INSET = 0.06;
 /** A second, looser text area, tried before giving up on the bubble for a long translation. */
 const LOOSE = 0;
 /** Gaps in an outline up to twice this many pixels wide are closed before the inside is flooded. */
 const GAP = 2;
-/** Most a paper colour's channels may differ (cream paper ~40; a lilac window ~60 is art). */
+/** With `paperOnly`: how far (per channel) a pixel may be from the paper colour and still count as paper… */
+const NEAR = 40;
+/** …and most a paper colour's channels may differ (cream paper ~40; a lilac window or painted sky ~60+ is art). */
 const SATURATION = 45;
-
 /**
- * Finds the speech bubble in a box (RGBA pixels, w×h): its paper colour, the pixels to paint (the paper inside the
- * outline plus the letters it encloses) and a text area that stays inside the oval. The outline and the art around
- * it are never in the mask. Null when there is no clear bubble, e.g. text drawn on busy art.
+ * Finds the box in a crop (RGBA pixels, w×h): a bubble or narration box of any colour (white, tinted, gradient, dark).
+ * `inside` is its background (the smooth region inside the outline, letters left out); `mask` is that plus the letters it
+ * encloses (what may be repainted); `color` the background's average colour; `inner`/`loose` a text area that stays
+ * inside the oval. The outline and the art around it are never in the mask. Null when there is no clear box, e.g. text
+ * drawn on busy art. With `paperOnly` set, only light, near-grey backgrounds count (real bubble paper, not smooth painted art).
  */
-export function bubbleShape(px: Uint8ClampedArray, w: number, h: number): { color: string; mask: Uint8Array; inner: Box; loose: Box } | null {
+export function bubbleShape(px: Uint8ClampedArray, w: number, h: number, seed?: Box, { paperOnly = false } = {}): { color: string; mask: Uint8Array; inside: Uint8Array; inner: Box; loose: Box } | null {
 	const n = w * h;
+	// Where the box's background is looked for: the given area (a found box), else the middle half of the crop.
+	const s0 = seed ?? { x: w / 4, y: h / 4, w: w / 2, h: h / 2 };
 	const central = (i: number) => {
 		const x = i % w, y = (i / w) | 0;
-		return x >= w / 4 && x < (w * 3) / 4 && y >= h / 4 && y < (h * 3) / 4;
-	};
-	// Paper colour: the commonest light colour in the middle half of the box.
-	const buckets = new Map<number, { n: number; r: number; g: number; b: number }>();
-	for (let i = 0; i < n; i++) {
-		if (!central(i)) continue;
-		const [r, g, b] = [px[i * 4], px[i * 4 + 1], px[i * 4 + 2]];
-		if (0.299 * r + 0.587 * g + 0.114 * b < 150) continue;
-		// Paper is white, grey or a faint cream; a coloured light patch (a lit window, sky) is art, not a bubble.
-		if (Math.max(r, g, b) - Math.min(r, g, b) > SATURATION) continue;
-		const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
-		const s = buckets.get(key) ?? { n: 0, r: 0, g: 0, b: 0 };
-		s.n++; s.r += r; s.g += g; s.b += b;
-		buckets.set(key, s);
-	}
-	const top = [...buckets.values()].reduce((a, b) => (b.n > a.n ? b : a), { n: 0, r: 0, g: 0, b: 0 });
-	if (!top.n) return null;
-	const paper = [top.r / top.n, top.g / top.n, top.b / top.n].map(Math.round);
-	const near = (i: number) => Math.abs(px[i * 4] - paper[0]) <= NEAR && Math.abs(px[i * 4 + 1] - paper[1]) <= NEAR && Math.abs(px[i * 4 + 2] - paper[2]) <= NEAR;
-
-	/** 4-connected flood fill from `seeds` through pixels where `pass` holds. */
-	const flood = (seeds: number[], pass: (i: number) => boolean) => {
-		const seen = new Uint8Array(n);
-		const stack = seeds.filter(pass);
-		for (const s of stack) seen[s] = 1;
-		while (stack.length) {
-			const i = stack.pop()!, x = i % w;
-			for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w])
-				if (j >= 0 && j < n && !seen[j] && pass(j)) { seen[j] = 1; stack.push(j); }
-		}
-		return seen;
+		return x >= s0.x && x < s0.x + s0.w && y >= s0.y && y < s0.y + s0.h;
 	};
 
-	// The bubble's inside: paper connected to the paper in the middle of the box.
-	const middle: number[] = [];
-	for (let i = 0; i < n; i++) if (central(i)) middle.push(i);
-	// Outlines have small gaps (the tail, a panel edge); flooding straight through one leaks into a white background
-	// and the outline would then be painted over. So flood the paper shrunk by GAP pixels (which closes gaps up to
-	// 2×GAP wide), then grow the result back over the paper.
-	const paperMap = new Uint8Array(n);
-	for (let i = 0; i < n; i++) paperMap[i] = near(i) ? 1 : 0;
-	const core = spread(spread(paperMap, w, h, GAP, true), w, h, GAP, true, true);
-	const coreInside = flood(middle, (i) => core[i] === 1);
-	const grown = spread(spread(coreInside, w, h, GAP, false), w, h, GAP, false, true);
-	const inside = new Uint8Array(n);
-	for (let i = 0; i < n; i++) inside[i] = grown[i] && paperMap[i] ? 1 : 0;
+	const need = seed ? seed.w * seed.h * 0.3 : n * 0.15;
+	const inside = paperOnly ? paperInside(px, w, h, central, need) : smoothInside(px, w, h, central, s0, need, seed);
+	if (!inside) return null;
+	let sr = 0, sg = 0, sb = 0;
 	let count = 0, x0 = w, y0 = h, x1 = 0, y1 = 0;
 	for (let i = 0; i < n; i++)
 		if (inside[i]) {
-			count++;
+			count++; sr += px[i * 4]; sg += px[i * 4 + 1]; sb += px[i * 4 + 2];
 			const x = i % w, y = (i / w) | 0;
 			if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
 		}
-	if (count < n * 0.15) return null;
+	const paper = [sr / count, sg / count, sb / count].map(Math.round);
 
 	// Everything the box edge reaches without crossing the inside is outline or art; the rest is the bubble and its letters.
 	const edge: number[] = [];
 	for (let x = 0; x < w; x++) edge.push(x, (h - 1) * w + x);
 	for (let y = 0; y < h; y++) edge.push(y * w, y * w + w - 1);
-	const outside = flood(edge, (i) => !inside[i]);
+	const outside = flood(n, w, edge, (i) => !inside[i]);
 	const mask = new Uint8Array(n);
 	let enclosed = 0;
 	for (let i = 0; i < n; i++) if (!outside[i]) { mask[i] = 1; enclosed++; }
@@ -96,7 +63,121 @@ export function bubbleShape(px: Uint8ClampedArray, w: number, h: number): { colo
 	// bubble's bounding box much bigger than the oval, and a rectangle cut from that box would stick out of it.
 	const room = inscribed(mask, w, h, Math.round((x0 + x1) / 2));
 	const shrink = (k: number) => ({ x: room.x + room.w * k, y: room.y + room.h * k, w: room.w * (1 - 2 * k), h: room.h * (1 - 2 * k) });
-	return { color: `rgb(${paper.join(',')})`, mask, inner: shrink(INSET), loose: shrink(LOOSE) };
+	return { color: `rgb(${paper.join(',')})`, mask, inside, inner: shrink(INSET), loose: shrink(LOOSE) };
+}
+
+/** The box's background as the one connected smooth region (any colour) that best holds the seed area. */
+function smoothInside(px: Uint8ClampedArray, w: number, h: number, central: (i: number) => boolean, s0: Box, need: number, seed?: Box): Uint8Array | null {
+	const n = w * h;
+	// Smooth pixels: close in colour to all four neighbours. A box's background is one connected smooth region.
+	const smooth = new Uint8Array(n);
+	const close = (i: number, j: number) =>
+		Math.abs(px[i * 4] - px[j * 4]) <= STEP && Math.abs(px[i * 4 + 1] - px[j * 4 + 1]) <= STEP && Math.abs(px[i * 4 + 2] - px[j * 4 + 2]) <= STEP;
+	for (let i = 0; i < n; i++) {
+		const x = i % w;
+		smooth[i] = (x === 0 || close(i, i - 1)) && (x === w - 1 || close(i, i + 1)) && (i < w || close(i, i - w)) && (i >= n - w || close(i, i + w)) ? 1 : 0;
+	}
+
+	// Outlines have small gaps (the tail, a panel edge); flooding straight through one leaks into the background around
+	// the bubble and the outline would then be painted over. So flood the smooth map shrunk by GAP pixels (which closes
+	// gaps up to 2×GAP wide), then grow each region back over the smooth pixels.
+	const core = spread(spread(smooth, w, h, GAP, true), w, h, GAP, true, true);
+	const cx = s0.x + s0.w / 2, cy = s0.y + s0.h / 2;
+	// Label every region of the shrunk map once, with its bounding box and whether it meets the seed area. Only regions
+	// whose box (grown back) could hold `need` pixels are weighed: letter holes and specks are skipped cheaply.
+	const label = new Int32Array(n);
+	const boxes: { x0: number; y0: number; x1: number; y1: number; seen: boolean }[] = [];
+	for (let i = 0; i < n; i++) {
+		if (!core[i] || label[i]) continue;
+		const b = { x0: w, y0: h, x1: -1, y1: -1, seen: false };
+		boxes.push(b);
+		const id = boxes.length, stack = [i];
+		label[i] = id;
+		while (stack.length) {
+			const k = stack.pop()!, x = k % w, y = (k / w) | 0;
+			if (x < b.x0) b.x0 = x; if (x > b.x1) b.x1 = x; if (y < b.y0) b.y0 = y; if (y > b.y1) b.y1 = y;
+			if (!b.seen && central(k)) b.seen = true;
+			for (const j of [x > 0 ? k - 1 : -1, x < w - 1 ? k + 1 : -1, k - w, k + w])
+				if (j >= 0 && j < n && core[j] && !label[j]) { label[j] = id; stack.push(j); }
+		}
+	}
+	const rim: number[] = [];
+	for (let x = 0; x < w; x++) rim.push(x, (h - 1) * w + x);
+	for (let y = 0; y < h; y++) rim.push(y * w, y * w + w - 1);
+	let inside: Uint8Array | null = null, best = -Infinity;
+	for (let id = 1; id <= boxes.length; id++) {
+		const b = boxes[id - 1], pad = 2 * GAP + 2;
+		if (!b.seen || (b.x1 - b.x0 + 1 + pad) * (b.y1 - b.y0 + 1 + pad) < need) continue;
+		const part = new Uint8Array(n);
+		for (let j = 0; j < n; j++) if (label[j] === id) part[j] = 1;
+		const grown = spread(spread(part, w, h, GAP, false), w, h, GAP, false, true);
+		const region = new Uint8Array(n);
+		// Size is the area the region encloses (its paper and the letters it surrounds): a bubble packed with text has
+		// only a thin ring of paper, but that ring still holds the whole bubble. The region counts with a 1 px rim: the
+		// background next to the outline is not smooth but is still the box.
+		const ring = spread(spread(grown, w, h, 1, false), w, h, 1, false, true);
+		const out = flood(n, w, rim, (j) => !ring[j]);
+		let count = n, edge = false, near = Infinity;
+		for (let j = 0; j < n; j++) {
+			if (out[j]) count--;
+			if (!grown[j] || !smooth[j]) continue;
+			region[j] = 1;
+			const x = j % w, y = (j / w) | 0;
+			if (x === 0 || y === 0 || x === w - 1 || y === h - 1) edge = true;
+			if (central(j)) near = Math.min(near, (x - cx) ** 2 + (y - cy) ** 2);
+		}
+		if (count < need) continue;
+		// A closed region (not running off the crop) is the box; otherwise the one nearest the middle of the seed area.
+		// With a found box as the seed, a closed region must also hold the box's middle (around it, or near it), so the
+		// box never grows onto a flat blob beside it when its own bubble runs off the crop.
+		const middle = Math.min(h - 1, Math.round(cy)) * w + Math.min(w - 1, Math.round(cx));
+		const closed = !edge && (!seed || !out[middle] || near <= (Math.min(seed.w, seed.h) / 4) ** 2);
+		const score = (closed ? 1e12 : 0) - near;
+		if (score > best) { best = score; inside = region; }
+	}
+	return inside;
+}
+
+/** Bubble paper only: the commonest light, near-grey colour in the seed area, flooded through pixels close to it. */
+function paperInside(px: Uint8ClampedArray, w: number, h: number, central: (i: number) => boolean, need: number): Uint8Array | null {
+	const n = w * h;
+	const buckets = new Map<number, { n: number; r: number; g: number; b: number }>();
+	for (let i = 0; i < n; i++) {
+		if (!central(i)) continue;
+		const [r, g, b] = [px[i * 4], px[i * 4 + 1], px[i * 4 + 2]];
+		if (0.299 * r + 0.587 * g + 0.114 * b < 150 || Math.max(r, g, b) - Math.min(r, g, b) > SATURATION) continue;
+		const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+		const s = buckets.get(key) ?? { n: 0, r: 0, g: 0, b: 0 };
+		s.n++; s.r += r; s.g += g; s.b += b;
+		buckets.set(key, s);
+	}
+	const top = [...buckets.values()].reduce((a, b) => (b.n > a.n ? b : a), { n: 0, r: 0, g: 0, b: 0 });
+	if (!top.n) return null;
+	const c = [top.r / top.n, top.g / top.n, top.b / top.n];
+	const paperMap = new Uint8Array(n);
+	for (let i = 0; i < n; i++) paperMap[i] = Math.abs(px[i * 4] - c[0]) <= NEAR && Math.abs(px[i * 4 + 1] - c[1]) <= NEAR && Math.abs(px[i * 4 + 2] - c[2]) <= NEAR ? 1 : 0;
+	// Flood the paper shrunk by GAP (closing small outline gaps) from the seed area, then grow it back over the paper.
+	const middle: number[] = [];
+	for (let i = 0; i < n; i++) if (central(i)) middle.push(i);
+	const core = spread(spread(paperMap, w, h, GAP, true), w, h, GAP, true, true);
+	const grown = spread(spread(flood(n, w, middle, (i) => core[i] === 1), w, h, GAP, false), w, h, GAP, false, true);
+	const inside = new Uint8Array(n);
+	let count = 0;
+	for (let i = 0; i < n; i++) if (grown[i] && paperMap[i]) { inside[i] = 1; count++; }
+	return count < need ? null : inside;
+}
+
+/** 4-connected flood fill over an n-pixel, w-wide map from `seeds` through pixels where `pass` holds. */
+function flood(n: number, w: number, seeds: number[], pass: (i: number) => boolean): Uint8Array {
+	const seen = new Uint8Array(n);
+	const stack = seeds.filter(pass);
+	for (const s of stack) seen[s] = 1;
+	while (stack.length) {
+		const i = stack.pop()!, x = i % w;
+		for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w])
+			if (j >= 0 && j < n && !seen[j] && pass(j)) { seen[j] = 1; stack.push(j); }
+	}
+	return seen;
 }
 
 /** Largest-area rectangle inside the mask, built from each row's run of mask pixels through column `cx`. */
@@ -177,8 +258,26 @@ function hullRows(marked: Uint8Array, w: number, h: number): ([number, number] |
 /** For the OCR: paints everything outside the bubble white, so only its letters are read, not the art around them.
  * Returns false (pixels untouched) when the box holds no clear bubble. */
 export function whitenOutside(px: Uint8ClampedArray, w: number, h: number): boolean {
-	const s = bubbleShape(px, w, h);
+	const s = bubbleShape(px, w, h, undefined, { paperOnly: true });
 	if (!s) return false;
 	for (let i = 0; i < s.mask.length; i++) if (!s.mask[i]) px.set([255, 255, 255], i * 4);
 	return true;
+}
+
+/**
+ * The whole bubble around a found box: `px` is a crop centred on the box with room around it (the box is its middle
+ * half). Returns the bubble's extent in crop pixels, or null when there is no closed bubble inside the crop (paper
+ * that runs off its edge), so the box stays as found.
+ */
+export function bubbleExtent(px: Uint8ClampedArray, w: number, h: number, seed?: Box): Box | null {
+	const s = bubbleShape(px, w, h, seed, { paperOnly: true });
+	if (!s) return null;
+	let x0 = w, y0 = h, x1 = -1, y1 = -1;
+	for (let i = 0; i < s.mask.length; i++)
+		if (s.mask[i]) {
+			const x = i % w, y = (i / w) | 0;
+			if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+		}
+	if (x1 < 0 || x0 === 0 || y0 === 0 || x1 === w - 1 || y1 === h - 1) return null;
+	return { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }

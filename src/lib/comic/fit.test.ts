@@ -82,3 +82,13 @@ describe('fontRange', () => {
 		expect(fontRange(1600)).toEqual({ minSize: 19, maxSize: 48 });
 	});
 });
+
+it('inside a bubble, the text shrinks instead of spreading over the page', async () => {
+	const { fitText } = await import('./fit');
+	const measure = (s: string, size: number) => s.length * size * 0.6;
+	const bubble = { x: 100, y: 100, w: 120, h: 60 };
+	const r = fitText('မင်္ဂလာပါ ခင်ဗျာ '.repeat(6), bubble, bubble, measure, { minSize: 12, maxSize: 20, floor: 5 });
+	expect(r.box).toEqual(bubble); // never outside the bubble
+	expect(r.size).toBeLessThan(12); // smaller than the usual minimum, down to the floor
+	expect(r.lines.length * r.size * 1.7).toBeLessThanOrEqual(60);
+});

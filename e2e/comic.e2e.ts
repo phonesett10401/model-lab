@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { comicPdf, comicPng, drawBox, fakeTranslate, fakeTranslateAll, openFile, openFiles } from './comic-fake';
+import { STYLE_NAMES } from '../src/lib/comic/styles';
+import { comicKindPng, comicPdf, comicPng, drawBox, fakeTranslate, fakeTranslateAll, openFile, openFiles } from './comic-fake';
 
 // Tall enough that the whole test page is on screen for mouse drags.
 test.use({ viewport: { width: 1280, height: 1600 } });
@@ -262,6 +263,146 @@ test('a long translation keeps the bubble outline', async ({ page }) => {
 	expect(outline.every((v) => v < 60)).toBe(true);
 });
 
+/** Opens a page of `kind`, boxes (102,104)-(396,248) as `cls`, translates it as `text` and returns both canvases' pixels. */
+async function letterKind(page: import('@playwright/test').Page, kind: 'gradient' | 'dark' | 'art' | 'dense', cls: string, text = 'မင်္ဂလာပါ', box = [0.17, 0.13, 0.66, 0.31]) {
+	await fakeTranslate(page, { ok: true, lines: [{ n: 1, text }], model: 'gemini-3.5-flash' });
+	await openFile(page, 'page.png', 'image/png', await comicKindPng(page, kind));
+	await drawBox(page, box[0], box[1], box[2], box[3]);
+	await rows(page).nth(0).getByLabel('Kind').selectOption(cls);
+	await rows(page).nth(0).getByLabel('English').fill('HELLO THERE');
+	await page.getByRole('button', { name: 'Translate page' }).click();
+	await expect(page.locator('.stage[aria-label="Burmese page"]')).toHaveAttribute('data-rendered', 'true');
+	// Pixels travel as base64: a plain array of 2 million numbers is very slow to pass out of WebKit.
+	const { before, after } = await page.evaluate(() => {
+		const get = (label: string) => {
+			const c = document.querySelector<HTMLCanvasElement>(`[aria-label="${label}"] canvas`)!;
+			const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+			let s = '';
+			for (let i = 0; i < d.length; i += 0x8000) s += String.fromCharCode(...d.subarray(i, i + 0x8000));
+			return btoa(s);
+		};
+		return { before: get('Original page'), after: get('Burmese page') };
+	});
+	return { before: Buffer.from(before, 'base64'), after: Buffer.from(after, 'base64') };
+}
+const rgb = (d: Buffer, x: number, y: number) => [...d.subarray((y * 600 + x) * 4, (y * 600 + x) * 4 + 3)];
+
+test('a gradient bubble keeps its gradient where the letters were', async ({ page }) => {
+	const { before, after } = await letterKind(page, 'gradient', 'bubble');
+	expect(rgb(after, 110, 240)).toEqual(rgb(before, 110, 240)); // paper away from the letters is untouched
+	let erased = 0, letters = 0;
+	for (let y = 150; y < 200; y++)
+		for (let x = 140; x < 200; x++) {
+			// The left part of "HELLO" lies left of the short Burmese, so these letter pixels are only erased.
+			if (rgb(before, x, y)[0] > 100) continue;
+			letters++;
+			const now = rgb(after, x, y), paper = rgb(before, 104, y);
+			if (Math.max(...now.map((v, k) => Math.abs(v - paper[k]))) <= 8) erased++;
+		}
+	expect(letters).toBeGreaterThan(50);
+	expect(erased / letters).toBeGreaterThan(0.95);
+});
+
+test('a dark caption keeps its colour and gets light Burmese', async ({ page }) => {
+	const { before, after } = await letterKind(page, 'dark', 'caption');
+	expect(rgb(after, 110, 240)).toEqual(rgb(before, 110, 240));
+	let light = 0, leftover = 0;
+	for (let y = 150; y < 200; y++)
+		for (let x = 140; x < 400; x++) {
+			const v = rgb(after, x, y);
+			if (x < 190 && v.some((c) => Math.abs(c - rgb(before, 104, y)[0]) > 30 && c > 120)) leftover++;
+			if (v.every((c) => c > 200)) light++;
+		}
+	expect(leftover).toBe(0); // the English letters are gone
+	expect(light).toBeGreaterThan(30); // the Burmese is light
+});
+
+test('text on the art is lettered in place without a box', async ({ page }) => {
+	const { before, after } = await letterKind(page, 'art', 'free-text');
+	let changed = 0, kept = 0, total = 0;
+	for (let y = 0; y < 800; y++)
+		for (let x = 0; x < 600; x++) {
+			const same = rgb(after, x, y).every((v, k) => v === rgb(before, x, y)[k]);
+			const inBox = x >= 101 && x <= 397 && y >= 103 && y <= 249;
+			if (!inBox && !same) changed++;
+			if (inBox) { total++; if (rgb(after, x, y).every((v, k) => Math.abs(v - [0x99, 0xaa, 0xbb][k]) <= 2)) kept++; }
+		}
+	expect(changed).toBe(0);
+	expect(kept / total).toBeGreaterThan(0.85); // the art shows through: no white box
+});
+
+test('a bubble packed with text keeps its outline', async ({ page }) => {
+	// The box takes in the outline and a little art; the bubble's middle is all letters.
+	const { before, after } = await letterKind(page, 'dense', 'bubble', 'မင်္ဂလာပါ', [0.15, 0.11, 0.69, 0.33]);
+	let outline = 0, kept = 0;
+	for (let y = 110; y < 240; y++)
+		for (const x of [99, 100, 101, 399, 400, 401])
+			if (rgb(before, x, y)[0] < 60) { outline++; if (rgb(after, x, y)[0] < 60) kept++; }
+	expect(outline).toBeGreaterThan(300);
+	expect(kept).toBe(outline);
+});
+
+test('nothing outside a box ever changes', async ({ page }) => {
+	const { before, after } = await letterKind(page, 'gradient', 'bubble', Array(30).fill('မင်္ဂလာပါ').join(' '));
+	let changed = 0;
+	for (let y = 0; y < 800; y++)
+		for (let x = 0; x < 600; x++)
+			if (!(x >= 101 && x <= 397 && y >= 103 && y <= 249) && !rgb(after, x, y).every((v, k) => v === rgb(before, x, y)[k])) changed++;
+	expect(changed).toBe(0);
+});
+
+test('edits redraw from the original', async ({ page }) => {
+	await translated(page);
+	await rows(page).nth(0).getByLabel('Burmese').fill('အိမ်ပြန်ကြစို့');
+	await expect.poll(() => canvasHash(page)).not.toBe('');
+	await page.waitForTimeout(300);
+	const second = await canvasHash(page);
+	await rows(page).nth(0).getByLabel('Burmese').fill('မင်္ဂလာပါ ခင်ဗျာ ဘယ်လိုလဲ');
+	await expect.poll(() => canvasHash(page)).not.toBe(second);
+	await rows(page).nth(0).getByLabel('Burmese').fill('အိမ်ပြန်ကြစို့');
+	await expect.poll(() => canvasHash(page)).toBe(second);
+});
+
+const LONG = Array(250).fill('မင်္ဂလာပါ').join(' ');
+
+test('a too-long line is flagged, not retried', async ({ page }) => {
+	const bodies = await fakeTranslate(page, { ok: true, lines: [{ n: 1, text: LONG }], model: 'gemini-3.5-flash' });
+	await setUp(page);
+	await page.getByRole('button', { name: 'Translate page' }).click();
+	await expect(rows(page).nth(0).getByText('The Burmese is longer than the space: shorten it or check it')).toBeVisible({ timeout: 15_000 }) // fitting a very long line takes a while;
+	await expect(rows(page).nth(0)).toHaveAttribute('data-mode', 'too-long');
+	expect(bodies).toHaveLength(1);
+});
+
+test('retrying a too-long line asks for a shorter one', async ({ page }) => {
+	const bodies = await fakeTranslate(page, { ok: true, lines: [{ n: 1, text: LONG }], model: 'gemini-3.5-flash' });
+	await setUp(page);
+	await page.getByRole('button', { name: 'Translate page' }).click();
+	await expect(rows(page).nth(0).getByText('The Burmese is longer than the space')).toBeVisible({ timeout: 15_000 }) // fitting a very long line takes a while;
+	await page.getByRole('button', { name: 'Retry flagged lines' }).click();
+	await expect.poll(() => bodies.length).toBe(2);
+	expect(JSON.parse(bodies[1]).lines[0]).toEqual({ n: 1, text: 'HELLO THERE', cls: 'bubble', speaker: 'man', short: true });
+});
+
+test('a box marked as a sound effect is not sent and not lettered', async ({ page }) => {
+	const bodies = await fakeTranslateAll(page, 'အိမ်ပြန်ကြစို့');
+	await setUp(page, true);
+	await rows(page).nth(0).getByLabel('Kind').selectOption('sfx');
+	await expect(rows(page).nth(0).getByText('Sound effects are left as drawn')).toBeVisible();
+	await page.getByRole('button', { name: 'Translate page' }).click();
+	await expect(page.locator('.stage[aria-label="Burmese page"]')).toHaveAttribute('data-rendered', 'true');
+	expect(bodies).toHaveLength(1);
+	expect(JSON.parse(bodies[0]).lines.map((l: { text: string }) => l.text)).toEqual(['GO HOME']);
+	const changed = await page.evaluate(() => {
+		const get = (label: string) => document.querySelector<HTMLCanvasElement>(`[aria-label="${label}"] canvas`)!.getContext('2d')!.getImageData(100, 100, 300, 150).data;
+		const a = get('Original page'), b = get('Burmese page');
+		let n = 0;
+		for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) n++;
+		return n;
+	});
+	expect(changed).toBe(0);
+});
+
 test('uses the Myanmar font', async ({ page }) => {
 	await translated(page);
 	expect(await page.evaluate(() => document.fonts.check('16px "Noto Sans Myanmar"', 'မ'))).toBe(true);
@@ -497,6 +638,7 @@ test('the free-tier warning stays when the server check fails', async ({ page })
 // ---------- Plan 3: report card, examples, home entry ----------
 
 const pipeline = JSON.parse(readFileSync('src/lib/data/comic-translator-pipeline.json', 'utf8'));
+const comic = JSON.parse(readFileSync('src/lib/data/comic-translator.json', 'utf8'));
 
 test('the home page lists the comic translator', async ({ page }) => {
 	await page.goto('/');
@@ -506,10 +648,17 @@ test('the home page lists the comic translator', async ({ page }) => {
 test('the report card says how it was measured', async ({ page }) => {
 	await page.goto('/models/comic-translator');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Comic translator');
-	await expect(page.getByText('reviewed by Claude, not by a person').first()).toBeVisible();
-	await expect(page.getByText('Worst case (of all text)')).toBeVisible();
-	await expect(page.getByText('counted by Claude on 20 pages; owner checked 4 and agreed with 4')).toBeVisible();
-	await expect(page.getByText('not measured (the automatic labels contain no sound effects)')).toBeVisible();
+	await expect(page.getByText('Not checked by a person.').first()).toBeVisible();
+	// Round 3: found share per style, this finder against round 2's (grey), and every data source credited
+	await expect(page.getByText('Text found per style')).toBeVisible();
+	await expect(page.getByText('Grey shows round 2’s finder.')).toBeVisible();
+	await expect(page.locator('.bars > li')).toHaveCount(Object.keys(comic.styles).length);
+	for (const style of Object.keys(comic.styles)) await expect(page.locator('.bars').getByText(STYLE_NAMES[style] ?? style, { exact: true })).toBeVisible();
+	for (const credit of comic.credits) await expect(page.getByText(`Source: ${credit.source}`)).toBeVisible();
+	// Measured only by the round-2 evaluation (`fitInBox`); the old "without covering the art" number never shows here.
+	const fit = (pipeline as { fitInBox?: number | null }).fitInBox ?? null;
+	await expect(page.locator('dt', { hasText: 'Burmese fitted inside its box' }).locator('xpath=following-sibling::dd'))
+		.toHaveText(fit === null ? 'not yet measured' : `${Math.round(fit * 100)}%`);
 	await expect(page.getByRole('link', { name: 'Open the translator' })).toHaveAttribute('href', '/comic-translator');
 	const examples = page.locator('.comic-examples figure');
 	await expect(examples).toHaveCount(pipeline.examples.length);

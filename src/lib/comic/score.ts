@@ -29,8 +29,8 @@ export function replacedShare(labelled: Rect[], translated: Rect[]): number | nu
 	return labelled.filter((l) => translated.some((t) => covered(l, t) >= 0.5)).length / labelled.length;
 }
 
-/** Share of lettered boxes whose Burmese fitted without growing the box or covering the art (null when none). */
-export function fitShare(modes: ('fit' | 'grown' | 'cover')[]): number | null {
+/** Share of lettered boxes whose Burmese fitted inside its box at or above the usual minimum size (null when none). */
+export function fitShare(modes: ('fit' | 'small' | 'too-long')[]): number | null {
 	return modes.length ? modes.filter((m) => m === 'fit').length / modes.length : null;
 }
 

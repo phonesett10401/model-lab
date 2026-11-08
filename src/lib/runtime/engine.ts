@@ -34,11 +34,13 @@ async function fetchBytes(url: string, onBytes: (got: number) => void): Promise<
  * Downloads a model AND the engine ourselves, with one progress bar over both (the engine is the bigger part).
  * Handing ONNX Runtime the engine bytes means a dropped download just fails this try: if ONNX Runtime fetched
  * the engine itself and that failed, it would refuse every later try until the page was reloaded.
+ * `threads`: most worker threads to use (only when the page is cross-origin isolated); small models need no more than
+ * 4. ONNX Runtime takes the count when its engine first starts, so the first model opened on a page sets it.
  */
-export async function openSession(modelUrl: string, modelMB: number, onProgress: (p: number | null) => void): Promise<{ ort: Ort; session: Session }> {
+export async function openSession(modelUrl: string, modelMB: number, onProgress: (p: number | null) => void, threads = 4): Promise<{ ort: Ort; session: Session }> {
 	const ort = await import('onnxruntime-web/wasm');
 	ort.env.wasm.wasmPaths = { mjs: engineGlueUrl, wasm: engineUrl };
-	ort.env.wasm.numThreads = globalThis.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
+	ort.env.wasm.numThreads = globalThis.crossOriginIsolated ? Math.min(threads, navigator.hardwareConcurrency || 1) : 1;
 	const total = (modelMB + (engineReady ? 0 : ENGINE_MB)) * 1e6; // sizes are checked against the real files by unit tests
 	const got = { model: 0, engine: 0 };
 	const report = () => onProgress(Math.min(1, (got.model + got.engine) / total));
