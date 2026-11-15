@@ -6,8 +6,9 @@ roar rumble rustle shff shing sip sizzle slam slap slash slurp smack snap snick 
 stomp swish swoosh tap thud thump thunk throb thwack tick tock tink twang vroom wham whack whap whir whoosh whump wobble
 yawn zap zip zoom`.split(/\s+/));
 
-/** Text that is only sound words (or words with a letter drawn out three times, "Ahhh", "Zzzz"): a sound effect. */
+/** Text whose words of 3+ letters are all sound words (or have a letter drawn out three times, "Ahhh", "Zzzz"): a sound
+ * effect. Shorter words are left out: the reader adds 1–2 letter junk around drawn letters ("a » GARGLE GARGLE"). */
 export function isSound(text: string): boolean {
-	const words = text.toLowerCase().match(/[a-z]+/g);
+	const words = text.toLowerCase().match(/[a-z]{3,}/g);
 	return !!words && words.every((w) => SOUNDS.has(w) || /([a-z])\1\1/.test(w));
 }
