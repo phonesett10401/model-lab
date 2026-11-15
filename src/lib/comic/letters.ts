@@ -81,3 +81,28 @@ export function inpaint(px: Uint8ClampedArray, w: number, h: number, hole: Uint8
 		left -= ring.length;
 	}
 }
+
+/**
+ * Keeps only the marks the area encloses: a connected group of `hole` pixels that reaches the area's edge is the box's
+ * outline or the art past it (on a real page the bubble's bottom outline came out as "letters" and was erased), not
+ * lettering, and is dropped. shortcut: a letter drawn touching the outline stays unerased; fine for lettered bubbles.
+ */
+export function enclosedOnly(hole: Uint8Array, area: Uint8Array, w: number, h: number): Uint8Array {
+	const out = new Uint8Array(w * h), seen = new Uint8Array(w * h);
+	for (let start = 0; start < w * h; start++) {
+		if (!hole[start] || seen[start]) continue;
+		const group = [start];
+		let edge = false;
+		seen[start] = 1;
+		for (let k = 0; k < group.length; k++) {
+			const i = group[k], x = i % w, y = (i / w) | 0;
+			for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+				if (nx < 0 || ny < 0 || nx >= w || ny >= h || !area[ny * w + nx]) { edge = true; continue; }
+				const j = ny * w + nx;
+				if (hole[j] && !seen[j]) { seen[j] = 1; group.push(j); }
+			}
+		}
+		if (!edge) for (const i of group) out[i] = 1;
+	}
+	return out;
+}

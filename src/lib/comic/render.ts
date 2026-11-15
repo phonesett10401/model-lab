@@ -1,7 +1,7 @@
 import { bubbleShape } from './bubble.ts';
 import { inkFor } from './erase.ts';
 import { fontRange } from './fit.ts';
-import { inpaint, letterPixels } from './letters.ts';
+import { enclosedOnly, inpaint, letterPixels } from './letters.ts';
 import { fitShaped } from './shaped.ts';
 import type { Region } from './types.ts';
 
@@ -43,7 +43,9 @@ export async function renderPage(ctx: CanvasRenderingContext2D, page: ImageBitma
 		// A bubble packed with text has no clear paper in its middle: look for its paper over the whole box then.
 		const shape = r.cls === 'free-text' ? null : (bubbleShape(img.data, rw, rh) ?? bubbleShape(img.data, rw, rh, { x: 0, y: 0, w: rw, h: rh }));
 		const area = shape?.mask ?? new Uint8Array(rw * rh).fill(1);
-		const hole = letterPixels(img.data, rw, rh, area);
+		// Inside a found bubble only enclosed marks are letters: its own outline must never be erased.
+		const marks = letterPixels(img.data, rw, rh, area);
+		const hole = shape ? enclosedOnly(marks, area, rw, rh) : marks;
 		inpaint(img.data, rw, rh, hole);
 		ctx.putImageData(img, rx, ry);
 
@@ -55,13 +57,19 @@ export async function renderPage(ctx: CanvasRenderingContext2D, page: ImageBitma
 			color = `rgb(${[sr, sg, sb].map((v) => Math.round(v / (rw * rh))).join(',')})`;
 		}
 
-		// Each row's inside, through the middle column (a tail off to the side is left out), kept clear of the edge.
+		// Each row's inside, through the middle column (a tail off to the side is left out), kept clear of the edge. The
+		// room for text leaves out the bubble's outline (marks not enclosed), and stops at it going up and down.
+		const room = area.map((v, i) => (v && !(marks[i] && !hole[i]) ? 1 : 0));
 		const cx = shape ? Math.round(shape.inner.x + shape.inner.w / 2) : rw >> 1;
+		const cy = shape ? Math.round(shape.inner.y + shape.inner.h / 2) : rh >> 1;
+		let top = cy, bottom = cy;
+		while (top > 0 && room[(top - 1) * rw + cx]) top--;
+		while (bottom < rh - 1 && room[(bottom + 1) * rw + cx]) bottom++;
 		const spans = Array.from({ length: rh }, (_, y): [number, number] | null => {
-			if (y < PAD || y >= rh - PAD || !area[y * rw + cx]) return null;
+			if (y < Math.max(PAD, top) || y > Math.min(rh - PAD - 1, bottom) || !room[y * rw + cx]) return null;
 			let a = cx, b = cx;
-			while (a > 0 && area[y * rw + a - 1]) a--;
-			while (b < rw - 1 && area[y * rw + b + 1]) b++;
+			while (a > 0 && room[y * rw + a - 1]) a--;
+			while (b < rw - 1 && room[y * rw + b + 1]) b++;
 			const p = Math.max(PAD, Math.round((b - a) * SIDE));
 			return b - a > 2 * p ? [rx + a + p, rx + b - p] : null;
 		});

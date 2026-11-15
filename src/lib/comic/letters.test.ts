@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { inpaint, letterPixels } from './letters';
+import { enclosedOnly, inpaint, letterPixels } from './letters';
 
 /** A 120×60 box painted row by row by `paint(y)`, with letter strokes (3 px bars, 10 px apart) across rows 22–37. */
 function box(paint: (y: number) => number[], ink: number[]) {
@@ -71,4 +71,16 @@ it('inpainting never changes a pixel outside the hole', () => {
 	inpaint(px, w, h, hole);
 	for (let i = 0; i < w * h; i++) if (!hole[i]) for (let c = 0; c < 4; c++) expect(px[i * 4 + c]).toBe(before[i * 4 + c]);
 	expect(px[(30 * w + 40) * 4]).not.toBe(0); // and the hole is filled
+});
+
+it('keeps only marks the bubble encloses: the outline edge and art past it are never erased', () => {
+	// A bubble's area (a rectangle); marks: a letter in the middle, and a band along the area's bottom edge (the outline's
+	// inner edge, as found on a real page where the bubble's own outline came out as "letters").
+	const w = 60, h = 40, area = new Uint8Array(w * h), hole = new Uint8Array(w * h);
+	for (let y = 5; y < 35; y++) for (let x = 5; x < 55; x++) area[y * w + x] = 1;
+	for (let y = 15; y < 20; y++) for (let x = 20; x < 30; x++) hole[y * w + x] = 1;
+	for (let y = 31; y < 35; y++) for (let x = 10; x < 50; x++) hole[y * w + x] = 1;
+	const kept = enclosedOnly(hole, area, w, h);
+	expect(kept[17 * w + 25]).toBe(1);
+	expect(kept[33 * w + 30]).toBe(0);
 });
