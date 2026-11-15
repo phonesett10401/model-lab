@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { enclosedOnly, inpaint, letterPixels } from './letters';
+import { inpaint, letterPixels } from './letters';
 
 /** A 120×60 box painted row by row by `paint(y)`, with letter strokes (3 px bars, 10 px apart) across rows 22–37. */
 function box(paint: (y: number) => number[], ink: number[]) {
@@ -73,14 +73,16 @@ it('inpainting never changes a pixel outside the hole', () => {
 	expect(px[(30 * w + 40) * 4]).not.toBe(0); // and the hole is filled
 });
 
-it('keeps only marks the bubble encloses: the outline edge and art past it are never erased', () => {
-	// A bubble's area (a rectangle); marks: a letter in the middle, and a band along the area's bottom edge (the outline's
-	// inner edge, as found on a real page where the bubble's own outline came out as "letters").
-	const w = 60, h = 40, area = new Uint8Array(w * h), hole = new Uint8Array(w * h);
+it('with enclosed set, strokes reaching the area edge are the outline, not letters', () => {
+	// A bubble's area (a rectangle) on white with dark marks: a letter in the middle, and a band along the area's bottom
+	// edge (the outline's inner edge, as found on a real page where the bubble's own outline came out as "letters").
+	const w = 60, h = 40, px = new Uint8ClampedArray(w * h * 4).fill(255), area = new Uint8Array(w * h);
 	for (let y = 5; y < 35; y++) for (let x = 5; x < 55; x++) area[y * w + x] = 1;
-	for (let y = 15; y < 20; y++) for (let x = 20; x < 30; x++) hole[y * w + x] = 1;
-	for (let y = 31; y < 35; y++) for (let x = 10; x < 50; x++) hole[y * w + x] = 1;
-	const kept = enclosedOnly(hole, area, w, h);
-	expect(kept[17 * w + 25]).toBe(1);
-	expect(kept[33 * w + 30]).toBe(0);
+	const dark = (x0: number, x1: number, y0: number, y1: number) => { for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) px.set([0, 0, 0, 255], (y * w + x) * 4); };
+	dark(20, 30, 15, 20);
+	dark(10, 50, 32, 35);
+	const { hole, outline } = letterPixels(px, w, h, area, true);
+	expect(hole[17 * w + 25]).toBe(1);
+	expect(hole[33 * w + 30]).toBe(0);
+	expect(outline[33 * w + 30]).toBe(1);
 });

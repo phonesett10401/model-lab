@@ -10,7 +10,12 @@ const EDGE = 2;
  * colour in the cells around them), grown by EDGE pixels to take the soft edge. Works for dark-on-light and
  * light-on-dark, flat or gradient backgrounds. Never marks a pixel outside `area`.
  */
-export function letterPixels(px: Uint8ClampedArray, w: number, h: number, area: Uint8Array): Uint8Array {
+export function letterPixels(px: Uint8ClampedArray, w: number, h: number, area: Uint8Array): Uint8Array;
+/** With `enclosed`: only strokes the area encloses are letters (`hole`); strokes reaching the area's edge are its
+ * outline or the art past it (`outline`), never erased. Judged on the strokes before growing, so a line of letters near
+ * the outline isn't joined to it by the soft edge. */
+export function letterPixels(px: Uint8ClampedArray, w: number, h: number, area: Uint8Array, enclosed: true): { hole: Uint8Array; outline: Uint8Array };
+export function letterPixels(px: Uint8ClampedArray, w: number, h: number, area: Uint8Array, enclosed = false): Uint8Array | { hole: Uint8Array; outline: Uint8Array } {
 	const cw = Math.ceil(w / CELL), ch = Math.ceil(h / CELL);
 	// Per cell, counts of quantised colours (4 bits a channel).
 	const counts: Map<number, number>[] = Array.from({ length: cw * ch }, () => new Map());
@@ -40,7 +45,13 @@ export function letterPixels(px: Uint8ClampedArray, w: number, h: number, area: 
 		// The bucket's middle is up to 8 off the true colour, so the margin is INK + 8.
 		for (let k = 0; k < 3; k++) if (Math.abs(px[i * 4 + k] - bg[c + k]) > INK + 8) { ink[i] = 1; break; }
 	}
-	// Grow over the soft edge, within the area.
+	if (!enclosed) return grown(ink, area, w, h);
+	const kept = enclosedOnly(ink, area, w, h);
+	return { hole: grown(kept, area, w, h), outline: grown(ink.map((v, i) => (v && !kept[i] ? 1 : 0)), area, w, h) };
+}
+
+/** The marks grown over their soft edge by EDGE pixels, within the area. */
+function grown(ink: Uint8Array, area: Uint8Array, w: number, h: number): Uint8Array {
 	const out = new Uint8Array(w * h);
 	for (let i = 0; i < w * h; i++) {
 		if (!ink[i]) continue;
@@ -83,23 +94,26 @@ export function inpaint(px: Uint8ClampedArray, w: number, h: number, hole: Uint8
 }
 
 /**
- * Keeps only the marks the area encloses: a connected group of `hole` pixels that reaches the area's edge is the box's
- * outline or the art past it (on a real page the bubble's bottom outline came out as "letters" and was erased), not
- * lettering, and is dropped. shortcut: a letter drawn touching the outline stays unerased; fine for lettered bubbles.
+ * Keeps only the marks the area encloses: a connected group of marks that reaches the area's edge is the box's outline
+ * or the art past it (on a real page the bubble's bottom outline came out as "letters" and was erased), not lettering.
+ * shortcut: a letter drawn touching the outline stays unerased; fine for lettered bubbles.
  */
-export function enclosedOnly(hole: Uint8Array, area: Uint8Array, w: number, h: number): Uint8Array {
+export function enclosedOnly(marks: Uint8Array, area: Uint8Array, w: number, h: number): Uint8Array {
 	const out = new Uint8Array(w * h), seen = new Uint8Array(w * h);
+	const group: number[] = [];
 	for (let start = 0; start < w * h; start++) {
-		if (!hole[start] || seen[start]) continue;
-		const group = [start];
-		let edge = false;
+		if (!marks[start] || seen[start]) continue;
+		group.length = 0;
+		group.push(start);
 		seen[start] = 1;
+		let edge = false;
 		for (let k = 0; k < group.length; k++) {
-			const i = group[k], x = i % w, y = (i / w) | 0;
-			for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
-				if (nx < 0 || ny < 0 || nx >= w || ny >= h || !area[ny * w + nx]) { edge = true; continue; }
-				const j = ny * w + nx;
-				if (hole[j] && !seen[j]) { seen[j] = 1; group.push(j); }
+			const i = group[k], x = i % w;
+			// The four neighbours; one off the crop or outside the area means the group reaches the edge.
+			for (let d = 0; d < 4; d++) {
+				const j = d === 0 ? (x > 0 ? i - 1 : -1) : d === 1 ? (x < w - 1 ? i + 1 : -1) : d === 2 ? (i >= w ? i - w : -1) : i < w * (h - 1) ? i + w : -1;
+				if (j < 0 || !area[j]) { edge = true; continue; }
+				if (marks[j] && !seen[j]) { seen[j] = 1; group.push(j); }
 			}
 		}
 		if (!edge) for (const i of group) out[i] = 1;
