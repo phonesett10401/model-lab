@@ -98,6 +98,8 @@ it('keeps one of two overlapping boxes that read the same words (one bubble boxe
 		{ box: b(260, 150, 120, 60), text: 'ME TOO', score: 0.6 } // a joined bubble beside it, other words: kept
 	]);
 	expect(kept).toEqual([1, 2, 3]);
+	// joined bubbles that share a word ("Yes!" next to "Yes, I know"), overlapping but neither inside the other: both kept
+	expect(dropSameText([{ box: b(0, 0, 100, 50), text: 'Yes!', score: 0.9 }, { box: b(80, 30, 140, 60), text: 'Yes, I know', score: 0.6 }])).toEqual([0, 1]);
 	// reader junk around the same words still counts as the same
 	expect(dropSameText([{ box: b(0, 0, 100, 50), text: '+» YOU REALLY LIKE YOUR COFFEE', score: 0.7 },
 		{ box: b(5, 5, 100, 50), text: 'YOU REALLY LIKE YOUR COFFEE, DON\'T YOU', score: 0.4 }])).toEqual([0]);

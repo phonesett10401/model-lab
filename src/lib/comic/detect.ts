@@ -69,21 +69,21 @@ export function cleanUp(found: (Detection & { tile: number })[]): Detection[] {
 const wordsOf = (text: string) => new Set(text.toLowerCase().match(/[a-z]{3,}/g) ?? []);
 
 /**
- * After reading: of two overlapping boxes that read the same words (most of the shorter reading's words are in the
- * other), one bubble was boxed twice; the surer box is kept. Boxes reading different words (joined bubbles, side by
- * side) stay apart. Returns the indexes kept, in order. Measured on round 3's test pages (Pepper&Carrot, Black Jack):
+ * After reading: of two boxes, one mostly inside the other (60% of the smaller), that read the same words (most of the
+ * shorter reading's words are in the other), one bubble was boxed twice; the surer box is kept. Boxes that only overlap
+ * (joined bubbles, even ones sharing a word: "Yes!" next to "Yes, I know") or read different words stay apart. Returns the indexes kept, in order. Measured on round 3's test pages (Pepper&Carrot, Black Jack):
  * about half the remaining repeats gone for about 1 point of real bubbles.
  */
 export function dropSameText(items: { box: Box; text: string; score: number }[]): number[] {
 	const words = items.map((it) => wordsOf(it.text));
-	const touch = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+	const nested = (a: Box, b: Box) => overlapOfSmaller(a, b) >= 0.6;
 	const same = (i: number, j: number) => {
 		const [a, b] = words[i].size <= words[j].size ? [words[i], words[j]] : [words[j], words[i]];
 		return a.size > 0 && [...a].filter((w) => b.has(w)).length >= 0.6 * a.size;
 	};
 	const order = items.map((_, i) => i).sort((i, j) => items[j].score - items[i].score);
 	const kept: number[] = [];
-	for (const i of order) if (!kept.some((k) => touch(items[i].box, items[k].box) && same(i, k))) kept.push(i);
+	for (const i of order) if (!kept.some((k) => nested(items[i].box, items[k].box) && same(i, k))) kept.push(i);
 	return kept.sort((a, b) => a - b);
 }
 

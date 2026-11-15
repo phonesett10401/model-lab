@@ -452,7 +452,7 @@
 							<label class="wide">English <input bind:value={r.english} oninput={() => { r.edited = true; if (r.problem === 'unread') r.problem = null; }} /></label>
 							{#if r.ocr && r.ocr !== r.english}<p class="ocr mono soft">OCR read: {r.ocr}</p>{/if}
 							<label class="wide">Burmese <input lang="my" class="my" bind:value={r.burmese} oninput={() => (r.problem = null)} /></label>
-							{#if r.cls === 'sfx'}<p class="soft">Sound effects are left as drawn.</p>
+							{#if r.cls === 'sfx'}<p class="soft">Sound effects are left as drawn. If this is speech, change Kind to translate it.</p>
 							{:else if r.problem}<p class="problem">{PROBLEMS[r.problem]}</p>{/if}
 							<button class="btn" aria-label="Delete box {i + 1}" onclick={() => remove(r.id)}>Delete</button>
 						</li>
