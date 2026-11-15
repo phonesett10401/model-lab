@@ -342,7 +342,8 @@ LABELS3 = ('Not checked by a person. Pepper&Carrot and Black Jack test pages: la
            "Old American: 42 Comix pages whose boxes Claude corrected by hand. Manga: an outside dataset's own labels "
            '(manga-text-detection, Indonesian scanlations). Each finder is scored on the boxes its page shows. Found = a box '
            'covers at least half of the bubble; text found = covers at least half of the words in it; extra boxes = boxes '
-           'that find nothing (repeats, or boxes on art).')
+           "that find nothing (repeats, or boxes on art), counted before the page reads them: round 3's page then also "
+           'drops boxes it cannot read and repeats that read the same words, so it shows fewer.')
 
 
 def build_report3(run: str, old_run: str, found: dict, train_coco: dict, pages: list[c.Page], used: set[str]) -> dict:

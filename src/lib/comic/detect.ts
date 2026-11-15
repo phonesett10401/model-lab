@@ -65,6 +65,28 @@ export function cleanUp(found: (Detection & { tile: number })[]): Detection[] {
 	return dropTwins(mergeBoxes(found).filter((d) => d.cls !== 'sfx'));
 }
 
+/** Words of 3+ letters: the reader's 1–2 letter junk around drawn letters doesn't count. */
+const wordsOf = (text: string) => new Set(text.toLowerCase().match(/[a-z]{3,}/g) ?? []);
+
+/**
+ * After reading: of two overlapping boxes that read the same words (most of the shorter reading's words are in the
+ * other), one bubble was boxed twice; the surer box is kept. Boxes reading different words (joined bubbles, side by
+ * side) stay apart. Returns the indexes kept, in order. Measured on round 3's test pages (Pepper&Carrot, Black Jack):
+ * about half the remaining repeats gone for about 1 point of real bubbles.
+ */
+export function dropSameText(items: { box: Box; text: string; score: number }[]): number[] {
+	const words = items.map((it) => wordsOf(it.text));
+	const touch = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+	const same = (i: number, j: number) => {
+		const [a, b] = words[i].size <= words[j].size ? [words[i], words[j]] : [words[j], words[i]];
+		return a.size > 0 && [...a].filter((w) => b.has(w)).length >= 0.6 * a.size;
+	};
+	const order = items.map((_, i) => i).sort((i, j) => items[j].score - items[i].score);
+	const kept: number[] = [];
+	for (const i of order) if (!kept.some((k) => touch(items[i].box, items[k].box) && same(i, k))) kept.push(i);
+	return kept.sort((a, b) => a - b);
+}
+
 function tensorOf(bmp: ImageBitmap, t: Box): Float32Array {
 	const canvas = document.createElement('canvas');
 	canvas.width = canvas.height = SIZE;
