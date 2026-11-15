@@ -4,6 +4,7 @@
 	import { serviceInfo, translateLines } from '$lib/comic/client';
 	import { latestOnly, loadFiles, type Pages } from '$lib/comic/load';
 	import { readingOrder } from '$lib/comic/order';
+	import { isSound } from '$lib/comic/sfx';
 	import { renderPage, type Fits } from '$lib/comic/render';
 	import { comicDetector, MODEL_MB } from '$lib/comic/detect';
 	import { loadOcr, looksEnglish, OCR_MB, readBox, stopOcr } from '$lib/comic/ocr';
@@ -253,6 +254,8 @@
 			r.english = text;
 			r.ocr = text;
 			r.problem = null;
+			// The finder often calls a drawn sound (SPLASH, GULP) a bubble: one that only says sound words is left as drawn.
+			if (isSound(text)) r.cls = 'sfx';
 		} else r.problem = 'unread';
 	}
 

@@ -24,9 +24,9 @@ INSIDE = 0.6  # a region belongs to a detected box when this share of it lies in
 SOURCES = {'pepper': 'Pepper&Carrot', 'blackjack': 'Black Jack', 'commons': 'Wikimedia Commons', 'comix': 'Comix'}
 # Sound-effect words (left as drawn on the page); any word with a letter drawn out 3+ times ("Grooo", "Shhh") is one too.
 SFX = set('''aah argh ba bam bang bash beep blam blip bloop bonk boom bop brr bzz chomp chug clack clang clank clap
-clatter click clink clomp clonk crack crash creak crunch ding dong doki drip fwoosh fwip gasp glug gong grr growl gulp
+clatter click clink clomp clonk crack crash creak crunch ding dong doki drip fwoosh fwip gargle gasp glug gong grr growl gulp
 ha hah haha hehe hiss honk huff hmph kaboom kapow knock krak munch pant plip plonk plop pow puff purr rattle ring rip
-roar rumble rustle shff shing sizzle slam slap slash slurp smack snap snick sniff snore sob splash splat squeak squish
+roar rumble rustle shff shing sip sizzle slam slap slash slurp smack snap snick sniff snore sob splash splat squeak squish
 stomp swish swoosh tap thud thump thunk throb thwack tick tock tink twang vroom wham whack whap whir whoosh whump wobble
 yawn zap zip zoom'''.split())
 
