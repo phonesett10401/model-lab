@@ -5,9 +5,16 @@ import type { Box } from './types';
 export const OCR_MODEL = 'best_int' as 'best_int' | 'standard';
 export const OCR_MB = 7; // worker + one engine variant + English data, as downloaded by the browser (checked by a test)
 
-/** At least two letters and a confident reading: otherwise the visitor types the English. */
+/** Two-letter words that can stand alone in a bubble ("NO!", "OK?"); any other lone pair of letters is reader junk. */
+const SHORT = new Set('ah ai am an as at be by do eh go ha he hi hm if in is it me my no of oh ok on or so to uh um up us we ya yo'.split(' '));
+
+/** A confident reading with a real word (3+ letters, or a known two-letter one) and more letters than stray marks:
+ * otherwise the visitor types the English. Empty bubbles read as "No / \ ~ 7" and got "translated". */
 export function looksEnglish(text: string, conf: number): boolean {
-	return (text.match(/[A-Za-z]/g) ?? []).length >= 2 && conf >= 40;
+	const letters = (text.match(/[A-Za-z]/g) ?? []).length;
+	const marks = (text.match(/[^A-Za-z\s.,!?'’"“”…-]/g) ?? []).length;
+	const word = (text.match(/[A-Za-z]+/g) ?? []).some((w) => w.length >= 3 || SHORT.has(w.toLowerCase()));
+	return conf >= 40 && word && letters > marks;
 }
 
 type Worker = import('tesseract.js').Worker;
@@ -72,10 +79,31 @@ export function stripBorders(g: Uint8ClampedArray, w: number, h: number): void {
 	}
 }
 
-/** One crop of the box in grey, `scale`× larger; optionally with borders whitened and a white margin around it. */
-function crop(bmp: ImageBitmap, box: Box, scale: number, clean: boolean): HTMLCanvasElement {
-	const m = 4, pad = clean ? 20 : 0;
-	const x = Math.max(0, Math.floor(box.x - m)), y = Math.max(0, Math.floor(box.y - m));
+const MARGIN = 4, PAD = 20;
+/** Paper filling less of the crop than this may be just the white outline round some letters on a see-through bubble
+ * (18% on "OTHER PEOPLE…"; the smallest real bubbles in the labelled set fill 15–20%). */
+const SEE_THROUGH = 0.25;
+/** The page pixel at a crop's top-left corner (before scaling and the white margin). */
+const origin = (box: Box) => ({ x: Math.max(0, Math.floor(box.x - MARGIN)), y: Math.max(0, Math.floor(box.y - MARGIN)) });
+
+const letters = (t: string) => (t.match(/[A-Za-z]/g) ?? []).length;
+const wordsOf = (t: string) => t.toUpperCase().match(/[A-Z']{2,}/g) ?? [];
+
+/** Whether `washed` reads more of a see-through bubble than `sure`: it looks English, holds every word of `sure`, and has
+ * half as many letters again. Its confidence is lower (48% on "OTHER PEOPLE…", with a little junk from the art around
+ * it, which the translation fixes) so it can't win on confidence. */
+export function readsMore(washed: { text: string; conf: number }, sure: { text: string }): boolean {
+	const have = new Set(wordsOf(washed.text));
+	return looksEnglish(washed.text, washed.conf) && wordsOf(sure.text).every((w) => have.has(w)) && letters(washed.text) >= 1.5 * letters(sure.text);
+}
+
+/** One crop of the box in grey, `scale`× larger; optionally with borders whitened and a white margin around it, and with
+ * the screentone washed out (`tone`: blurred by a page pixel, then contrast raised, so the dots go grey and letters stay). */
+/** `shaped`: a bubble's paper fills the crop (false: see-through, or text on the art); the washed (`tone`) crop then
+ * keeps the art, since whitening around a small patch of paper left one word of the bubble. */
+function crop(bmp: ImageBitmap, box: Box, scale: number, clean: boolean, tone = false): { canvas: HTMLCanvasElement; shaped: boolean } {
+	const m = MARGIN, pad = clean ? PAD : 0;
+	const { x, y } = origin(box);
 	const w = Math.min(bmp.width - x, Math.ceil(box.w + 2 * m)), h = Math.min(bmp.height - y, Math.ceil(box.h + 2 * m));
 	const canvas = document.createElement('canvas');
 	canvas.width = scale * w + 2 * pad;
@@ -83,12 +111,15 @@ function crop(bmp: ImageBitmap, box: Box, scale: number, clean: boolean): HTMLCa
 	const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
 	ctx.fillStyle = '#fff';
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
-	ctx.filter = 'grayscale(1)';
+	ctx.filter = tone ? `grayscale(1) blur(${scale}px) contrast(2)` : 'grayscale(1)';
 	ctx.drawImage(bmp, x, y, w, h, pad, pad, scale * w, scale * h);
+	ctx.filter = 'none';
 	// Inside a bubble only its letters matter: the art around them made clean lettering read as junk
 	// ("Thank you!" came back as "cD" with the bar behind it in the crop, and right once the art was whitened).
 	const all = ctx.getImageData(pad, pad, scale * w, scale * h);
-	if (whitenOutside(all.data, scale * w, scale * h)) ctx.putImageData(all, pad, pad);
+	const least = tone ? SEE_THROUGH : 0, fill = whitenOutside(all.data, scale * w, scale * h, least);
+	if (fill && fill >= least) ctx.putImageData(all, pad, pad);
+	const shaped = fill >= SEE_THROUGH;
 	if (clean) {
 		const img = ctx.getImageData(pad, pad, scale * w, scale * h);
 		const g = new Uint8ClampedArray(scale * w * scale * h);
@@ -97,28 +128,52 @@ function crop(bmp: ImageBitmap, box: Box, scale: number, clean: boolean): HTMLCa
 		for (let i = 0; i < g.length; i++) img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = g[i];
 		ctx.putImageData(img, pad, pad);
 	}
-	return canvas;
+	return { canvas, shaped };
 }
 
 /**
  * Reads the English in one box: cropped with a small margin, doubled in size, in grey. When that reading is unsure, a
  * second one (3×, borders whitened, white margin, sparse-text mode) is tried and the more confident kept; measured on
- * 205 Black Jack boxes this raised similarity to the reference text from 0.76 to 0.83.
+ * 205 Black Jack boxes this raised similarity to the reference text from 0.76 to 0.83. Still unsure: two more, 4× (small
+ * lettering, as on an 880 px Garfield strip, read as junk at 2×) and with the screentone washed out. A box with no paper
+ * filling it (a see-through bubble) always gets the washed reading too, kept by `readsMore` ("PEOPLE" at 90% was all of
+ * "OTHER PEOPLE AREN'T JUST THINGS…" read). `words`: where each word read sits on the page.
  */
-export async function readBox(bmp: ImageBitmap, box: Box, model: Model = OCR_MODEL): Promise<{ text: string; conf: number }> {
+export async function readBox(bmp: ImageBitmap, box: Box, model: Model = OCR_MODEL): Promise<{ text: string; conf: number; words: Box[] }> {
 	const worker = await getWorker(model);
-	const read = async (c: HTMLCanvasElement) => {
-		const { data } = await worker.recognize(c);
-		return { text: data.text.replace(/\s+/g, ' ').trim(), conf: data.confidence };
+	const { x, y } = origin(box);
+	const read = async (scale: number, clean: boolean, tone = false) => {
+		const { canvas, shaped } = crop(bmp, box, scale, clean, tone);
+		const { data } = await worker.recognize(canvas, {}, { text: true, blocks: true });
+		const pad = clean ? PAD : 0;
+		const words = (data.blocks ?? []).flatMap((b) => b.paragraphs.flatMap((p) => p.lines.flatMap((l) => l.words)))
+			.filter((wd) => /[A-Za-z]{2}|^[IA]\W*$/.test(wd.text)) // a lone letter is junk from the art ("t" by a bubble's edge)
+			.map(({ bbox: b }) => ({ x: x + (b.x0 - pad) / scale, y: y + (b.y0 - pad) / scale, w: (b.x1 - b.x0) / scale, h: (b.y1 - b.y0) / scale }));
+		return { text: data.text.replace(/\s+/g, ' ').trim(), conf: data.confidence, words, shaped };
 	};
-	const first = await read(crop(bmp, box, 2, false));
-	if (first.conf >= SURE && looksEnglish(first.text, first.conf)) return first;
-	const { PSM } = await import('tesseract.js');
-	await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
-	try {
-		const second = await read(crop(bmp, box, 3, true));
-		return second.conf > first.conf ? second : first;
-	} finally {
-		await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_BLOCK });
+	const sure = (r: { text: string; conf: number }) => r.conf >= SURE && looksEnglish(r.text, r.conf);
+	const first = await read(2, false);
+	let best = first;
+	if (!sure(first)) {
+		const { PSM } = await import('tesseract.js');
+		await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
+		try {
+			const second = await read(3, true);
+			if (second.conf > best.conf) best = second;
+		} finally {
+			await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_BLOCK });
+		}
+		if (!sure(best)) {
+			const big = await read(4, false);
+			if (big.conf > best.conf) best = big;
+		}
 	}
+	// No paper filling the box (a see-through bubble): a sure reading can be the one word the screentone left clear
+	// ("PEOPLE" at 90%), so the washed-out reading is tried too.
+	if (!first.shaped || !sure(best)) {
+		const washed = await read(2, false, true);
+		if (washed.conf > best.conf || (!first.shaped && readsMore(washed, best))) best = washed;
+	}
+	const { text, conf, words } = best;
+	return { text, conf, words };
 }

@@ -103,4 +103,7 @@ it('keeps one of two overlapping boxes that read the same words (one bubble boxe
 	// reader junk around the same words still counts as the same
 	expect(dropSameText([{ box: b(0, 0, 100, 50), text: '+» YOU REALLY LIKE YOUR COFFEE', score: 0.7 },
 		{ box: b(5, 5, 100, 50), text: 'YOU REALLY LIKE YOUR COFFEE, DON\'T YOU', score: 0.4 }])).toEqual([0]);
+	// a less sure box over two bubbles reads words the surer one (one of the bubbles) lacks: kept, or a bubble is lost
+	expect(dropSameText([{ box: b(0, 400, 500, 450), text: 'CAPTURE ZHUGE QIANXING AND RECLAIM THE SEVEN STAR LAMP!', score: 0.77 },
+		{ box: b(40, 0, 500, 880), text: 'EVEN THE GREATEST TALENT CAN BE A CURSE! CAPTURE ZHUGE QIANXING AND RECLAIM THE SEVEN STAR LAMP!', score: 0.74 }])).toEqual([0, 1]);
 });

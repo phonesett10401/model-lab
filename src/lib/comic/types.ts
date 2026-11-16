@@ -22,6 +22,8 @@ export interface Region {
 	english: string; burmese: string; problem: LineProblem | null;
 	/** What the OCR read (empty for hand-drawn boxes), and whether the visitor typed in the English field. */
 	ocr: string; edited: boolean;
+	/** Where each English word the OCR read sits on the page: a see-through bubble erases only those letters. */
+	words?: Box[];
 }
 
 /** `fallback` takes over when `model`'s free daily quota is used up. */

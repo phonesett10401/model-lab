@@ -248,10 +248,11 @@
 
 	/** Fills one row from the OCR; a box it can't read asks the visitor to type the English. */
 	async function read(r: Region, page: ImageBitmap) {
-		const { text, conf } = await readBox(page, r.box);
+		const { text, conf, words } = await readBox(page, r.box);
 		if (r.edited) return;
 		if (looksEnglish(text, conf)) {
 			r.english = text;
+			r.words = words;
 			r.ocr = text;
 			r.problem = null;
 			// The finder often calls a drawn sound (SPLASH, GULP) a bubble: one that only says sound words is left as drawn.

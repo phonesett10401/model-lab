@@ -9,6 +9,18 @@ it('junk is not English', () => {
 	expect(looksEnglish('~~ |', 80)).toBe(false);
 	expect(looksEnglish('HELLO', 30)).toBe(false);
 	expect(looksEnglish('HELLO THERE', 85)).toBe(true);
+	// reader junk from empty bubbles and a "..." bubble, which got "translated"
+	for (const junk of ['No / \\ ~ 7', '{ re', 'pa JA', '/ | \\ / =f', ') r']) expect(looksEnglish(junk, 60), junk).toBe(false);
+	for (const ok of ['OH... OKAY.', 'NO!', 'I LOVE YOU.', 'OK?', "IT'S ALL THE FABRIC I COULD FIND HERE"]) expect(looksEnglish(ok, 60), ok).toBe(true);
+});
+
+it('keeps a washed reading of a see-through bubble only when it reads more of the same words', async () => {
+	const { readsMore } = await import('./ocr');
+	const washed = 'a | §5 OTHER PEOPLE | ARENT JUST THINGS. "Af WOR Kv WAY ) YOU WANTY EMD';
+	expect(readsMore({ text: washed, conf: 48 }, { text: 'PEOPLE' })).toBe(true);
+	expect(readsMore({ text: washed, conf: 30 }, { text: 'PEOPLE' })).toBe(false); // too unsure
+	expect(readsMore({ text: 'WHERE ARE THE OTHERS GONE', conf: 60 }, { text: 'PEOPLE' })).toBe(false); // other words
+	expect(readsMore({ text: 'I LOVE YOU. ~ |', conf: 70 }, { text: 'I LOVE YOU.' })).toBe(false); // only junk added
 });
 
 it('copies every OCR file to be served from our own site', () => {

@@ -256,12 +256,14 @@ function hullRows(marked: Uint8Array, w: number, h: number): ([number, number] |
 }
 
 /** For the OCR: paints everything outside the bubble white, so only its letters are read, not the art around them.
- * Returns false (pixels untouched) when the box holds no clear bubble. */
-export function whitenOutside(px: Uint8ClampedArray, w: number, h: number): boolean {
+ * Returns the bubble's share of the crop, 0 (pixels untouched) when the box holds no clear bubble; below `least` the
+ * pixels are left untouched too. */
+export function whitenOutside(px: Uint8ClampedArray, w: number, h: number, least = 0): number {
 	const s = bubbleShape(px, w, h, undefined, { paperOnly: true });
-	if (!s) return false;
-	for (let i = 0; i < s.mask.length; i++) if (!s.mask[i]) px.set([255, 255, 255], i * 4);
-	return true;
+	if (!s) return 0;
+	const fill = s.mask.reduce((a, v) => a + v, 0) / (w * h);
+	if (fill >= least) for (let i = 0; i < s.mask.length; i++) if (!s.mask[i]) px.set([255, 255, 255], i * 4);
+	return fill;
 }
 
 /**

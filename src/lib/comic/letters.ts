@@ -13,9 +13,10 @@ const EDGE = 2;
 export function letterPixels(px: Uint8ClampedArray, w: number, h: number, area: Uint8Array): Uint8Array;
 /** With `enclosed`: only strokes the area encloses are letters (`hole`); strokes reaching the area's edge are its
  * outline or the art past it (`outline`), never erased. Judged on the strokes before growing, so a line of letters near
- * the outline isn't joined to it by the soft edge. */
-export function letterPixels(px: Uint8ClampedArray, w: number, h: number, area: Uint8Array, enclosed: true): { hole: Uint8Array; outline: Uint8Array };
-export function letterPixels(px: Uint8ClampedArray, w: number, h: number, area: Uint8Array, enclosed = false): Uint8Array | { hole: Uint8Array; outline: Uint8Array } {
+ * the outline isn't joined to it by the soft edge. `paper`: the box's inside colour; where the commonest colour around is
+ * far from it (the middle of a big bold letter), the paper is the background there, so the whole letter is erased. */
+export function letterPixels(px: Uint8ClampedArray, w: number, h: number, area: Uint8Array, enclosed: true, paper?: number[]): { hole: Uint8Array; outline: Uint8Array };
+export function letterPixels(px: Uint8ClampedArray, w: number, h: number, area: Uint8Array, enclosed = false, paper?: number[]): Uint8Array | { hole: Uint8Array; outline: Uint8Array } {
 	const cw = Math.ceil(w / CELL), ch = Math.ceil(h / CELL);
 	// Per cell, counts of quantised colours (4 bits a channel).
 	const counts: Map<number, number>[] = Array.from({ length: cw * ch }, () => new Map());
@@ -35,7 +36,9 @@ export function letterPixels(px: Uint8ClampedArray, w: number, h: number, area: 
 					for (const [k, v] of counts[y * cw + x]) sum.set(k, (sum.get(k) ?? 0) + v);
 			let key = -1, most = 0;
 			for (const [k, v] of sum) if (v > most) { most = v; key = k; }
-			if (key >= 0) bg.set([((key >> 8) << 4) + 8, (((key >> 4) & 15) << 4) + 8, ((key & 15) << 4) + 8], (cy * cw + cx) * 3);
+			if (key < 0) continue;
+			const c = [((key >> 8) << 4) + 8, (((key >> 4) & 15) << 4) + 8, ((key & 15) << 4) + 8];
+			bg.set(paper && c.some((v, k) => Math.abs(v - paper[k]) > INK + 8) ? paper : c, (cy * cw + cx) * 3);
 		}
 	const ink = new Uint8Array(w * h);
 	for (let i = 0; i < w * h; i++) {
@@ -119,4 +122,35 @@ export function enclosedOnly(marks: Uint8Array, area: Uint8Array, w: number, h: 
 		if (!edge) for (const i of group) out[i] = 1;
 	}
 	return out;
+}
+
+/**
+ * A see-through bubble's letters (RGBA crop, w×h): no paper to measure against, so only pixels inside the reader's word
+ * boxes (`words`, crop pixels) count. A letter is what stays dark once screentone dots are blurred to grey (3×3 mean
+ * under 119, as CSS blur(1px) contrast(2) under 110); its white outline (light pixels within 4 px) and soft edge (EDGE) go too.
+ * Art outside the word boxes is never touched.
+ */
+export function wordLetters(px: Uint8ClampedArray, w: number, h: number, words: { x: number; y: number; w: number; h: number }[]): Uint8Array {
+	const grey = new Float32Array(w * h);
+	for (let i = 0; i < w * h; i++) grey[i] = 0.2126 * px[i * 4] + 0.7152 * px[i * 4 + 1] + 0.0722 * px[i * 4 + 2];
+	const core = new Uint8Array(w * h), hole = new Uint8Array(w * h);
+	for (const q of words)
+		for (let y = Math.max(1, Math.floor(q.y - 2)); y < Math.min(h - 1, Math.ceil(q.y + q.h + 2)); y++)
+			for (let x = Math.max(1, Math.floor(q.x - 2)); x < Math.min(w - 1, Math.ceil(q.x + q.w + 2)); x++) {
+				let s = 0;
+				for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) s += grey[(y + dy) * w + x + dx];
+				if (s < 119 * 9) core[y * w + x] = 1;
+			}
+	for (let i = 0; i < w * h; i++) {
+		if (!core[i]) continue;
+		const x = i % w, y = (i / w) | 0;
+		for (let dy = -4; dy <= 4; dy++)
+			for (let dx = -4; dx <= 4; dx++) {
+				const lx = x + dx, ly = y + dy;
+				if (lx < 0 || ly < 0 || lx >= w || ly >= h) continue;
+				const j = ly * w + lx;
+				if ((Math.abs(dx) <= EDGE && Math.abs(dy) <= EDGE) || grey[j] > 170) hole[j] = 1;
+			}
+	}
+	return hole;
 }
