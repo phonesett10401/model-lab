@@ -72,3 +72,17 @@ it('inpainting never changes a pixel outside the hole', () => {
 	for (let i = 0; i < w * h; i++) if (!hole[i]) for (let c = 0; c < 4; c++) expect(px[i * 4 + c]).toBe(before[i * 4 + c]);
 	expect(px[(30 * w + 40) * 4]).not.toBe(0); // and the hole is filled
 });
+
+it('with enclosed set, strokes reaching the area edge are the outline, not letters', () => {
+	// A bubble's area (a rectangle) on white with dark marks: a letter in the middle, and a band along the area's bottom
+	// edge (the outline's inner edge, as found on a real page where the bubble's own outline came out as "letters").
+	const w = 60, h = 40, px = new Uint8ClampedArray(w * h * 4).fill(255), area = new Uint8Array(w * h);
+	for (let y = 5; y < 35; y++) for (let x = 5; x < 55; x++) area[y * w + x] = 1;
+	const dark = (x0: number, x1: number, y0: number, y1: number) => { for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) px.set([0, 0, 0, 255], (y * w + x) * 4); };
+	dark(20, 30, 15, 20);
+	dark(10, 50, 32, 35);
+	const { hole, outline } = letterPixels(px, w, h, area, true);
+	expect(hole[17 * w + 25]).toBe(1);
+	expect(hole[33 * w + 30]).toBe(0);
+	expect(outline[33 * w + 30]).toBe(1);
+});

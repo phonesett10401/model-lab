@@ -4,8 +4,9 @@
 	import { serviceInfo, translateLines } from '$lib/comic/client';
 	import { latestOnly, loadFiles, type Pages } from '$lib/comic/load';
 	import { readingOrder } from '$lib/comic/order';
+	import { isSound } from '$lib/comic/sfx';
 	import { renderPage, type Fits } from '$lib/comic/render';
-	import { comicDetector, MODEL_MB } from '$lib/comic/detect';
+	import { comicDetector, dropSameText, MODEL_MB } from '$lib/comic/detect';
 	import { loadOcr, looksEnglish, OCR_MB, readBox, stopOcr } from '$lib/comic/ocr';
 	import { ENGINE_MB } from '$lib/runtime/engine';
 	import '@fontsource/noto-sans-myanmar/400.css';
@@ -253,6 +254,8 @@
 			r.english = text;
 			r.ocr = text;
 			r.problem = null;
+			// The finder often calls a drawn sound (SPLASH, GULP) a bubble: one that only says sound words is left as drawn.
+			if (isSound(text)) r.cls = 'sfx';
 		} else r.problem = 'unread';
 	}
 
@@ -302,6 +305,11 @@
 			// A found box nobody can read is almost always a sound effect or a scribble: leave it as drawn rather than
 			// ask for typing. (A box drawn by hand still asks.)
 			const dropped = new Set(ids.filter((id) => byPage[at].find((x) => x.id === id)?.problem === 'unread'));
+			// Two overlapping boxes reading the same words are one bubble found twice: the finder's surer box stays.
+			const readable = ids.filter((id) => !dropped.has(id)).map((id) => ({ id, r: byPage[at].find((x) => x.id === id), score: found[ids.indexOf(id)].score }))
+				.filter((x): x is { id: number; r: Region; score: number } => !!x.r);
+			const keep = new Set(dropSameText(readable.map(({ r, score }) => ({ box: r.box, text: r.english, score }))).map((k) => readable[k].id));
+			for (const { id } of readable) if (!keep.has(id)) dropped.add(id);
 			byPage[at] = byPage[at].filter((x) => !dropped.has(x.id));
 			const kept = ids.length - dropped.size;
 			auto = 'done';
@@ -444,7 +452,7 @@
 							<label class="wide">English <input bind:value={r.english} oninput={() => { r.edited = true; if (r.problem === 'unread') r.problem = null; }} /></label>
 							{#if r.ocr && r.ocr !== r.english}<p class="ocr mono soft">OCR read: {r.ocr}</p>{/if}
 							<label class="wide">Burmese <input lang="my" class="my" bind:value={r.burmese} oninput={() => (r.problem = null)} /></label>
-							{#if r.cls === 'sfx'}<p class="soft">Sound effects are left as drawn.</p>
+							{#if r.cls === 'sfx'}<p class="soft">Sound effects are left as drawn. If this is speech, change Kind to translate it.</p>
 							{:else if r.problem}<p class="problem">{PROBLEMS[r.problem]}</p>{/if}
 							<button class="btn" aria-label="Delete box {i + 1}" onclick={() => remove(r.id)}>Delete</button>
 						</li>

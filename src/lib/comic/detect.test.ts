@@ -87,3 +87,20 @@ it('reads the round 3 model: its four classes, free text kept, sound effects dro
 	const kept = cleanUp([2, 3, 0].map((k, i) => ({ box: b(200 * i), cls: CLASSES[k], score: 0.9, tile: 0 })));
 	expect(kept.map((d) => d.cls).sort()).toEqual(['bubble', 'free-text']);
 });
+
+it('keeps one of two overlapping boxes that read the same words (one bubble boxed twice), the surer one', async () => {
+	const { dropSameText } = await import('./detect');
+	const b = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
+	const kept = dropSameText([
+		{ box: b(0, 0, 300, 200), text: 'MORNING', score: 0.5 }, // a box over the panel, reading part of the bubble
+		{ box: b(80, 20, 120, 60), text: 'OH BOY IS IT THIS MORNING', score: 0.85 },
+		{ box: b(150, 150, 120, 60), text: 'THAT FEELS SO', score: 0.6 }, // overlaps the panel box, other words: kept
+		{ box: b(260, 150, 120, 60), text: 'ME TOO', score: 0.6 } // a joined bubble beside it, other words: kept
+	]);
+	expect(kept).toEqual([1, 2, 3]);
+	// joined bubbles that share a word ("Yes!" next to "Yes, I know"), overlapping but neither inside the other: both kept
+	expect(dropSameText([{ box: b(0, 0, 100, 50), text: 'Yes!', score: 0.9 }, { box: b(80, 30, 140, 60), text: 'Yes, I know', score: 0.6 }])).toEqual([0, 1]);
+	// reader junk around the same words still counts as the same
+	expect(dropSameText([{ box: b(0, 0, 100, 50), text: '+» YOU REALLY LIKE YOUR COFFEE', score: 0.7 },
+		{ box: b(5, 5, 100, 50), text: 'YOU REALLY LIKE YOUR COFFEE, DON\'T YOU', score: 0.4 }])).toEqual([0]);
+});

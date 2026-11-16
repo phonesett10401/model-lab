@@ -38,14 +38,10 @@ export async function renderPage(ctx: CanvasRenderingContext2D, page: ImageBitma
 		const rw = Math.min(page.width, Math.round(r.box.x + r.box.w)) - rx, rh = Math.min(page.height, Math.round(r.box.y + r.box.h)) - ry;
 		if (rw < 1 || rh < 1) continue;
 		const img = ctx.getImageData(rx, ry, rw, rh);
-		// Bubbles and captions: the box's inside (any colour), outline kept. Text on the art, or no clear box: the
-		// whole found rectangle is the inside.
-		// A bubble packed with text has no clear paper in its middle: look for its paper over the whole box then.
-		const shape = r.cls === 'free-text' ? null : (bubbleShape(img.data, rw, rh) ?? bubbleShape(img.data, rw, rh, { x: 0, y: 0, w: rw, h: rh }));
-		const area = shape?.mask ?? new Uint8Array(rw * rh).fill(1);
-		const hole = letterPixels(img.data, rw, rh, area);
+		const { shape, hole, spans: local } = boxInside(img.data, rw, rh, r.cls);
 		inpaint(img.data, rw, rh, hole);
 		ctx.putImageData(img, rx, ry);
+		const spans = local.map((sp): [number, number] | null => (sp ? [rx + sp[0], rx + sp[1]] : null));
 
 		// Background colour for the ink: the bubble's, else the average of the box after erasing.
 		let color = shape?.color;
@@ -55,16 +51,6 @@ export async function renderPage(ctx: CanvasRenderingContext2D, page: ImageBitma
 			color = `rgb(${[sr, sg, sb].map((v) => Math.round(v / (rw * rh))).join(',')})`;
 		}
 
-		// Each row's inside, through the middle column (a tail off to the side is left out), kept clear of the edge.
-		const cx = shape ? Math.round(shape.inner.x + shape.inner.w / 2) : rw >> 1;
-		const spans = Array.from({ length: rh }, (_, y): [number, number] | null => {
-			if (y < PAD || y >= rh - PAD || !area[y * rw + cx]) return null;
-			let a = cx, b = cx;
-			while (a > 0 && area[y * rw + a - 1]) a--;
-			while (b < rw - 1 && area[y * rw + b + 1]) b++;
-			const p = Math.max(PAD, Math.round((b - a) * SIDE));
-			return b - a > 2 * p ? [rx + a + p, rx + b - p] : null;
-		});
 		const fit = fitShaped(text, spans, ry, measure, opts);
 		modes[r.id] = fit.fits;
 		texts.push({ r, fit, ink: inkFor(color), clip: [rx, ry, rw, rh] });
@@ -93,4 +79,38 @@ export async function renderPage(ctx: CanvasRenderingContext2D, page: ImageBitma
 		ctx.restore();
 	}
 	return { modes };
+}
+
+/**
+ * One box's inside (RGBA crop, w×h): what to erase (`hole`, the English letters) and, per row, the span the Burmese may
+ * use (crop x, or null). Bubbles and captions: the box's inside (any colour), its outline and the art past it never
+ * erased or lettered over. Text on the art, or no clear box: the whole rectangle is the inside.
+ */
+export function boxInside(px: Uint8ClampedArray, w: number, h: number, cls: Region['cls']) {
+	// A bubble packed with text has no clear paper in its middle: look for its paper over the whole box then.
+	const shape = cls === 'free-text' ? null : (bubbleShape(px, w, h) ?? bubbleShape(px, w, h, { x: 0, y: 0, w, h }));
+	const area = shape?.mask ?? new Uint8Array(w * h).fill(1);
+	const { hole, outline } = shape ? letterPixels(px, w, h, area, true) : { hole: letterPixels(px, w, h, area), outline: null };
+	// Each row's inside, through the middle column (a tail off to the side is left out), kept clear of the edge and of
+	// the outline; rows run up and down from the middle until the outline.
+	const room = outline ? area.map((v, i) => (v && !outline[i] ? 1 : 0)) : area;
+	const cx = shape ? Math.round(shape.inner.x + shape.inner.w / 2) : w >> 1;
+	let cy = shape ? Math.round(shape.inner.y + shape.inner.h / 2) : h >> 1;
+	// The middle can land on the outline or outside the paper (a two-lobed bubble): start from the nearest row in the room.
+	for (let d = 0; !room[cy * w + cx] && d < h; d++) {
+		if (cy - d >= 0 && room[(cy - d) * w + cx]) cy -= d;
+		else if (cy + d < h && room[(cy + d) * w + cx]) cy += d;
+	}
+	let top = cy, bottom = cy;
+	while (top > 0 && room[(top - 1) * w + cx]) top--;
+	while (bottom < h - 1 && room[(bottom + 1) * w + cx]) bottom++;
+	const spans = Array.from({ length: h }, (_, y): [number, number] | null => {
+		if (y < Math.max(PAD, top) || y > Math.min(h - PAD - 1, bottom) || !room[y * w + cx]) return null;
+		let a = cx, b = cx;
+		while (a > 0 && room[y * w + a - 1]) a--;
+		while (b < w - 1 && room[y * w + b + 1]) b++;
+		const p = Math.max(PAD, Math.round((b - a) * SIDE));
+		return b - a > 2 * p ? [a + p, b - p] : null;
+	});
+	return { shape, hole, spans };
 }
