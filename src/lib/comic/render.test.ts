@@ -56,3 +56,22 @@ it('a see-through bubble with word boxes: only those letters erased, the Burmese
 	// without word boxes, the old way: no halo
 	expect(boxInside(px, w, h, 'bubble').halo).toBe(false);
 });
+
+it('works on a small page\'s boxes enlarged to 1600 px page width, never shrinking', async () => {
+	const { zoomFor } = await import('./render');
+	expect(zoomFor(900)).toBeCloseTo(1600 / 900); // a 900 px scan: 1–2 px between letters read as rough art
+	expect(zoomFor(1600)).toBe(1);
+	expect(zoomFor(1500)).toBe(1); // under 10%: not worth it
+	expect(zoomFor(3000)).toBe(1);
+});
+
+it('maps an enlarged box\'s erase mask and text rows back to page pixels', async () => {
+	const { shrink } = await import('./render');
+	const w = 10, h = 4, k = 2, W = 20, H = 8, hole = new Uint8Array(W * H);
+	hole[3 * W + 7] = 1; // enlarged (7,3) is page (3,1)
+	const spans = Array.from({ length: H }, (_, y): [number, number] | null => (y === 5 ? [4, 15] : null));
+	const out = shrink({ hole, spans }, w, h, k);
+	expect([...out.hole].map((v, i) => (v ? i : -1)).filter((i) => i >= 0)).toEqual([1 * w + 3]);
+	expect(out.spans[2]).toEqual([2, 7]); // page row 2 takes enlarged row 5
+	expect(out.spans[0]).toBeNull();
+});
