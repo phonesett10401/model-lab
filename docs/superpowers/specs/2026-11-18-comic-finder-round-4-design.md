@@ -115,7 +115,7 @@ credits for any new sources. Publishers' art never appears on the site.
 
 ## Order of work
 
-1. **Owner:** drop pages into `training/incoming/comic4/`, and export the 3 Roboflow sets. *(This step sets the pace.)*
+1. **Owner (optional):** drop pages of series they translate into `training/incoming/comic4/<series>/<chapter>/`. The outside sets are downloaded and imported (2026-11-18).
 2. **Claude:** import, auto-label and check the labels, choose the held-out chapters, add the no-text and downscaled pages,
    and build the new splits and the private Kaggle dataset version.
 3. **Owner:** upload the dataset version and run the trial, then the full run, on Kaggle (Claude gives the exact commands).
