@@ -92,7 +92,7 @@ grow to closed bubbles). Final per-set counts and mappings: `training/comic_sour
 
 ## Training
 
-- **Fine-tune from round 3's weights**, not from scratch: D-FINE's tuning flag (`-t runs/comic/r3-full-l2/best_stg1.pth`, the checkpoint the live `r3-full-l2-fp16` ONNX was exported from),
+- **Fine-tune from round 3's weights**, not from scratch: D-FINE's tuning flag (`-t`, from `runs/comic/r3-full-l2/best_stg2.pth`, the checkpoint the live `r3-full-l2-fp16` ONNX was exported from; shipped in the dataset as `weights/`),
   through a new `--tune <checkpoint>` option in `comic_train.py` and the Kaggle notebook.
 - About 20 epochs with a lower learning rate. Estimate: **6–10 GPU hours** on Kaggle's free T4 ×2 (about a third of the
   weekly allowance). If the time runs out mid-run, resume on Kaggle or the laptop as in round 3.

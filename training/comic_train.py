@@ -50,8 +50,12 @@ def build_annotations() -> dict[str, int]:
 BATCH = {'n': 4, 's': 4, 'm': 4, 'l': 4, 'x': 2}
 
 
+# Fine-tuning (round 4) starts from trained weights: the head's learning rate drops from D-FINE's 0.00025 to this.
+TUNE_LR = 0.0001
+
+
 def dfine_config(run: str, epochs: int, size: str = 'n', data: str = 'comic', data_root=None, runs=None, vendor=None,
-                 batch: int | None = None, workers: int = 4) -> str:
+                 batch: int | None = None, workers: int = 4, tune: bool = False) -> str:
     """D-FINE config. data='comic' is round 2 (data/comic, 4 old classes); 'comic3' is round 3 (one target, file names
     relative to the data root)."""
     out = (runs or c.RUNS) / run
@@ -62,8 +66,9 @@ def dfine_config(run: str, epochs: int, size: str = 'n', data: str = 'comic', da
     else:
         ann, imgs, classes = (c.DATA / 'annotations').as_posix(), (c.DATA / 'images').as_posix(), c.CLASSES_V2
     base = (vendor or VENDOR / 'D-FINE') / f'configs/dfine/custom/dfine_hgnetv2_{size}_custom.yml'
+    lr = f'optimizer:\n  lr: {TUNE_LR}\n' if tune else ''
     return f"""__include__: ['{base.as_posix()}']
-output_dir: {out.as_posix()}
+{lr}output_dir: {out.as_posix()}
 num_classes: {len(classes)}
 epochs: {epochs}
 eval_spatial_size: [1024, 1024]
@@ -161,15 +166,17 @@ def resume_config(run_dir: Path, data_root=None, runs=None, vendor=None) -> str:
     """A stopped run's config for this machine: the settings it started with (settings.json), this machine's folders.
     A run stopped on Kaggle resumes on the laptop this way."""
     st = json.loads((run_dir / 'settings.json').read_text(encoding='utf8'))
-    return dfine_config(st['run'], st['epochs'], st['size'], st['data'], data_root, runs, vendor)
+    return dfine_config(st['run'], st['epochs'], st['size'], st['data'], data_root, runs, vendor, tune=bool(st.get('tune')))
 
 
-def train_command(kind: str, run: str, resume: bool = False, runs=None, vendor=None) -> tuple[list[str], str]:
-    """The vendor training command and its folder; resume continues from the last saved epoch."""
+def train_command(kind: str, run: str, resume: bool = False, runs=None, vendor=None, tune: Path | None = None) -> tuple[list[str], str]:
+    """The vendor training command and its folder; resume continues from the last saved epoch, tune starts from a trained
+    checkpoint's weights (D-FINE's -t: weights only, a fresh schedule)."""
     out = (runs or c.RUNS) / run
     if kind == 'dfine':
         cmd = [PY, 'train.py', '-c', str(out / 'config.yml'), '--use-amp', '--seed=0']
-        return cmd + (['-r', str(out / 'last.pth')] if resume else []), str(vendor or VENDOR / 'D-FINE')
+        more = ['-r', str(out / 'last.pth')] if resume else ['-t', str(tune)] if tune else []
+        return cmd + more, str(vendor or VENDOR / 'D-FINE')
     cmd = [PY, 'tools/train.py', '-f', str(out / 'exp.py'), '-d', '1', '-b', '4', '--fp16']
     return cmd + (['--resume', '-c', str(out / 'latest_ckpt.pth')] if resume else []), str(VENDOR / 'YOLOX')
 
@@ -185,6 +192,7 @@ def main() -> None:
     ap.add_argument('--data-root', type=Path, help='folder holding comic/ and comic3/ (default training/data)')
     ap.add_argument('--runs', type=Path, help='where runs are written (default training/runs/comic)')
     ap.add_argument('--vendor', type=Path, help='the D-FINE checkout (default training/vendor/D-FINE)')
+    ap.add_argument('--tune', type=Path, help='fine-tune: start from this trained checkpoint (round 4 starts from round 3)')
     args = ap.parse_args()
     out = (args.runs or c.RUNS) / args.run
     if not args.resume:
@@ -193,15 +201,17 @@ def main() -> None:
         out.mkdir(parents=True, exist_ok=True)
         (out / 'kind.txt').write_text(args.kind)
         if args.kind == 'dfine':
-            (out / 'config.yml').write_text(dfine_config(args.run, args.epochs, args.size, args.data, args.data_root, args.runs, args.vendor))
-            (out / 'settings.json').write_text(json.dumps({'run': args.run, 'epochs': args.epochs, 'size': args.size, 'data': args.data}))
+            (out / 'config.yml').write_text(dfine_config(args.run, args.epochs, args.size, args.data, args.data_root, args.runs, args.vendor,
+                                                         tune=bool(args.tune)))
+            (out / 'settings.json').write_text(json.dumps({'run': args.run, 'epochs': args.epochs, 'size': args.size, 'data': args.data,
+                                                           'tune': bool(args.tune)}))
         else:
             (out / 'exp.py').write_text(yolox_exp(args.run, args.epochs))
     elif args.kind == 'dfine' and (out / 'settings.json').exists():
         local = resume_config(out, args.data_root, args.runs, args.vendor)
         if local != (out / 'config.yml').read_text():  # stopped on another machine: same settings, this machine's folders
             (out / 'config.yml').write_text(local)
-    cmd, cwd = train_command(args.kind, args.run, args.resume, args.runs, args.vendor)
+    cmd, cwd = train_command(args.kind, args.run, args.resume, args.runs, args.vendor, None if args.resume else args.tune)
     subprocess.run(cmd, cwd=cwd, check=True)
 
 

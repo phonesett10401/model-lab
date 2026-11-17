@@ -24,7 +24,10 @@ from comic_bubble import grow
 
 C3 = c.HERE / 'data/comic3'
 OWN = {'pepper': 'Pepper&Carrot', 'blackjack': 'Black Jack', 'comix': 'Comix'}  # data/comic3 folder -> v1 source prefix
-HELD_OUT = {'manga-text-detection'}
+# Round 4: rf-webtoon-segmented is the only English webtoon set, held out whole (its Roboflow brightness copies would
+# leak across a page split); rf-manhua-b has no Roboflow copies, so a share of its pages is enough.
+HELD_OUT = {'manga-text-detection', 'rf-webtoon-segmented'}
+TEST_SHARE = {'rf-manhua-b': 15}  # percent of an imported source's pages held out as test
 MIN_TEST = 30
 VAL = 10  # percent of an imported source's pages that go to val
 # Claude's hand-fixed labels for 42 Comix test pages (3 a book), file -> labels: Comix test pages are autolabels, too
@@ -32,7 +35,7 @@ VAL = 10  # percent of an imported source's pages that go to val
 REVIEWED = c.HERE / 'attribution/comic-v3-reviewed.json'
 
 
-def assign(pages: list[c.Page], held_out: set[str], dropped: set[str]) -> dict[str, str]:
+def assign(pages: list[c.Page], held_out: set[str], dropped: set[str], test_share: dict[str, int] | None = None) -> dict[str, str]:
     """file -> 'train' | 'val' | 'test'."""
     out = {}
     for p in pages:
@@ -45,7 +48,8 @@ def assign(pages: list[c.Page], held_out: set[str], dropped: set[str]) -> dict[s
         elif p.split:  # our own pages: split by episode, volume or book
             out[p.file] = p.split
         else:
-            out[p.file] = 'val' if int(hashlib.sha256(p.file.encode()).hexdigest(), 16) % 100 < VAL else 'train'
+            k, t = int(hashlib.sha256(p.file.encode()).hexdigest(), 16) % 100, (test_share or {}).get(p.source, 0)
+            out[p.file] = 'test' if k < t else 'val' if k < t + VAL else 'train'
     return out
 
 
@@ -109,7 +113,7 @@ def main() -> None:
             # The import log's split is the source's hash, not a decision: this script decides imported pages' splits.
             pages += [replace(p, split='') for p in imported if p.file in got]
         items.update(got)
-    split = assign(pages, HELD_OUT, c.dropped())
+    split = assign(pages, HELD_OUT, c.dropped(), TEST_SHARE)
     reviewed_test(pages, split, items, json.loads(REVIEWED.read_text(encoding='utf8')))
     out = C3 / 'annotations'
     for s in ('train', 'val', 'test'):

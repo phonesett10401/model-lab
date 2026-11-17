@@ -24,6 +24,12 @@ assert groups['blackjack-v02'] == {'test'} and groups['blackjack-v06'] == {'test
 # held-out sources appear only in test; other imported sources never do (they have no book IDs to split by)
 assert all(split[p.file] == 'test' for p in pages if p.source == 'manga-text-detection')
 assert {split[p.file] for p in pages if p.source == 'lie-eater'} == {'train', 'val'}
+# a test share holds out about that percent of a source's pages, the rest train and val; other sources keep no test pages
+mh = [page(f'mh_{i}.jpg', 'rf-manhua-b', 'rf-manhua-b', 'manhua') for i in range(400)]
+ms = assign(mh + pages, held_out=set(), dropped=set(), test_share={'rf-manhua-b': 15})
+share = sum(ms[p.file] == 'test' for p in mh) / len(mh)
+assert 0.1 < share < 0.2 and {ms[p.file] for p in mh} == {'train', 'val', 'test'}, share
+assert 'test' not in {ms[p.file] for p in pages if p.source == 'lie-eater'}
 # synthetic pages train only, even when their art page's episode is a test episode; reviewed drops are left out
 assert all(split[p.file] == 'train' for p in pages if p.file.startswith('synth3_'))
 assert 'bj1_0.jpg' not in split

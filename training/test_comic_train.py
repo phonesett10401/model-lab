@@ -37,6 +37,19 @@ with tempfile.TemporaryDirectory() as d:
     assert local == dfine_config('r3-test', 40, size='l', data='comic3', data_root=Path('C:/data'), runs=Path(d), vendor=Path('C:/vendor/D-FINE'))
     assert 'kaggle' not in local and 'epochs: 40' in local and 'dfine_hgnetv2_l_custom.yml' in local
 
+# fine-tuning (round 4): starts from a checkpoint's weights with a lower head learning rate; resuming it keeps that rate
+from comic_train import TUNE_LR
+tuned = dfine_config('r4', 20, size='l', data='comic3', tune=True)
+assert f'optimizer:\n  lr: {TUNE_LR}\n' in tuned and 'optimizer' not in cfg and TUNE_LR < 0.00025
+cmd, _ = train_command('dfine', 'r4', runs=Path('/runs'), vendor=Path('/v'), tune=Path('/w/r3.pth'))
+assert cmd[-2:] == ['-t', str(Path('/w/r3.pth'))], cmd
+assert '-t' not in train_command('dfine', 'r4', resume=True, runs=Path('/runs'), vendor=Path('/v'))[0]
+with tempfile.TemporaryDirectory() as d:
+    (Path(d) / 'settings.json').write_text('{"run": "r4", "epochs": 20, "size": "l", "data": "comic3", "tune": true}')
+    assert f'lr: {TUNE_LR}' in resume_config(Path(d))
+    (Path(d) / 'settings.json').write_text('{"run": "r3", "epochs": 40, "size": "l", "data": "comic3"}')  # round 3's runs have no "tune"
+    assert 'optimizer' not in resume_config(Path(d))
+
 # the requirements pin the D-FINE commit and the torch version
 req = (HERE / 'kaggle/requirements.txt').read_text(encoding='utf8')
 notebook = (HERE / 'kaggle/comic_train_notebook.py').read_text(encoding='utf8')
