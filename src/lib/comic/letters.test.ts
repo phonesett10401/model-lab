@@ -135,3 +135,14 @@ it('a word the box edge cuts through is left whole, not half erased', () => {
 	expect(hole[15 * w + 21]).toBe(1);
 	for (const x of [78, 83, 88, 93]) { expect(hole[15 * w + x], `x ${x}`).toBe(0); expect(outline[15 * w + x]).toBe(1); }
 });
+
+it('a cut word never spreads to the line below it, however tight the lettering', () => {
+	// A cut word on one line and the bubble's own line 2 px under it: only the cut word is left.
+	const w = 100, h = 40, px = new Uint8ClampedArray(w * h * 4).fill(255), area = new Uint8Array(w * h).fill(1);
+	const bar = (x0: number, y0: number) => { for (let y = y0; y < y0 + 8; y++) for (let x = x0; x < x0 + 3; x++) px.set([0, 0, 0, 255], (y * w + x) * 4); };
+	for (const x of [82, 87, 92, 97]) bar(x, 6); // the cut word, last letter on the right edge
+	for (const x of [70, 75, 80, 85]) bar(x, 16); // the bubble's own line, 2 px below
+	const { hole } = letterPixels(px, w, h, area, true);
+	expect(hole[20 * w + 81]).toBe(1);
+	expect(hole[10 * w + 83]).toBe(0);
+});

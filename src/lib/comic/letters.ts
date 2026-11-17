@@ -123,15 +123,16 @@ export function enclosedOnly(marks: Uint8Array, area: Uint8Array, w: number, h: 
 			}
 		}
 		if (!edge) for (const i of group) out[i] = 1;
-		else if (offCrop) cut.push(...group);
+		else if (offCrop) for (const i of group) cut.push(i); // a loop: a big group spread as arguments overflows the stack
 	}
 	// A word the box's edge cuts through is another line of text running out of the box ("ALL RIGHT!" beside a bubble):
-	// its other letters, within WORD_GAP of it, stay too, so it is never left half erased ("RIG" gone, "HT!" kept).
+	// its other letters, within WORD_GAP of it along the line, stay too, so it is never left half erased ("RIG" gone, "HT!"
+	// kept). Only a row up or down: further, it would jump to the next line, the bubble's own.
 	const reached = new Uint8Array(w * h);
 	for (const i of cut) reached[i] = 1;
 	for (let k = 0; k < cut.length; k++) {
 		const x = cut[k] % w, y = (cut[k] / w) | 0;
-		for (let dy = -WORD_GAP; dy <= WORD_GAP; dy++)
+		for (let dy = -1; dy <= 1; dy++)
 			for (let dx = -WORD_GAP; dx <= WORD_GAP; dx++) {
 				const xx = x + dx, yy = y + dy, j = yy * w + xx;
 				if (xx < 0 || xx >= w || yy < 0 || yy >= h || !marks[j] || reached[j]) continue;
