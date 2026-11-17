@@ -39,7 +39,8 @@ export async function renderPage(ctx: CanvasRenderingContext2D, page: ImageBitma
 		if (rw < 1 || rh < 1) continue;
 		const img = ctx.getImageData(rx, ry, rw, rh);
 		const words = r.words?.map((q) => ({ ...q, x: q.x - rx, y: q.y - ry }));
-		const { shape, hole, spans: local, halo } = boxInside(img.data, rw, rh, r.cls, words);
+		const k = zoomFor(page.width);
+		const { shape, hole, spans: local, halo } = k === 1 ? boxInside(img.data, rw, rh, r.cls, words) : zoomedInside(img, k, r.cls, words);
 		inpaint(img.data, rw, rh, hole);
 		ctx.putImageData(img, rx, ry);
 		const spans = local.map((sp): [number, number] | null => (sp ? [rx + sp[0], rx + sp[1]] : null));
@@ -81,6 +82,49 @@ export async function renderPage(ctx: CanvasRenderingContext2D, page: ImageBitma
 		ctx.restore();
 	}
 	return { modes };
+}
+
+/** Page width the lettering works at (as PDFs are drawn). */
+const WORK_WIDTH = 1600;
+
+/**
+ * How much to enlarge a small page's boxes before finding their bubble and letters: to WORK_WIDTH, never shrunk, and
+ * not for less than 10%. On a 900 px scan the letters were 1–2 px apart and the text read as rough art, so 7 of 12
+ * bubbles on a Bleach page kept their English with the Burmese squeezed beside it; enlarged, all were lettered.
+ */
+export function zoomFor(pageWidth: number): number {
+	const k = WORK_WIDTH / pageWidth;
+	return k >= 1.1 ? k : 1;
+}
+
+/** An enlarged box's erase mask and text rows (`k`× the page's w×h) back in page pixels: a page pixel is erased when any
+ * enlarged pixel in it is, and each page row takes the text span of the enlarged row through its middle. */
+export function shrink(r: { hole: Uint8Array; spans: ([number, number] | null)[] }, w: number, h: number, k: number) {
+	const W = Math.round(w * k), hole = new Uint8Array(w * h);
+	for (let i = 0; i < r.hole.length; i++)
+		if (r.hole[i]) hole[Math.min(h - 1, Math.floor(((i / W) | 0) / k)) * w + Math.min(w - 1, Math.floor((i % W) / k))] = 1;
+	const spans = Array.from({ length: h }, (_, y): [number, number] | null => {
+		const sp = r.spans[Math.min(r.spans.length - 1, Math.floor((y + 0.5) * k))];
+		return sp ? [Math.ceil(sp[0] / k), Math.floor(sp[1] / k)] : null;
+	});
+	return { hole, spans };
+}
+
+/** boxInside on the box enlarged `k`× (smoothly), mapped back to page pixels. */
+function zoomedInside(img: ImageData, k: number, cls: Region['cls'], words?: Box[]) {
+	const W = Math.round(img.width * k), H = Math.round(img.height * k);
+	const small = document.createElement('canvas');
+	small.width = img.width;
+	small.height = img.height;
+	small.getContext('2d')!.putImageData(img, 0, 0);
+	const big = document.createElement('canvas');
+	big.width = W;
+	big.height = H;
+	const ctx = big.getContext('2d', { willReadFrequently: true })!;
+	ctx.imageSmoothingQuality = 'high';
+	ctx.drawImage(small, 0, 0, W, H);
+	const r = boxInside(ctx.getImageData(0, 0, W, H).data, W, H, cls, words?.map((q) => ({ x: q.x * k, y: q.y * k, w: q.w * k, h: q.h * k })));
+	return { ...r, ...shrink(r, img.width, img.height, k) };
 }
 
 /**
