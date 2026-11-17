@@ -37,7 +37,7 @@ it('gives the Burmese only rows inside the outline', () => {
 	expect(Math.max(...rows)).toBeLessThan(h - 8);
 });
 
-it('a see-through bubble with word boxes: only those letters erased, the Burmese where they were, on a panel', () => {
+it('a see-through bubble with word boxes: only those letters erased, the Burmese where they were, with a halo', () => {
 	// Screentone art all over (no paper to find), a word of black letters in the middle, a dark art blob in a corner.
 	const w = 200, h = 120, px = new Uint8ClampedArray(w * h * 4);
 	for (let i = 0; i < w * h; i++) {
@@ -45,14 +45,14 @@ it('a see-through bubble with word boxes: only those letters erased, the Burmese
 		const v = x >= 70 && x < 130 && y >= 50 && y < 70 && x % 8 < 3 ? 0 : x < 30 && y < 30 ? 0 : (x + y) % 2 ? 90 : 230;
 		px.set([v, v, v, 255], i * 4);
 	}
-	const { hole, spans, panel } = boxInside(px, w, h, 'bubble', [{ x: 70, y: 50, w: 60, h: 20 }]);
-	expect(panel).toBe(true);
+	const { hole, spans, halo } = boxInside(px, w, h, 'bubble', [{ x: 70, y: 50, w: 60, h: 20 }]);
+	expect(halo).toBe(true);
 	expect(hole[60 * w + 72]).toBe(1);
 	expect(hole[10 * w + 10]).toBe(0);
 	const rows = spans.map((s, y) => (s ? y : -1)).filter((y) => y >= 0);
 	expect(Math.min(...rows)).toBeGreaterThanOrEqual(42);
 	expect(Math.max(...rows)).toBeLessThan(78);
 	expect(spans[60]![0]).toBeGreaterThanOrEqual(64);
-	// without word boxes, the old way: no panel
-	expect(boxInside(px, w, h, 'bubble').panel).toBe(false);
+	// without word boxes, the old way: no halo
+	expect(boxInside(px, w, h, 'bubble').halo).toBe(false);
 });

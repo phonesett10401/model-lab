@@ -29,7 +29,7 @@ export async function renderPage(ctx: CanvasRenderingContext2D, page: ImageBitma
 	};
 	// Two passes: every box is erased first, then all the text is written, so a box that overlaps another can never
 	// erase its neighbour's Burmese.
-	const texts: { r: Region; fit: ReturnType<typeof fitShaped>; ink: '#000' | '#fff'; clip: [number, number, number, number]; panel: boolean }[] = [];
+	const texts: { r: Region; fit: ReturnType<typeof fitShaped>; ink: '#000' | '#fff'; clip: [number, number, number, number]; halo: boolean }[] = [];
 
 	for (const r of regions) {
 		const text = r.burmese.trim();
@@ -39,7 +39,7 @@ export async function renderPage(ctx: CanvasRenderingContext2D, page: ImageBitma
 		if (rw < 1 || rh < 1) continue;
 		const img = ctx.getImageData(rx, ry, rw, rh);
 		const words = r.words?.map((q) => ({ ...q, x: q.x - rx, y: q.y - ry }));
-		const { shape, hole, spans: local, panel } = boxInside(img.data, rw, rh, r.cls, words);
+		const { shape, hole, spans: local, halo } = boxInside(img.data, rw, rh, r.cls, words);
 		inpaint(img.data, rw, rh, hole);
 		ctx.putImageData(img, rx, ry);
 		const spans = local.map((sp): [number, number] | null => (sp ? [rx + sp[0], rx + sp[1]] : null));
@@ -54,33 +54,24 @@ export async function renderPage(ctx: CanvasRenderingContext2D, page: ImageBitma
 
 		const fit = fitShaped(text, spans, ry, measure, opts);
 		modes[r.id] = fit.fits;
-		texts.push({ r, fit, ink: panel ? '#000' : inkFor(color), clip: [rx, ry, rw, rh], panel });
+		texts.push({ r, fit, ink: halo ? '#000' : inkFor(color), clip: [rx, ry, rw, rh], halo });
 	}
 
-	for (const { r, fit, ink, clip, panel } of texts) {
+	for (const { r, fit, ink, clip, halo } of texts) {
 		ctx.save();
 		ctx.beginPath();
 		ctx.rect(...clip);
 		ctx.clip();
 		ctx.font = `${fit.size}px ${FONT}`;
-		// A see-through bubble: a soft white panel just behind the Burmese, so it reads and the art around it shows.
-		if (panel && fit.lines.length) {
-			const half = (fit.size * LINE_HEIGHT) / 2;
-			const x0 = Math.min(...fit.lines.map((l) => l.x)) - 6, x1 = Math.max(...fit.lines.map((l) => l.x + ctx.measureText(l.text).width)) + 6;
-			const y0 = Math.min(...fit.lines.map((l) => l.y)) - half - 3, y1 = Math.max(...fit.lines.map((l) => l.y)) + half + 3;
-			ctx.fillStyle = 'rgba(255,255,255,0.85)';
-			ctx.beginPath();
-			ctx.roundRect(x0, y0, x1 - x0, y1 - y0, Math.round(fit.size * 0.6));
-			ctx.fill();
-		}
 		ctx.textAlign = 'left';
 		ctx.textBaseline = 'middle';
 		ctx.fillStyle = ink;
-		// Text on the art gets a thin outline in the opposite colour so it reads without a box.
-		const outline = r.cls === 'free-text';
+		// Text on the art gets a thin outline in the opposite colour so it reads without a box; on a see-through bubble a
+		// white halo as wide as the English letters' own white outline, so the art around it still shows.
+		const outline = r.cls === 'free-text' || halo;
 		if (outline) {
 			ctx.strokeStyle = ink === '#000' ? '#fff' : '#000';
-			ctx.lineWidth = 4;
+			ctx.lineWidth = halo ? Math.max(3, fit.size * 0.3) : 4;
 			ctx.lineJoin = 'round';
 		}
 		for (const l of fit.lines) {
@@ -96,22 +87,22 @@ export async function renderPage(ctx: CanvasRenderingContext2D, page: ImageBitma
  * One box's inside (RGBA crop, w×h): what to erase (`hole`, the English letters) and, per row, the span the Burmese may
  * use (crop x, or null). Bubbles and captions: the box's inside (any colour), its outline and the art past it never
  * erased or lettered over. A bubble with no paper to find (see-through, over the art) but with the OCR's word boxes
- * (`words`, crop pixels): only the letters in them are erased, the Burmese goes where they were, on a panel (`panel`).
+ * (`words`, crop pixels): only the letters in them are erased, the Burmese goes where they were, black with a white halo (`halo`).
  * Text on the art, or no clear box: the whole rectangle is the inside.
  */
 export function boxInside(px: Uint8ClampedArray, w: number, h: number, cls: Region['cls'], words?: Box[]) {
 	// A bubble packed with text has no clear paper in its middle: look for its paper over the whole box then.
 	const shape = cls === 'free-text' ? null : (bubbleShape(px, w, h) ?? bubbleShape(px, w, h, { x: 0, y: 0, w, h }));
-	const panel = !shape && cls !== 'free-text' && !!words?.length;
+	const halo = !shape && cls !== 'free-text' && !!words?.length;
 	let area = shape?.mask ?? new Uint8Array(w * h).fill(1);
 	let mid: Box = shape?.inner ?? { x: 0, y: 0, w, h };
-	if (panel) {
+	if (halo) {
 		const x0 = Math.max(0, Math.floor(Math.min(...words.map((q) => q.x))) - 6), x1 = Math.min(w, Math.ceil(Math.max(...words.map((q) => q.x + q.w))) + 6);
 		const y0 = Math.max(0, Math.floor(Math.min(...words.map((q) => q.y))) - 8), y1 = Math.min(h, Math.ceil(Math.max(...words.map((q) => q.y + q.h))) + 8);
 		area = area.map((_, i) => (i % w >= x0 && i % w < x1 && i / w >= y0 && i / w < y1 ? 1 : 0));
 		mid = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 	}
-	const { hole, outline } = shape ? letterPixels(px, w, h, area, true, shape.color.match(/\d+/g)!.map(Number)) : { hole: panel ? wordLetters(px, w, h, words!) : letterPixels(px, w, h, area), outline: null };
+	const { hole, outline } = shape ? letterPixels(px, w, h, area, true, shape.color.match(/\d+/g)!.map(Number)) : { hole: halo ? wordLetters(px, w, h, words!) : letterPixels(px, w, h, area), outline: null };
 	// Each row's inside, through the middle column (a tail off to the side is left out), kept clear of the edge and of
 	// the outline; rows run up and down from the middle until the outline.
 	const room = outline ? area.map((v, i) => (v && !outline[i] ? 1 : 0)) : area;
@@ -133,5 +124,5 @@ export function boxInside(px: Uint8ClampedArray, w: number, h: number, cls: Regi
 		const p = Math.max(PAD, Math.round((b - a) * SIDE));
 		return b - a > 2 * p ? [a + p, b - p] : null;
 	});
-	return { shape, hole, spans, panel };
+	return { shape, hole, spans, halo };
 }
