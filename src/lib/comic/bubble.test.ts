@@ -113,11 +113,16 @@ it('takes white paper, not a coloured light patch, as the bubble', () => {
 it('whitens everything outside the bubble for the OCR, keeping the letters', async () => {
 	const { whitenOutside } = await import('./bubble');
 	const { px, w, h } = page();
-	expect(whitenOutside(px, w, h)).toBe(true);
+	// asked for paper filling nearly all of the crop, it measures the bubble's share and leaves the pixels alone
+	const before = px.slice(), fill = whitenOutside(px, w, h, 0.99);
+	expect(fill).toBeGreaterThan(0);
+	expect(fill).toBeLessThan(0.99);
+	expect(px).toEqual(before);
+	expect(whitenOutside(px, w, h)).toBe(fill);
 	expect([...px.slice((1 * w + 1) * 4, (1 * w + 1) * 4 + 3)]).toEqual([255, 255, 255]); // art gone
 	expect(px[(40 * w + 50) * 4]).toBe(0); // the letter stays
 	const busy = new Uint8ClampedArray(40 * 40 * 4).map((_, i) => (i * 37) % 256);
-	expect(whitenOutside(busy, 40, 40)).toBe(false); // no bubble: left as it is
+	expect(whitenOutside(busy, 40, 40)).toBe(0); // no bubble: left as it is
 });
 
 it('finds the whole bubble around a box that covers only part of it', async () => {
@@ -234,7 +239,7 @@ it('box growing and the OCR clean-up take only bubble paper, not a smooth painte
 		}
 	expect(bubbleShape(px, w, h)).not.toBeNull(); // lettering still finds it
 	expect(bubbleExtent(px, w, h, { x: 50, y: 40, w: 100, h: 80 })).toBeNull();
-	expect(whitenOutside(px.slice(), w, h)).toBe(false);
+	expect(whitenOutside(px.slice(), w, h)).toBe(0);
 });
 
 it('gives the extents recorded in bubble-cases.json (the Python port is held to the same cases)', async () => {

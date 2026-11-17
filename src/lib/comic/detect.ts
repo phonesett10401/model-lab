@@ -69,21 +69,20 @@ export function cleanUp(found: (Detection & { tile: number })[]): Detection[] {
 const wordsOf = (text: string) => new Set(text.toLowerCase().match(/[a-z]{3,}/g) ?? []);
 
 /**
- * After reading: of two boxes, one mostly inside the other (60% of the smaller), that read the same words (most of the
- * shorter reading's words are in the other), one bubble was boxed twice; the surer box is kept. Boxes that only overlap
+ * After reading: of two boxes, one mostly inside the other (60% of the smaller), where the less sure one reads nothing
+ * new (80% of its words are in the surer one's), one bubble was boxed twice; the surer box is kept. A less sure box over
+ * two bubbles reads more words than the surer box over one, so it stays (a whole bubble was nearly lost that way). Boxes that only overlap
  * (joined bubbles, even ones sharing a word: "Yes!" next to "Yes, I know") or read different words stay apart. Returns the indexes kept, in order. Measured on round 3's test pages (Pepper&Carrot, Black Jack):
  * about half the remaining repeats gone for about 1 point of real bubbles.
  */
 export function dropSameText(items: { box: Box; text: string; score: number }[]): number[] {
 	const words = items.map((it) => wordsOf(it.text));
 	const nested = (a: Box, b: Box) => overlapOfSmaller(a, b) >= 0.6;
-	const same = (i: number, j: number) => {
-		const [a, b] = words[i].size <= words[j].size ? [words[i], words[j]] : [words[j], words[i]];
-		return a.size > 0 && [...a].filter((w) => b.has(w)).length >= 0.6 * a.size;
-	};
+	// The less sure box adds nothing: 80% of its words are in the surer one's (a box over two bubbles reads more).
+	const adds = (i: number, k: number) => words[i].size === 0 || [...words[i]].filter((w) => words[k].has(w)).length < 0.8 * words[i].size;
 	const order = items.map((_, i) => i).sort((i, j) => items[j].score - items[i].score);
 	const kept: number[] = [];
-	for (const i of order) if (!kept.some((k) => nested(items[i].box, items[k].box) && same(i, k))) kept.push(i);
+	for (const i of order) if (!kept.some((k) => nested(items[i].box, items[k].box) && !adds(i, k))) kept.push(i);
 	return kept.sort((a, b) => a - b);
 }
 

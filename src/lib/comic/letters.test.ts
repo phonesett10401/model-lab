@@ -86,3 +86,40 @@ it('with enclosed set, strokes reaching the area edge are the outline, not lette
 	expect(hole[33 * w + 30]).toBe(0);
 	expect(outline[33 * w + 30]).toBe(1);
 });
+
+it('with the paper colour given, the middle of a big bold letter is erased too', () => {
+	// A caption's inside on white with one bold stroke 60 px thick: in its middle the commonest colour around is black,
+	// so without the paper colour that black passed as background and stayed as a blot (the "ZHUGE YI" caption).
+	const w = 120, h = 100, px = new Uint8ClampedArray(w * h * 4).fill(255), area = new Uint8Array(w * h).fill(1);
+	for (let y = 20; y < 80; y++) for (let x = 30; x < 90; x++) px.set([0, 0, 0, 255], (y * w + x) * 4);
+	expect(letterPixels(px, w, h, area, true).hole[50 * w + 60]).toBe(0); // the old blot
+	const { hole } = letterPixels(px, w, h, area, true, [255, 255, 255]);
+	for (let y = 20; y < 80; y++) for (let x = 30; x < 90; x++) expect(hole[y * w + x]).toBe(1);
+	expect(hole[5 * w + 5]).toBe(0); // the paper stays
+});
+
+it('on a see-through bubble, erases the letters in the word boxes with their white outline, and nothing else', async () => {
+	const { wordLetters } = await import('./letters');
+	// Screentone dots (every other pixel dark) over the art, a black letter bar with a white outline inside a word box,
+	// and a dark art blob outside any word box.
+	const w = 80, h = 40, px = new Uint8ClampedArray(w * h * 4);
+	for (let i = 0; i < w * h; i++) {
+		const x = i % w, y = (i / w) | 0;
+		const v = x >= 10 && x < 14 && y >= 10 && y < 30 ? 0 : x >= 7 && x < 17 && y >= 7 && y < 33 ? 255 : x >= 50 && x < 60 && y >= 10 && y < 30 ? 0 : (x + y) % 2 ? 90 : 230;
+		px.set([v, v, v, 255], i * 4);
+	}
+	const hole = wordLetters(px, w, h, [{ x: 10, y: 10, w: 4, h: 20 }]);
+	expect(hole[20 * w + 12]).toBe(1); // the letter
+	expect(hole[20 * w + 8]).toBe(1); // its white outline
+	expect(hole[20 * w + 55]).toBe(0); // the art blob
+	expect(hole[20 * w + 30]).toBe(0); // the screentone
+});
+
+it('with the paper colour given, a gradient caption keeps its background', () => {
+	// A caption fading from light to dark blue: its average colour is in the middle, far from both ends, yet the ends are
+	// paper, not letters.
+	const w = 120, h = 60, px = new Uint8ClampedArray(w * h * 4), area = new Uint8Array(w * h).fill(1);
+	for (let i = 0; i < w * h; i++) { const x = i % w; px.set([220 - 1.5 * x, 220 - 1.5 * x, 255, 255], i * 4); }
+	const { hole } = letterPixels(px, w, h, area, true, [130, 130, 255]);
+	expect(hole.reduce((a, v) => a + v, 0)).toBe(0);
+});
