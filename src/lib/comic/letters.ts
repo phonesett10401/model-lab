@@ -4,6 +4,8 @@ const CELL = 12;
 const INK = 48;
 /** The anti-aliased edge around each stroke: letters are grown by this many pixels. */
 const EDGE = 2;
+/** Most space between two letters of one word, in pixels. */
+const WORD_GAP = 3;
 
 /**
  * Which pixels of `area` (1 = look here) are letters: those far in colour from the local background (the commonest
@@ -103,23 +105,41 @@ export function inpaint(px: Uint8ClampedArray, w: number, h: number, hole: Uint8
  */
 export function enclosedOnly(marks: Uint8Array, area: Uint8Array, w: number, h: number): Uint8Array {
 	const out = new Uint8Array(w * h), seen = new Uint8Array(w * h);
-	const group: number[] = [];
+	const group: number[] = [], cut: number[] = [];
 	for (let start = 0; start < w * h; start++) {
 		if (!marks[start] || seen[start]) continue;
 		group.length = 0;
 		group.push(start);
 		seen[start] = 1;
-		let edge = false;
+		let edge = false, offCrop = false;
 		for (let k = 0; k < group.length; k++) {
 			const i = group[k], x = i % w;
 			// The four neighbours; one off the crop or outside the area means the group reaches the edge.
 			for (let d = 0; d < 4; d++) {
 				const j = d === 0 ? (x > 0 ? i - 1 : -1) : d === 1 ? (x < w - 1 ? i + 1 : -1) : d === 2 ? (i >= w ? i - w : -1) : i < w * (h - 1) ? i + w : -1;
+				if (j < 0) offCrop = true;
 				if (j < 0 || !area[j]) { edge = true; continue; }
 				if (marks[j] && !seen[j]) { seen[j] = 1; group.push(j); }
 			}
 		}
 		if (!edge) for (const i of group) out[i] = 1;
+		else if (offCrop) for (const i of group) cut.push(i); // a loop: a big group spread as arguments overflows the stack
+	}
+	// A word the box's edge cuts through is another line of text running out of the box ("ALL RIGHT!" beside a bubble):
+	// its other letters, within WORD_GAP of it along the line, stay too, so it is never left half erased ("RIG" gone, "HT!"
+	// kept). Only a row up or down: further, it would jump to the next line, the bubble's own.
+	const reached = new Uint8Array(w * h);
+	for (const i of cut) reached[i] = 1;
+	for (let k = 0; k < cut.length; k++) {
+		const x = cut[k] % w, y = (cut[k] / w) | 0;
+		for (let dy = -1; dy <= 1; dy++)
+			for (let dx = -WORD_GAP; dx <= WORD_GAP; dx++) {
+				const xx = x + dx, yy = y + dy, j = yy * w + xx;
+				if (xx < 0 || xx >= w || yy < 0 || yy >= h || !marks[j] || reached[j]) continue;
+				reached[j] = 1;
+				out[j] = 0;
+				cut.push(j);
+			}
 	}
 	return out;
 }

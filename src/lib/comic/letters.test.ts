@@ -123,3 +123,26 @@ it('with the paper colour given, a gradient caption keeps its background', () =>
 	const { hole } = letterPixels(px, w, h, area, true, [130, 130, 255]);
 	expect(hole.reduce((a, v) => a + v, 0)).toBe(0);
 });
+
+it('a word the box edge cuts through is left whole, not half erased', () => {
+	// The paper runs off the box's right edge, where a neighbouring line ("ALL RIGHT!") is cut by it: letters 2 px apart,
+	// the last touching the edge. Only that letter used to be kept, so "RIG" was erased and "HT!" left.
+	const w = 100, h = 40, px = new Uint8ClampedArray(w * h * 4).fill(255), area = new Uint8Array(w * h).fill(1);
+	const bar = (x0: number) => { for (let y = 10; y < 22; y++) for (let x = x0; x < x0 + 3; x++) px.set([0, 0, 0, 255], (y * w + x) * 4); };
+	for (const x of [20, 25, 30]) bar(x); // the bubble's own word
+	for (const x of [77, 82, 87, 92, 97]) bar(x); // the cut word, last letter on the edge
+	const { hole, outline } = letterPixels(px, w, h, area, true);
+	expect(hole[15 * w + 21]).toBe(1);
+	for (const x of [78, 83, 88, 93]) { expect(hole[15 * w + x], `x ${x}`).toBe(0); expect(outline[15 * w + x]).toBe(1); }
+});
+
+it('a cut word never spreads to the line below it, however tight the lettering', () => {
+	// A cut word on one line and the bubble's own line 2 px under it: only the cut word is left.
+	const w = 100, h = 40, px = new Uint8ClampedArray(w * h * 4).fill(255), area = new Uint8Array(w * h).fill(1);
+	const bar = (x0: number, y0: number) => { for (let y = y0; y < y0 + 8; y++) for (let x = x0; x < x0 + 3; x++) px.set([0, 0, 0, 255], (y * w + x) * 4); };
+	for (const x of [82, 87, 92, 97]) bar(x, 6); // the cut word, last letter on the right edge
+	for (const x of [70, 75, 80, 85]) bar(x, 16); // the bubble's own line, 2 px below
+	const { hole } = letterPixels(px, w, h, area, true);
+	expect(hole[20 * w + 81]).toBe(1);
+	expect(hole[10 * w + 83]).toBe(0);
+});
