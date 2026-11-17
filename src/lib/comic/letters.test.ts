@@ -114,3 +114,12 @@ it('on a see-through bubble, erases the letters in the word boxes with their whi
 	expect(hole[20 * w + 55]).toBe(0); // the art blob
 	expect(hole[20 * w + 30]).toBe(0); // the screentone
 });
+
+it('with the paper colour given, a gradient caption keeps its background', () => {
+	// A caption fading from light to dark blue: its average colour is in the middle, far from both ends, yet the ends are
+	// paper, not letters.
+	const w = 120, h = 60, px = new Uint8ClampedArray(w * h * 4), area = new Uint8Array(w * h).fill(1);
+	for (let i = 0; i < w * h; i++) { const x = i % w; px.set([220 - 1.5 * x, 220 - 1.5 * x, 255, 255], i * 4); }
+	const { hole } = letterPixels(px, w, h, area, true, [130, 130, 255]);
+	expect(hole.reduce((a, v) => a + v, 0)).toBe(0);
+});

@@ -12,7 +12,7 @@ const SHORT = new Set('ah ai am an as at be by do eh go ha he hi hm if in is it 
  * otherwise the visitor types the English. Empty bubbles read as "No / \ ~ 7" and got "translated". */
 export function looksEnglish(text: string, conf: number): boolean {
 	const letters = (text.match(/[A-Za-z]/g) ?? []).length;
-	const marks = (text.match(/[^A-Za-z\s.,!?'’"“”…-]/g) ?? []).length;
+	const marks = (text.match(/[^A-Za-z0-9\s.,!?'’"“”…:;$%&()#-]/g) ?? []).length; // numbers and their signs are fine ("IT'S 10:30!")
 	const word = (text.match(/[A-Za-z]+/g) ?? []).some((w) => w.length >= 3 || SHORT.has(w.toLowerCase()));
 	return conf >= 40 && word && letters > marks;
 }
@@ -98,8 +98,8 @@ export function readsMore(washed: { text: string; conf: number }, sure: { text: 
 }
 
 /** One crop of the box in grey, `scale`× larger; optionally with borders whitened and a white margin around it, and with
- * the screentone washed out (`tone`: blurred by a page pixel, then contrast raised, so the dots go grey and letters stay). */
-/** `shaped`: a bubble's paper fills the crop (false: see-through, or text on the art); the washed (`tone`) crop then
+ * the screentone washed out (`tone`: blurred by a page pixel, then contrast raised, so the dots go grey and letters stay).
+ * `shaped`: a bubble's paper fills the crop (false: see-through, or text on the art); the washed (`tone`) crop then
  * keeps the art, since whitening around a small patch of paper left one word of the bubble. */
 function crop(bmp: ImageBitmap, box: Box, scale: number, clean: boolean, tone = false): { canvas: HTMLCanvasElement; shaped: boolean } {
 	const m = MARGIN, pad = clean ? PAD : 0;
@@ -147,7 +147,7 @@ export async function readBox(bmp: ImageBitmap, box: Box, model: Model = OCR_MOD
 		const { data } = await worker.recognize(canvas, {}, { text: true, blocks: true });
 		const pad = clean ? PAD : 0;
 		const words = (data.blocks ?? []).flatMap((b) => b.paragraphs.flatMap((p) => p.lines.flatMap((l) => l.words)))
-			.filter((wd) => /[A-Za-z]{2}|^[IA]\W*$/.test(wd.text)) // a lone letter is junk from the art ("t" by a bubble's edge)
+			.filter((wd) => letters(wd.text) >= 2 || /^[IA]\W*$/.test(wd.text)) // a lone letter is junk from the art ("t" by a bubble's edge)
 			.map(({ bbox: b }) => ({ x: x + (b.x0 - pad) / scale, y: y + (b.y0 - pad) / scale, w: (b.x1 - b.x0) / scale, h: (b.y1 - b.y0) / scale }));
 		return { text: data.text.replace(/\s+/g, ' ').trim(), conf: data.confidence, words, shaped };
 	};

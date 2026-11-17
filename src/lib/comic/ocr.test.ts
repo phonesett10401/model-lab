@@ -11,7 +11,7 @@ it('junk is not English', () => {
 	expect(looksEnglish('HELLO THERE', 85)).toBe(true);
 	// reader junk from empty bubbles and a "..." bubble, which got "translated"
 	for (const junk of ['No / \\ ~ 7', '{ re', 'pa JA', '/ | \\ / =f', ') r']) expect(looksEnglish(junk, 60), junk).toBe(false);
-	for (const ok of ['OH... OKAY.', 'NO!', 'I LOVE YOU.', 'OK?', "IT'S ALL THE FABRIC I COULD FIND HERE"]) expect(looksEnglish(ok, 60), ok).toBe(true);
+	for (const ok of ['OH... OKAY.', 'NO!', 'I LOVE YOU.', 'OK?', "IT'S ALL THE FABRIC I COULD FIND HERE", "IT'S 10:30!", 'ONLY $100 (CASH)']) expect(looksEnglish(ok, 60), ok).toBe(true);
 });
 
 it('keeps a washed reading of a see-through bubble only when it reads more of the same words', async () => {
