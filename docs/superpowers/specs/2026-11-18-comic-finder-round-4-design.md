@@ -122,6 +122,42 @@ credits for any new sources. Publishers' art never appears on the site.
 4. **Claude:** export the ONNX, measure both ways, and report.
 5. If it passes: a PR with the model and the numbers. `/code-review`, then merge.
 
+## Round 4 result (2026-11-19): not shipped
+
+12 epochs from round 3's weights (7 h 55 min on Kaggle, 8,616 pages an epoch). Bubbles found, live-size (fp16) model,
+`comic_evaluate.py found`:
+
+| Test set | Pages | Round 3 | Round 4 |
+|---|---|---|---|
+| manhua (new) | 500 | 88.2% | 99.1% |
+| webtoon (new) | 187 | 83.7% | 91.7% |
+| manga | 170 | 93.6% | 93.2% |
+| modern Western | 47 | 94.8% | 93.1% |
+| old American | 42 | 88.3% | 82.2% |
+| test97 | 97 | 92.4% | 89.7% |
+
+Extra boxes a page fell everywhere except manga (1.8 → 2.0). Three styles lost more than 1 point, so the ship rule
+failed and round 3 stays live. Cause: the new sets were 54% of training pages; old American (Comix, 684 pages) fell to
+8% of the mix and got nothing new, and real Western pages were 283.
+
+## Round 4b: same data, rebalanced
+
+Goal: keep round 4's manhua and webtoon gains and win back old American, Western and test97. Same ship rule.
+
+- **Start from round 4's weights** (`runs/comic/r4-dfine-l/best_stg2.pth`), not round 3's: the new styles are already
+  learned, so this run only has to pull the mix back. 6 epochs (about 3.5 h), same learning rate (0.0001).
+- **Halve the new sets' caps** (`TRAIN_CAP`): manhua-a 450, manhua-b 300, webtoon-bubbles 350, hf-manga-bubbles 400,
+  bubble-shapes 400, manga-bubble 250, manga-segment 150 (2,300 pages, down from 4,600).
+- **Repeat the styles that lost ground** (new `REPEAT` in `comic_split3.py`: a source's training pages listed n times in
+  train.json, each entry its own image id): Comix ×2, real Pepper&Carrot ×2, Black Jack ×2, rf-comicbubbles ×3. Old
+  American goes from 8% to about 18% of the mix.
+- About 7,600 pages an epoch. Test sets unchanged, so round 3, round 4 and round 4b are compared on the same pages.
+- If 4b still loses more than 1 point on a style: one more try from round 3's weights with the 4b mix and 12 epochs
+  (about 7.5 h); if that fails too, round 3 stays and round 5 needs new Western and old-American pages.
+
+Work: `REPEAT` plus a test; new caps; rebuild splits; dataset version with round 4's checkpoint as the only file in
+`weights/`; push a private kernel `comic-finder-r4b-l` (6 epochs); measure as above, plus the 28-page pipeline check.
+
 ## Left to the builder
 
 The exact learning rate and epoch count (from the trial), the share of downscaled copies (about 20%), how many no-text
