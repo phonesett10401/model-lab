@@ -28,10 +28,14 @@ OWN = {'pepper': 'Pepper&Carrot', 'blackjack': 'Black Jack', 'comix': 'Comix'}  
 # leak across a page split); rf-manhua-b has no Roboflow copies, so a share of its pages is enough.
 HELD_OUT = {'manga-text-detection', 'rf-webtoon-segmented'}
 TEST_SHARE = {'rf-manhua-b': 15}  # percent of an imported source's pages held out as test
-# Most training pages a round 4 source adds (picked by page-name hash, so the same each run); the rest stay out. Keeps an
-# epoch near 8,600 pages (about 40 minutes on Kaggle's T4, against 1.5 hours for all 18,752), within the free GPU hours.
-TRAIN_CAP = {'rf-manhua-a': 900, 'rf-manhua-b': 600, 'rf-webtoon-bubbles': 700, 'hf-manga-bubbles': 800,
-             'rf-bubble-shapes': 800, 'rf-manga-segment': 300, 'rf-manga-bubble': 500}
+# Most training pages a round 4 source adds (picked by page-name hash, so the same each run); the rest stay out.
+# Round 4b halved round 4's caps: at 54% of the pages the new sets drowned out old American and Western (round 4 lost 6
+# points on old American). About 7,600 pages an epoch with REPEAT.
+TRAIN_CAP = {'rf-manhua-a': 450, 'rf-manhua-b': 300, 'rf-webtoon-bubbles': 350, 'hf-manga-bubbles': 400,
+             'rf-bubble-shapes': 400, 'rf-manga-segment': 150, 'rf-manga-bubble': 250}
+# Round 4b: training pages of these sources (by source-name prefix) are listed this many times in train.json, so the
+# styles round 4 lost ground on weigh more (old American goes from 8% to about 18% of the pages).
+REPEAT = {'Comix': 2, 'Pepper&Carrot': 2, 'Black Jack': 2, 'rf-comicbubbles': 3}
 MIN_TEST = 30
 VAL = 10  # percent of an imported source's pages that go to val
 # Claude's hand-fixed labels for 42 Comix test pages (3 a book), file -> labels: Comix test pages are autolabels, too
@@ -55,6 +59,11 @@ def assign(pages: list[c.Page], held_out: set[str], dropped: set[str], test_shar
             k, t = int(hashlib.sha256(p.file.encode()).hexdigest(), 16) % 100, (test_share or {}).get(p.source, 0)
             out[p.file] = 'test' if k < t else 'val' if k < t + VAL else 'train'
     return out
+
+
+def times(p: c.Page, repeat: dict[str, int]) -> int:
+    """How many times a training page is listed (REPEAT)."""
+    return next((n for k, n in repeat.items() if p.source.startswith(k)), 1)
 
 
 def cap_train(pages: list[c.Page], split: dict[str, str], cap: dict[str, int]) -> None:
@@ -131,7 +140,8 @@ def main() -> None:
     reviewed_test(pages, split, items, json.loads(REVIEWED.read_text(encoding='utf8')))
     out = C3 / 'annotations'
     for s in ('train', 'val', 'test'):
-        c.write_coco(out / f'{s}.json', [items[p.file] for p in pages if split.get(p.file) == s])
+        c.write_coco(out / f'{s}.json', [items[p.file] for p in pages if split.get(p.file) == s
+                                         for _ in range(times(p, REPEAT) if s == 'train' else 1)])
     for style in c.STYLES:
         test = [items[p.file] for p in pages if split.get(p.file) == 'test' and p.style == style]
         if test:
