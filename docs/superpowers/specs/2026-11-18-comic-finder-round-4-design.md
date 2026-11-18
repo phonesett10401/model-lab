@@ -158,6 +158,24 @@ Goal: keep round 4's manhua and webtoon gains and win back old American, Western
 Work: `REPEAT` plus a test; new caps; rebuild splits; dataset version with round 4's checkpoint as the only file in
 `weights/`; push a private kernel `comic-finder-r4b-l` (6 epochs); measure as above, plus the 28-page pipeline check.
 
+### Round 4b result (2026-11-19): not shipped
+
+6 epochs from round 4's weights (3 h 24 min, 7,561 entries an epoch; best validation AP 0.514 at epoch 1, round 4
+ended at 0.529). Bubbles found, fp16, same pages:
+
+| Test set | Round 3 | Round 4 | Round 4b |
+|---|---|---|---|
+| manhua | 88.2% | 99.1% | 98.9% |
+| webtoon | 83.7% | 91.7% | 89.0% |
+| manga | 93.6% | 93.2% | 91.4% |
+| modern Western | 94.8% | 93.1% | 90.4% |
+| old American | 88.3% | 82.2% | 80.7% |
+| test97 | 92.4% | 89.7% | 86.9% |
+
+Extra boxes a page fell further (test97 3.4 → 2.3, manga 2.0 → 1.4), but bubbles found fell in every style, including
+the ones it repeated. Repeating old pages did not win them back, so the fallback (round 3's weights, 4b mix) is unlikely
+to either. Round 3 stays live; the 28-page pipeline check was skipped because the finder already fails the rule.
+
 ## Left to the builder
 
 The exact learning rate and epoch count (from the trial), the share of downscaled copies (about 20%), how many no-text
