@@ -28,6 +28,10 @@ OWN = {'pepper': 'Pepper&Carrot', 'blackjack': 'Black Jack', 'comix': 'Comix'}  
 # leak across a page split); rf-manhua-b has no Roboflow copies, so a share of its pages is enough.
 HELD_OUT = {'manga-text-detection', 'rf-webtoon-segmented'}
 TEST_SHARE = {'rf-manhua-b': 15}  # percent of an imported source's pages held out as test
+# Most training pages a round 4 source adds (picked by page-name hash, so the same each run); the rest stay out. Keeps an
+# epoch near 8,600 pages (about 40 minutes on Kaggle's T4, against 1.5 hours for all 18,752), within the free GPU hours.
+TRAIN_CAP = {'rf-manhua-a': 900, 'rf-manhua-b': 600, 'rf-webtoon-bubbles': 700, 'hf-manga-bubbles': 800,
+             'rf-bubble-shapes': 800, 'rf-manga-segment': 300, 'rf-manga-bubble': 500}
 MIN_TEST = 30
 VAL = 10  # percent of an imported source's pages that go to val
 # Claude's hand-fixed labels for 42 Comix test pages (3 a book), file -> labels: Comix test pages are autolabels, too
@@ -51,6 +55,15 @@ def assign(pages: list[c.Page], held_out: set[str], dropped: set[str], test_shar
             k, t = int(hashlib.sha256(p.file.encode()).hexdigest(), 16) % 100, (test_share or {}).get(p.source, 0)
             out[p.file] = 'test' if k < t else 'val' if k < t + VAL else 'train'
     return out
+
+
+def cap_train(pages: list[c.Page], split: dict[str, str], cap: dict[str, int]) -> None:
+    """Leaves out a capped source's training pages past its cap (in place), lowest page-name hashes kept."""
+    key = lambda p: hashlib.sha256(p.file.encode()).hexdigest()
+    for src, n in cap.items():
+        train = sorted((p for p in pages if p.source == src and split.get(p.file) == 'train'), key=key)
+        for p in train[n:]:
+            del split[p.file]
 
 
 def reviewed_test(pages: list[c.Page], split: dict[str, str], items: dict[str, tuple], reviewed: dict[str, list]) -> None:
@@ -114,6 +127,7 @@ def main() -> None:
             pages += [replace(p, split='') for p in imported if p.file in got]
         items.update(got)
     split = assign(pages, HELD_OUT, c.dropped(), TEST_SHARE)
+    cap_train(pages, split, TRAIN_CAP)
     reviewed_test(pages, split, items, json.loads(REVIEWED.read_text(encoding='utf8')))
     out = C3 / 'annotations'
     for s in ('train', 'val', 'test'):

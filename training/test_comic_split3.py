@@ -1,6 +1,6 @@
 """Round 3's splits: test pages never leak into training. Run: python test_comic_split3.py"""
 import comic_common as c
-from comic_split3 import MIN_TEST, assign, reviewed_test, style_counts, to_test97
+from comic_split3 import MIN_TEST, assign, cap_train, reviewed_test, style_counts, to_test97
 
 
 def page(file, source, group, style='manga', split=''):
@@ -30,6 +30,11 @@ ms = assign(mh + pages, held_out=set(), dropped=set(), test_share={'rf-manhua-b'
 share = sum(ms[p.file] == 'test' for p in mh) / len(mh)
 assert 0.1 < share < 0.2 and {ms[p.file] for p in mh} == {'train', 'val', 'test'}, share
 assert 'test' not in {ms[p.file] for p in pages if p.source == 'lie-eater'}
+# a training cap keeps that many of a source's training pages, the same ones each run; its val and test pages stay
+cs1 = dict(ms); cap_train(mh, cs1, {'rf-manhua-b': 50})
+cs2 = dict(ms); cap_train(mh, cs2, {'rf-manhua-b': 50})
+assert sum(v == 'train' for f, v in cs1.items() if f.startswith('mh_')) == 50 and cs1 == cs2
+assert [f for f in ms if ms[f] != 'train' and f.startswith('mh_')] == [f for f in cs1 if cs1[f] != 'train' and f.startswith('mh_')]
 # synthetic pages train only, even when their art page's episode is a test episode; reviewed drops are left out
 assert all(split[p.file] == 'train' for p in pages if p.file.startswith('synth3_'))
 assert 'bj1_0.jpg' not in split

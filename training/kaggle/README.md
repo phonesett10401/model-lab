@@ -47,6 +47,6 @@ python kaggle/make_dataset.py ../../kaggle-comic3 <your kaggle username> runs/co
 kaggle datasets version -p ../../kaggle-comic3 --dir-mode zip -m "round 4: 9 more bubble sets, round 3 weights"
 ```
 
-The notebook defaults to round 4 (`TUNE = True`, `EPOCHS = 20`, run `r4-dfine-l`): it starts from the checkpoint in the
-dataset's `weights/` folder with a lower learning rate (`comic_train.TUNE_LR`). Run a short trial first (`EPOCHS = 5`)
+The notebook defaults to round 4 (`TUNE = True`, `EPOCHS = 12`, run `r4-dfine-l`; about 40 minutes an epoch on 8,617 pages): it starts from the checkpoint in the
+dataset's `weights/` folder with a lower learning rate (`comic_train.TUNE_LR`). Run a short trial first (`EPOCHS = 2`)
 to check the loss falls, then the full run. Resuming works as in round 3.

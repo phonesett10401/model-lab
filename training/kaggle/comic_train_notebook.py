@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 SIZE = 'l'            # D-FINE size: m, l or x
-EPOCHS = 20
+EPOCHS = 12
 RUN = f'r4-dfine-{SIZE}'
 TUNE = True          # round 4: start from round 3's weights (weights/ in the dataset); False trains from scratch
 RESUME_FROM = ''      # e.g. '/kaggle/input/comic-r3-run/r3-dfine-l' (a folder holding last.pth and config.yml)
