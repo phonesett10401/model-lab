@@ -176,6 +176,24 @@ Extra boxes a page fell further (test97 3.4 → 2.3, manga 2.0 → 1.4), but bub
 the ones it repeated. Repeating old pages did not win them back, so the fallback (round 3's weights, 4b mix) is unlikely
 to either. Round 3 stays live; the 28-page pipeline check was skipped because the finder already fails the rule.
 
+### Blending round 3 and round 4 (2026-11-22)
+
+Round 4 was fine-tuned from round 3, so their weights can be averaged into one model of the same size, with no training
+(`w × round 4 + (1 − w) × round 3`, EMA weights). Bubbles found, fp16, same pages (extra boxes a page in brackets):
+
+| Test set | Round 3 | 30% round 4 | 50% | 70% |
+|---|---|---|---|---|
+| manhua | 88.2% (0.3) | 95.5% (0.4) | 97.3% (0.3) | 99.1% (0.1) |
+| webtoon | 83.7% (0.4) | 89.0% (0.4) | 89.7% (0.4) | 91.4% (0.3) |
+| manga | 93.6% (1.8) | 93.6% (1.9) | 93.7% (2.0) | 93.8% (2.0) |
+| modern Western | 94.8% (1.9) | 95.2% (1.9) | 95.2% (1.9) | 95.2% (1.9) |
+| old American | 88.3% (2.1) | 87.5% (2.2) | 86.9% (2.0) | 85.2% (2.0) |
+| test97 | 92.4% (3.6) | 92.2% (4.0) | 91.8% (4.1) | 91.4% (3.9) |
+
+The 30% blend is the only one with no style down more than 1 point, and it gains 7 points on manhua and 5 on webtoon.
+But extra boxes don't drop (test97 rises 3.6 → 4.0), so it doesn't meet the rule's "extra boxes drop" clause as written.
+The 28-page pipeline check decides whether those boxes matter (most extra boxes are dropped later as junk).
+
 ## Left to the builder
 
 The exact learning rate and epoch count (from the trial), the share of downscaled copies (about 20%), how many no-text
