@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 // Fixes from the Hallmark audit (docs: the audit run on 2026-10-25).
-const pages = ['/', '/assistants', '/assistant/pathum-rai', '/audits/pathum-rai', '/models/sea-creature-detector', '/models/sound-detective', '/intro', '/present'];
+const pages = ['/', '/assistants', '/assistant/pathum-rai', '/audits/pathum-rai', '/models/sea-creature-detector', '/models/sound-detective', '/intro'];
 
 test('no emoji or picture characters stand in for icons', async ({ page }) => {
 	for (const path of pages) {

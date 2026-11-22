@@ -25,7 +25,7 @@
 		if (id === '/' || id.startsWith('/models') || id.startsWith('/audits')) return 'models';
 		return null;
 	});
-	const bare = $derived(page.route.id === '/intro' || page.route.id === '/present' || (page.route.id?.startsWith('/og-card') ?? false));
+	const bare = $derived(page.route.id === '/intro' || (page.route.id?.startsWith('/og-card') ?? false));
 </script>
 
 <svelte:head>
@@ -40,7 +40,6 @@
 	<header class="topbar">
 		<a class="wordmark mono" href="/">AI MODEL LAB</a>
 		<nav class="tools">
-			<a class="intro-link mono" href="/present">Present</a>
 			<a class="intro-link mono" href="/intro"><svg class="play" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 1l7 4-7 4z" fill="currentColor" /></svg><span class="wide">Watch the </span>intro</a>
 			<ThemeToggle />
 		</nav>
