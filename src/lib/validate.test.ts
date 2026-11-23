@@ -60,6 +60,6 @@ describe('drafts', () => {
 
 	it('audits are hidden on production for now', () => {
 		expect(visible(allEntries, false).some((e) => e.kind === 'audit')).toBe(false);
-		expect(visible(allEntries, false).find((e) => e.slug === 'sound-detective')?.kind).toBe('model');
+		expect(visible(allEntries, false).find((e) => e.slug === 'gender-classifier')?.kind).toBe('model');
 	});
 });

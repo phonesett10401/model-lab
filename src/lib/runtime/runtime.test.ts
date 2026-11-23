@@ -14,7 +14,7 @@ describe('runtime slot', () => {
 	});
 
 	it('non-live models have no runtime', async () => {
-		expect(await getRuntime({ ...models.find((m) => m.slug === 'sea-creature-detector')!, status: 'planned' })).toBeNull();
+		expect(await getRuntime(models.find((m) => m.slug === 'fresh-or-spoiled')!)).toBeNull();
 	});
 
 	it('drafts get the demo runtime, which replays sample outputs', async () => {

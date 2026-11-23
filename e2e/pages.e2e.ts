@@ -1,5 +1,14 @@
 import { expect, test } from '@playwright/test';
 
+test('a planned model page is honest about having no numbers', async ({ page }) => {
+	await page.goto('/models/fresh-or-spoiled');
+	await expect(page.getByRole('heading', { level: 1, name: 'Fresh or spoiled' })).toBeVisible();
+	await expect(page.getByText('Planned', { exact: true })).toBeVisible();
+	await expect(page.getByText('not yet measured').first()).toBeVisible();
+	await expect(page.locator('main')).not.toContainText('%');
+	await expect(page).toHaveTitle('Fresh or spoiled · AI Model Lab');
+});
+
 test('the live detector page shows its measured report card', async ({ page }) => {
 	await page.goto('/models/sea-creature-detector');
 	await expect(page.getByRole('heading', { level: 1, name: 'Sea creature detector' })).toBeVisible();
