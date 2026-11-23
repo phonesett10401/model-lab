@@ -24,7 +24,7 @@ for (const vp of [{ width: 768, height: 1024 }, { width: 844, height: 390 }])
 test('tapping a hero dot stops the rotation for good', async ({ page }) => {
 	await page.clock.install();
 	await page.goto('/');
-	await page.getByRole('button', { name: 'Show text sample' }).click();
+	await page.getByRole('button', { name: 'Show comic sample' }).click();
 	const hero = page.getByRole('figure', { name: /Sample specimen/ });
 	await page.mouse.move(0, 0); // leave the figure: hover pause no longer applies
 	await page.clock.fastForward(12000);
