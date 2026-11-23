@@ -26,45 +26,12 @@ const creature: ModelEntry = {
 	}
 };
 
-const produce: ModelEntry = {
-	kind: 'model', slug: 'fresh-or-spoiled', no: 2, name: 'Fresh or spoiled',
-	purpose: 'Tells whether produce in a photo is fresh or going off.',
-	status: 'planned', input: 'image', labels: ['fresh', 'spoiled'], unsureBelow: 0.6, samples: [],
-	report: {
-		data: [
-			{ label: 'Source', value: null },
-			{ label: 'Photos', value: null },
-			{ label: 'Split', value: null }
-		],
-		metrics: { title: 'Accuracy per category', rows: [{ label: 'fresh', value: null }, { label: 'spoiled', value: null }] },
-		failures: []
-	}
-};
-
-const gender: ModelEntry = {
-	kind: 'model', slug: 'gender-classifier', no: 3, name: 'Gender classifier',
-	purpose: 'Tests how reliably gender can be read from a photo, and for whom it fails.',
-	status: 'planned', input: 'image', labels: [], unsureBelow: 0.6, samples: [],
-	report: {
-		data: [
-			{ label: 'Base model', value: null },
-			{ label: 'Test set', value: null },
-			{ label: 'Known limits', value: 'Gender can’t be reliably seen in a photo, so results are reported per group' }
-		],
-		metrics: {
-			title: 'Accuracy by group',
-			rows: [{ label: 'by skin tone', value: null }, { label: 'by age group', value: null }, { label: 'trans and non-binary people', value: null }]
-		},
-		failures: []
-	}
-};
-
 // Numbers come from the detector's test run (training/comic_evaluate.py) and the page's own run over the test pages
 // (pnpm eval:comic), never typed by hand. null shows "not yet measured".
 const share = (v: number | null) => (v === null ? null : `${Math.round(v * 100)}%`);
 const comicStyles = Object.entries(comic.styles);
 const comicTranslator: ModelEntry = {
-	kind: 'model', slug: 'comic-translator', no: 5, name: 'Comic translator',
+	kind: 'model', slug: 'comic-translator', no: 3, name: 'Comic translator',
 	purpose: 'Finds the English in a comic page and letters it back in Burmese. The page stays on your device; only the words are sent to be translated.',
 	status: 'live', task: 'translate', input: 'image', labels: ['speech bubble', 'caption', 'text on art', 'sound effect'], unsureBelow: 0.3,
 	samples: [],
@@ -96,7 +63,7 @@ const comicTranslator: ModelEntry = {
 
 // Numbers, samples and failures come from the evaluation (training/sounds_pick_examples.py), never typed by hand.
 const soundDetective: ModelEntry = {
-	kind: 'model', slug: 'sound-detective', no: 4, name: 'Sound detective',
+	kind: 'model', slug: 'sound-detective', no: 2, name: 'Sound detective',
 	purpose: 'Listens to a recording and marks which everyday sounds happen, and when.',
 	status: 'live', task: 'events', input: 'audio', labels: sounds.classes, unsureBelow: sounds.threshold,
 	samples: sounds.samples as Sample[],
@@ -218,7 +185,7 @@ const draftAudit: AuditEntry = {
 
 // Drafts are compiled out of production builds entirely (not just hidden), so their sample content never ships.
 export const allEntries: Entry[] = [
-	creature, produce, gender, soundDetective, comicTranslator,
+	creature, soundDetective, comicTranslator,
 	...(__SHOW_DRAFTS__ ? [draftShapes, draftMood, draftSounds, draftPlants, draftAudit] : [])
 ];
 
