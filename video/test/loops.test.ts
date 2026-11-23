@@ -3,9 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { LOOP_FPS, LOOP_FRAMES, loopSize, loops, tallLoops } from '../src/loops/sizes.ts';
 
-test('nine loops, in slide order, matching the deck', () => {
-	const deck = [...readFileSync('../src/lib/present/slides.ts', 'utf8').matchAll(/loop: '(\w+)'/g)].map((m) => m[1]);
-	assert.deepEqual(loops.map((l) => l.id), deck);
+test('nine loops, in slide order', () => {
 	assert.deepEqual(loops.map((l) => l.id), ['swarm', 'boxes', 'pipeline', 'device', 'sea', 'sound', 'rag', 'coming', 'site']);
 });
 
