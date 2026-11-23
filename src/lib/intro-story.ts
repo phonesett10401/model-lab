@@ -1,8 +1,8 @@
 export const storySteps = [
-	{ title: 'One job each.', body: 'Small models, each trained for a single task: recognising images, reading text, identifying sounds, sorting tables, and whatever comes next.' },
+	{ title: 'One job each.', body: 'Small models, each trained for a single task: recognising sea creatures, identifying sounds, translating comics into Burmese, answering from documents, and whatever comes next.' },
 	{ title: 'Made by hand.', body: 'Examples are collected and labelled (photos, sentences, sound clips), the model is trained, then tested on examples it has never seen.' },
 	{ title: 'Honest report cards.', body: 'Every model shows its accuracy per category and the cases where it’s wrong. No number appears until it’s been measured.' },
-	{ title: 'Runs on your device.', body: 'Models run in your browser. Your photos, text and recordings never leave your phone or laptop.' }
+	{ title: 'Runs on your device.', body: 'Models run in your browser. Your photos and recordings never leave your phone or laptop; the comic translator sends only the words, never the page.' }
 ];
 
 const clamp = (x: number) => Math.min(1, Math.max(0, x));

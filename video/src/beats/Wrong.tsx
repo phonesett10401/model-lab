@@ -38,10 +38,10 @@ export const Wrong: React.FC<{ layout: Layout; from: number }> = ({ layout, from
 		<>
 			<BeatGlow from={from} strength={0.6 + hit} />
 			<AbsoluteFill style={{ transform: `translate(${shakeX}px, ${shakeY}px)` }}>
-				<Bench layout={layout} u={u} photo="cuttlefish.jpg" overlay={stamp}>
+				<Bench layout={layout} u={u} photo="seal.jpg" overlay={stamp}>
 					<Caption u={u}>…and we show where it’s wrong.</Caption>
-					<div style={{ fontFamily: font.mono, fontSize: 28 * u, color: c.faint }}>true: cuttlefish</div>
-					<div style={{ fontFamily: font.serif, fontSize: 96 * u, color: c.red, opacity: said, textShadow: `${split * 0.5}px 0 rgba(0,240,255,0.6), ${-split * 0.5}px 0 rgba(255,0,90,0.6)` }}>said: squid 71%</div>
+					<div style={{ fontFamily: font.mono, fontSize: 28 * u, color: c.faint }}>true: seal</div>
+					<div style={{ fontFamily: font.serif, fontSize: 96 * u, color: c.red, opacity: said, textShadow: `${split * 0.5}px 0 rgba(0,240,255,0.6), ${-split * 0.5}px 0 rgba(255,0,90,0.6)` }}>said: sea lion 79%</div>
 				</Bench>
 				{/* Glitch slices for a few frames after the hit. */}
 				{hit > 0.5 &&
