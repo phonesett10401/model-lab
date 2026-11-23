@@ -186,9 +186,10 @@ test('on the narrowest phone, every scene stays inside its picture once built', 
 test('the story covers every kind of model, not just images', async ({ page }) => {
 	await page.goto('/intro');
 	const story = page.locator('#story ol');
-	for (const word of [/images/, /text/, /sounds/, /tables/]) await expect(story).toContainText(word);
+	for (const word of [/sea creatures/, /sounds/, /comics/, /documents/]) await expect(story).toContainText(word);
 	await expect(story).not.toContainText('Roboflow');
 	for (const scene of ['1', '3'])
-		for (const kind of ['image', 'text', 'audio', 'table'])
+		for (const kind of ['image', 'text', 'audio', 'docs'])
 			await expect(page.locator(`.scene[data-i="${scene}"] [data-kind="${kind}"]`)).toHaveCount(1);
+	await expect(page.locator('#story [data-kind="table"]')).toHaveCount(0);
 });
