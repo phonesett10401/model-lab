@@ -5,18 +5,18 @@
 	// Fixed, hand-picked orbit and particle layouts: no randomness, so server and client render the same.
 	const swarm = Array.from({ length: 24 }, (_, i) => ({ a: (i * 360) / 24, y: ((i * 37) % 11) - 5, s: 0.7 + ((i * 53) % 7) / 20 }));
 	const bits = Array.from({ length: 16 }, (_, i) => ({ x: ((i * 29) % 17) - 8, d: (i % 8) * 0.06 }));
-	// The lab's four kinds of input; each swarm box carries one mark, evenly mixed.
-	const marks = ['▣', 'Aa', '∿', '⊞'];
+	// The lab's four kinds of work (photos, comics, sounds, documents); each swarm box carries one mark, evenly mixed.
+	const marks = ['▣', 'Aa', '∿', '¶'];
 	const wave = [3, 6, 10, 5, 8, 12, 7, 4, 9, 6, 3];
 </script>
 
-<!-- One sample of each kind the lab takes: a photo, a sentence, a sound, a table row. -->
+<!-- One sample of each kind: a sea photo, a comic speech bubble (English to Burmese), a sound, and a document the RAG assistants answer from (the lock: restricted files stay private). -->
 {#snippet samples()}
 	<span class="kinds">
-		<span class="k" data-kind="image"><img src="/samples/octopus.jpg" alt="" width="512" height="512" /></span>
-		<span class="k txt" data-kind="text"><b class="serif">Aa</b><i></i><i></i></span>
+		<span class="k photo" data-kind="image"><img src="/samples/sea/sea-turtle.jpg" alt="" width="1024" height="768" /></span>
+		<span class="k txt" data-kind="text"><span class="bubble"><b class="serif">Aa</b><b class="my">က</b></span></span>
 		<span class="k wave" data-kind="audio">{#each wave as h, i (i)}<i style="--h: {h}"></i>{/each}</span>
-		<span class="k grid" data-kind="table">{#each Array(9) as _, i (i)}<i></i>{/each}</span>
+		<span class="k doc" data-kind="docs"><i></i><i></i><i></i><svg class="lock-icon" viewBox="0 0 12 14"><rect x="1" y="6" width="10" height="7" rx="1" /><path d="M3.5 6V4a2.5 2.5 0 0 1 5 0v2" /></svg></span>
 	</span>
 {/snippet}
 
@@ -32,7 +32,7 @@
 				<span class="box" style="--a: {b.a}deg; --y: {b.y}; --s: {b.s}"><span class="mark mono">{marks[i % 4]}</span></span>
 			{/each}
 		</div>
-		<div class="hero"><span class="mono">IMAGE<br />TEXT<br />AUDIO<br />TABLE</span><span class="bar"></span></div>
+		<div class="hero"><span class="mono">PHOTOS<br />COMICS<br />SOUNDS<br />DOCUMENTS</span><span class="bar"></span></div>
 	</div>
 
 	<!-- 2 · Made by hand: one sample of each kind travels Collect → Train → Test along a glowing line; a box locks on at Test. -->
@@ -106,19 +106,20 @@
 		/* Only boxes facing the viewer show their mark, so none reads mirrored as it swings round the back. */
 		opacity: clamp(0, calc(cos(var(--a) + var(--t) * 140deg) * 6), 1); }
 
-	/* The four sample kinds, as a 2×2 tile: photo, sentence, waveform, table. */
+	/* The four sample kinds as a 2×2 tile: photo, speech bubble, waveform, locked document. */
 	.kinds { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%; aspect-ratio: 1; }
 	.k { display: grid; place-items: center; overflow: hidden; background: var(--plate); border: 1px solid var(--hairline); min-width: 0; }
 	.k img { width: 100%; height: 100%; object-fit: cover; }
-	.txt { align-content: center; gap: 3px; padding: 12%; place-items: stretch; }
-	.txt b { font-weight: 400; font-size: 1.1em; line-height: 1; color: var(--ink); }
-	.txt i { height: 2px; background: var(--ink); opacity: 0.35; }
-	.txt i:last-child { width: 60%; }
+	.txt { padding: 6%; }
+	.bubble { display: flex; align-items: baseline; gap: 0.2em; padding: 0.1em 0.35em; white-space: nowrap; font-size: 0.85em; border: 1px solid var(--ink-soft); border-radius: 999px; line-height: 1.1; }
+	.bubble b { flex: none; overflow-wrap: normal; font-weight: 400; font-size: 1em; color: var(--ink); }
+	.bubble .my { color: var(--red); }
 	.wave { grid-auto-flow: column; align-items: center; justify-content: center; gap: 2px; }
 	.wave i { width: 2px; height: calc(var(--h) * 6%); background: var(--red); }
-	.grid { grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 14%; place-items: stretch; }
-	.grid i { background: var(--ink); opacity: 0.25; aspect-ratio: 1; }
-	.grid i:nth-child(-n + 3) { background: var(--red); opacity: 0.7; }
+	.doc { position: relative; align-content: center; gap: 3px; padding: 14%; place-items: stretch; }
+	.doc i { height: 2px; background: var(--ink); opacity: 0.35; }
+	.doc i:nth-child(3) { width: 60%; }
+	.lock-icon { position: absolute; right: 10%; bottom: 10%; width: 32%; fill: none; stroke: var(--red); stroke-width: 1.4; }
 
 	/* 2 · Pipeline */
 	.pipe { --w: 60%; --x: 16%; }
