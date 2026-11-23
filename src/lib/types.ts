@@ -55,7 +55,8 @@ export interface MetricRow {
 
 export interface ReportCard {
 	data: { label: string; value: string | null }[];
-	metrics: { title: string; lowerIsBetter?: boolean; rows: MetricRow[] };
+	/** beforeNote: what the grey `before` bars show (default: before defences, for audits). */
+	metrics: { title: string; lowerIsBetter?: boolean; beforeNote?: string; rows: MetricRow[] };
 	failures: Failure[];
 }
 

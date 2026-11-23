@@ -1,85 +1,172 @@
 import { bubbleShape } from './bubble.ts';
-import { eraseStyle, inkFor } from './erase.ts';
-import { fitText, fontRange } from './fit.ts';
-import type { Region } from './types.ts';
+import { inkFor } from './erase.ts';
+import { fontRange } from './fit.ts';
+import { inpaint, letterPixels, wordLetters } from './letters.ts';
+import { fitShaped } from './shaped.ts';
+import type { Box, Region } from './types.ts';
 
 const FONT = '"Noto Sans Myanmar"';
+/** Room kept between the Burmese and the box's edge, in pixels and as a share of each row's width. */
 const PAD = 4;
+const SIDE = 0.06;
 const LINE_HEIGHT = 1.7;
 
-/** Draws the page, erases each translated box and letters its Burmese in. Counts are kept for the fitting score. */
-export async function renderPage(
-	ctx: CanvasRenderingContext2D, page: ImageBitmap, regions: Region[]
-): Promise<{ fit: number; grown: number; cover: number; modes: Record<number, 'fit' | 'grown' | 'cover'> }> {
+export type Fits = 'fit' | 'small' | 'too-long';
+
+/**
+ * Draws the page and letters each translated box in place: only the English letters are erased (filled from the box's
+ * own background), and the Burmese is set in lines shaped to the box. Nothing outside a box is ever changed. Returns
+ * how each box's Burmese fitted: at the usual size, smaller, or too long even at the smallest size.
+ */
+export async function renderPage(ctx: CanvasRenderingContext2D, page: ImageBitmap, regions: Region[]): Promise<{ modes: Record<number, Fits> }> {
 	await document.fonts.load(`16px ${FONT}`, 'မ');
-	const counts = { fit: 0, grown: 0, cover: 0 };
-	const modes: Record<number, 'fit' | 'grown' | 'cover'> = {};
-	const full = { x: 0, y: 0, w: page.width, h: page.height };
+	const modes: Record<number, Fits> = {};
 	ctx.drawImage(page, 0, 0);
-	// Two passes: every box is cleared first, then all the text is written, so a box that overlaps another can never
-	// paint over its neighbour's Burmese.
-	const texts: { fit: ReturnType<typeof fitText>; ink: string }[] = [];
+	const opts = { ...fontRange(page.width), floor: Math.max(6, Math.round(page.width * 0.006)), lineHeight: LINE_HEIGHT };
+	const measure = (s: string, size: number) => {
+		ctx.font = `${size}px ${FONT}`;
+		return ctx.measureText(s).width;
+	};
+	// Two passes: every box is erased first, then all the text is written, so a box that overlaps another can never
+	// erase its neighbour's Burmese.
+	const texts: { r: Region; fit: ReturnType<typeof fitShaped>; ink: '#000' | '#fff'; clip: [number, number, number, number]; halo: boolean }[] = [];
 
 	for (const r of regions) {
 		const text = r.burmese.trim();
-		if (!text) continue;
-		const { x, y, w, h } = r.box;
-		const rx = Math.round(x), ry = Math.round(y), rw = Math.max(1, Math.round(w)), rh = Math.max(1, Math.round(h));
+		if (!text || r.cls === 'sfx') continue;
+		const rx = Math.max(0, Math.round(r.box.x)), ry = Math.max(0, Math.round(r.box.y));
+		const rw = Math.min(page.width, Math.round(r.box.x + r.box.w)) - rx, rh = Math.min(page.height, Math.round(r.box.y + r.box.h)) - ry;
+		if (rw < 1 || rh < 1) continue;
 		const img = ctx.getImageData(rx, ry, rw, rh);
-		const erase = eraseStyle(img.data, r.cls);
-		const inner = { x: x + PAD, y: y + PAD, w: Math.max(1, w - 2 * PAD), h: Math.max(1, h - 2 * PAD) };
-		const measure = (s: string, size: number) => {
-			ctx.font = `${size}px ${FONT}`;
-			return ctx.measureText(s).width;
-		};
-		const opts = { ...fontRange(page.width), lineHeight: LINE_HEIGHT };
-		// A speech bubble keeps its shape: only the paper inside the outline (and the letters on it) is painted over,
-		// and the Burmese goes in the oval. If it doesn't fit there, the plain box below takes over.
-		// Captions too: the finder often can't tell a boxed bubble from a caption, and both are paper inside an outline.
-		const shape = r.cls === 'bubble' || r.cls === 'caption' ? bubbleShape(img.data, rw, rh) : null;
-		// Once a bubble is found its outline always stays: the Burmese tries the oval's text area, a looser one, then a
-		// smaller font; only if all fail does it get a paper-coloured patch behind the text (never the whole box).
-		const inOval = (a: { x: number; y: number; w: number; h: number }, o = opts) => fitText(text, { x: rx + a.x, y: ry + a.y, w: a.w, h: a.h }, full, measure, o);
-		const small = { ...opts, minSize: Math.max(9, Math.round(opts.minSize * 0.8)) };
-		const tries = shape ? [inOval(shape.inner), inOval(shape.loose), inOval(shape.loose, small)] : [];
-		const fit = shape ? (tries.find((t) => t.mode === 'fit') ?? tries[2]) : fitText(text, inner, full, measure, opts);
-		counts[fit.mode]++;
-		modes[r.id] = fit.mode;
+		const words = r.words?.map((q) => ({ ...q, x: q.x - rx, y: q.y - ry }));
+		const k = zoomFor(page.width);
+		const { shape, hole, spans: local, halo } = k === 1 ? boxInside(img.data, rw, rh, r.cls, words) : zoomedInside(img, k, r.cls, words);
+		inpaint(img.data, rw, rh, hole);
+		ctx.putImageData(img, rx, ry);
+		const spans = local.map((sp): [number, number] | null => (sp ? [rx + sp[0], rx + sp[1]] : null));
 
-		let ink = '#000';
-		if (shape) {
-			const [pr, pg, pb] = shape.color.match(/\d+/g)!.map(Number);
-			for (let i = 0; i < shape.mask.length; i++)
-				if (shape.mask[i]) img.data.set([pr, pg, pb, 255], i * 4);
-			ctx.putImageData(img, rx, ry);
-			if (fit.mode !== 'fit') {
-				ctx.fillStyle = shape.color;
-				ctx.fillRect(fit.box.x - PAD, fit.box.y - PAD, fit.box.w + 2 * PAD, fit.box.h + 2 * PAD);
-			}
-		} else if (erase.mode === 'fill' && fit.mode !== 'cover') {
-			ctx.fillStyle = erase.color;
-			ctx.fillRect(x, y, w, h);
-			ink = inkFor(erase.color); // white on a dark caption
-			if (fit.mode === 'grown') ctx.fillRect(fit.box.x, fit.box.y, fit.box.w, fit.box.h);
-		} else {
-			const b = fit.mode === 'fit' ? r.box : { x: fit.box.x - PAD, y: fit.box.y - PAD, w: fit.box.w + 2 * PAD, h: fit.box.h + 2 * PAD };
-			ctx.fillStyle = '#fff';
-			ctx.fillRect(b.x, b.y, b.w, b.h);
-			ctx.strokeStyle = '#000';
-			ctx.lineWidth = 2;
-			ctx.strokeRect(b.x + 1, b.y + 1, b.w - 2, b.h - 2);
+		// Background colour for the ink: the bubble's, else the average of the box after erasing.
+		let color = shape?.color;
+		if (!color) {
+			let sr = 0, sg = 0, sb = 0;
+			for (let i = 0; i < rw * rh; i++) { sr += img.data[i * 4]; sg += img.data[i * 4 + 1]; sb += img.data[i * 4 + 2]; }
+			color = `rgb(${[sr, sg, sb].map((v) => Math.round(v / (rw * rh))).join(',')})`;
 		}
 
-		texts.push({ fit, ink });
+		const fit = fitShaped(text, spans, ry, measure, opts);
+		modes[r.id] = fit.fits;
+		texts.push({ r, fit, ink: halo ? '#000' : inkFor(color), clip: [rx, ry, rw, rh], halo });
 	}
-	for (const { fit, ink } of texts) {
+
+	for (const { r, fit, ink, clip, halo } of texts) {
+		ctx.save();
+		ctx.beginPath();
+		ctx.rect(...clip);
+		ctx.clip();
 		ctx.font = `${fit.size}px ${FONT}`;
-		ctx.fillStyle = ink;
-		ctx.textAlign = 'center';
+		ctx.textAlign = 'left';
 		ctx.textBaseline = 'middle';
-		const step = fit.size * LINE_HEIGHT;
-		const top = fit.box.y + (fit.box.h - fit.lines.length * step) / 2 + step / 2;
-		fit.lines.forEach((line, i) => ctx.fillText(line.trim(), fit.box.x + fit.box.w / 2, top + i * step));
+		ctx.fillStyle = ink;
+		// Text on the art gets a thin outline in the opposite colour so it reads without a box; on a see-through bubble a
+		// white halo as wide as the English letters' own white outline, so the art around it still shows.
+		const outline = r.cls === 'free-text' || halo;
+		if (outline) {
+			ctx.strokeStyle = ink === '#000' ? '#fff' : '#000';
+			ctx.lineWidth = halo ? Math.max(3, fit.size * 0.3) : 4;
+			ctx.lineJoin = 'round';
+		}
+		for (const l of fit.lines) {
+			if (outline) ctx.strokeText(l.text, l.x, l.y);
+			ctx.fillText(l.text, l.x, l.y);
+		}
+		ctx.restore();
 	}
-	return { ...counts, modes };
+	return { modes };
+}
+
+/** Page width the lettering works at (as PDFs are drawn). */
+const WORK_WIDTH = 1600;
+
+/**
+ * How much to enlarge a small page's boxes before finding their bubble and letters: to WORK_WIDTH, never shrunk, and
+ * not for less than 10%. On a 900 px scan the letters were 1–2 px apart and the text read as rough art, so 7 of 12
+ * bubbles on a Bleach page kept their English with the Burmese squeezed beside it; enlarged, all were lettered.
+ */
+export function zoomFor(pageWidth: number): number {
+	const k = WORK_WIDTH / pageWidth;
+	return k >= 1.1 ? k : 1;
+}
+
+/** An enlarged box's erase mask and text rows (`k`× the page's w×h) back in page pixels: a page pixel is erased when any
+ * enlarged pixel in it is, and each page row takes the text span of the enlarged row through its middle. */
+export function shrink(r: { hole: Uint8Array; spans: ([number, number] | null)[] }, w: number, h: number, k: number) {
+	const W = Math.round(w * k), hole = new Uint8Array(w * h);
+	for (let i = 0; i < r.hole.length; i++)
+		if (r.hole[i]) hole[Math.min(h - 1, Math.floor(((i / W) | 0) / k)) * w + Math.min(w - 1, Math.floor((i % W) / k))] = 1;
+	const spans = Array.from({ length: h }, (_, y): [number, number] | null => {
+		const sp = r.spans[Math.min(r.spans.length - 1, Math.floor((y + 0.5) * k))];
+		return sp ? [Math.ceil(sp[0] / k), Math.floor(sp[1] / k)] : null;
+	});
+	return { hole, spans };
+}
+
+/** boxInside on the box enlarged `k`× (smoothly), mapped back to page pixels. */
+function zoomedInside(img: ImageData, k: number, cls: Region['cls'], words?: Box[]) {
+	const W = Math.round(img.width * k), H = Math.round(img.height * k);
+	const small = document.createElement('canvas');
+	small.width = img.width;
+	small.height = img.height;
+	small.getContext('2d')!.putImageData(img, 0, 0);
+	const big = document.createElement('canvas');
+	big.width = W;
+	big.height = H;
+	const ctx = big.getContext('2d', { willReadFrequently: true })!;
+	ctx.imageSmoothingQuality = 'high';
+	ctx.drawImage(small, 0, 0, W, H);
+	const r = boxInside(ctx.getImageData(0, 0, W, H).data, W, H, cls, words?.map((q) => ({ x: q.x * k, y: q.y * k, w: q.w * k, h: q.h * k })));
+	return { ...r, ...shrink(r, img.width, img.height, k) };
+}
+
+/**
+ * One box's inside (RGBA crop, w×h): what to erase (`hole`, the English letters) and, per row, the span the Burmese may
+ * use (crop x, or null). Bubbles and captions: the box's inside (any colour), its outline and the art past it never
+ * erased or lettered over. A bubble with no paper to find (see-through, over the art) but with the OCR's word boxes
+ * (`words`, crop pixels): only the letters in them are erased, the Burmese goes where they were, black with a white halo (`halo`).
+ * Text on the art, or no clear box: the whole rectangle is the inside.
+ */
+export function boxInside(px: Uint8ClampedArray, w: number, h: number, cls: Region['cls'], words?: Box[]) {
+	// A bubble packed with text has no clear paper in its middle: look for its paper over the whole box then.
+	const shape = cls === 'free-text' ? null : (bubbleShape(px, w, h) ?? bubbleShape(px, w, h, { x: 0, y: 0, w, h }));
+	const halo = !shape && cls !== 'free-text' && !!words?.length;
+	let area = shape?.mask ?? new Uint8Array(w * h).fill(1);
+	let mid: Box = shape?.inner ?? { x: 0, y: 0, w, h };
+	if (halo) {
+		const x0 = Math.max(0, Math.floor(Math.min(...words.map((q) => q.x))) - 6), x1 = Math.min(w, Math.ceil(Math.max(...words.map((q) => q.x + q.w))) + 6);
+		const y0 = Math.max(0, Math.floor(Math.min(...words.map((q) => q.y))) - 8), y1 = Math.min(h, Math.ceil(Math.max(...words.map((q) => q.y + q.h))) + 8);
+		area = area.map((_, i) => (i % w >= x0 && i % w < x1 && i / w >= y0 && i / w < y1 ? 1 : 0));
+		mid = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+	}
+	const { hole, outline } = shape ? letterPixels(px, w, h, area, true, shape.color.match(/\d+/g)!.map(Number)) : { hole: halo ? wordLetters(px, w, h, words!) : letterPixels(px, w, h, area), outline: null };
+	// Each row's inside, through the middle column (a tail off to the side is left out), kept clear of the edge and of
+	// the outline; rows run up and down from the middle until the outline.
+	const room = outline ? area.map((v, i) => (v && !outline[i] ? 1 : 0)) : area;
+	const cx = Math.min(w - 1, Math.round(mid.x + mid.w / 2));
+	let cy = Math.min(h - 1, Math.round(mid.y + mid.h / 2));
+	// The middle can land on the outline or outside the paper (a two-lobed bubble): start from the nearest row in the room.
+	for (let d = 0; !room[cy * w + cx] && d < h; d++) {
+		if (cy - d >= 0 && room[(cy - d) * w + cx]) cy -= d;
+		else if (cy + d < h && room[(cy + d) * w + cx]) cy += d;
+	}
+	let top = cy, bottom = cy;
+	while (top > 0 && room[(top - 1) * w + cx]) top--;
+	while (bottom < h - 1 && room[(bottom + 1) * w + cx]) bottom++;
+	const spans = Array.from({ length: h }, (_, y): [number, number] | null => {
+		if (y < Math.max(PAD, top) || y > Math.min(h - PAD - 1, bottom) || !room[y * w + cx]) return null;
+		let a = cx, b = cx;
+		while (a > 0 && room[y * w + a - 1]) a--;
+		while (b < w - 1 && room[y * w + b + 1]) b++;
+		const p = Math.max(PAD, Math.round((b - a) * SIDE));
+		return b - a > 2 * p ? [a + p, b - p] : null;
+	});
+	return { shape, hole, spans, halo };
 }

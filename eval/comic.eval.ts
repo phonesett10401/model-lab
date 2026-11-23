@@ -5,11 +5,12 @@
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import type { Fits } from '../src/lib/comic/render';
 import { doneFiles, fitShare, replacedShare, wordRecall } from '../src/lib/comic/score';
 
 const TRAIN = 'training';
 const DATA = join(TRAIN, 'data/comic');
-// COMIC_EVAL_FAKE=1: a dry run of the runner itself — fake Burmese, 3 pages, everything written to a scratch folder.
+// COMIC_EVAL_FAKE=1: a dry run of the runner itself — fake Burmese, 3 pages (all pages with =all), everything written to a scratch folder.
 const FAKE = !!process.env.COMIC_EVAL_FAKE;
 const RUN = join(TRAIN, FAKE ? 'runs/comic/eval-pipeline-fake' : 'runs/comic/eval-pipeline');
 const PROGRESS = join(RUN, 'pages.jsonl');
@@ -32,7 +33,7 @@ function csvRows(path: string): Record<string, string>[] {
 }
 
 const test_ = JSON.parse(readFileSync(join(DATA, 'annotations/test.json'), 'utf8'));
-const pages = (test_.images.map((i: { file_name: string }) => i.file_name).sort() as string[]).slice(0, FAKE ? 3 : undefined);
+const pages = (test_.images.map((i: { file_name: string }) => i.file_name).sort() as string[]).slice(0, FAKE && process.env.COMIC_EVAL_FAKE !== 'all' ? 3 : undefined);
 
 async function runPage(page: Page, file: string): Promise<Done | { stop: string }> {
 	// Choosing the file finds, reads and translates it (the page's automatic run).
@@ -118,7 +119,7 @@ function writeReport() {
 	}
 	const rect = (b: number[]) => ({ x: b[0], y: b[1], w: b[2], h: b[3] });
 	let replaced = 0, total = 0;
-	const modes: ('fit' | 'grown' | 'cover')[] = [];
+	const modes: Fits[] = [];
 	const failures: { truth: string; said: string; score: number; why: string }[] = [];
 	const truth = JSON.parse(readFileSync('src/lib/data/comic-truth-pepper.json', 'utf8')) as Record<string, string[]>;
 	const before = { found: 0, total: 0 }, after = { found: 0, total: 0 };
@@ -129,7 +130,7 @@ function writeReport() {
 		const translated = r.rows.filter((x) => x.burmese.trim()).map((x) => rect(x.box));
 		const s = replacedShare(lab.map((l) => rect(l.box)), translated);
 		if (s !== null) { replaced += s * lab.length; total += lab.length; share.set(r.file, s); }
-		for (const x of r.rows) if (x.mode) modes.push(x.mode as 'fit' | 'grown' | 'cover');
+		for (const x of r.rows) if (x.mode) modes.push(x.mode as Fits);
 		for (const l of lab)
 			if (failures.length < 3 && replacedShare([rect(l.box)], translated) === 0 && l.text)
 				failures.push({ truth: `${l.cls}: “${l.text.slice(0, 60)}” (${r.file.replace(/\.jpg$/, '')})`, said: 'not replaced', score: 0, why: WHY[l.cls] });
@@ -165,7 +166,8 @@ function writeReport() {
 	writeFileSync(OUT, JSON.stringify({
 		pages: results.length,
 		replaced: r3(total ? replaced / total : null),
-		fit: r3(fitShare(modes)),
+		// Share lettered inside its box at the usual size (lettering round 2); the older `fit` measured something else.
+		fitInBox: r3(fitShare(modes)),
 		ocrPages,
 		ocrBefore: r3(before.total ? before.found / before.total : null),
 		ocrAfter: r3(after.total ? after.found / after.total : null),

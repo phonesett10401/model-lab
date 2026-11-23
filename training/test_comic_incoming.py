@@ -16,13 +16,13 @@ with tempfile.TemporaryDirectory() as d:
     csv, images = d / 'a.csv', d / 'images'
     kw = dict(source='X comics', style='manga', author='A. Author', link='https://example.org', attribution=csv, images=images)
 
-    # licence must be allowed: nothing saved or logged
+    # a licence must be recorded: nothing saved or logged
     try:
-        register(d / 'incoming/x', licence='CC BY-SA 4.0', **kw)
+        register(d / 'incoming/x', licence='', **kw)
     except ValueError:
         pass
     else:
-        raise AssertionError('accepted CC BY-SA')
+        raise AssertionError('accepted an empty licence')
     assert not csv.exists() and not images.exists()
 
     # groups come from folders
@@ -40,7 +40,7 @@ with tempfile.TemporaryDirectory() as d:
     flat = d / 'commons/Planet-Comics'
     flat.mkdir(parents=True)
     Image.new('RGB', (900, 1300), 'white').save(flat / 'page-a.jpg')
-    pages = register(flat, source='Wikimedia Commons', style='old-pd', licence='Public domain', author='see link',
+    pages = register(flat, source='Wikimedia Commons', style='old-american', licence='Public domain', author='see link',
                      link='x', attribution=csv, images=images, group_prefix='commons',
                      meta={'page-a': ('Fiction House', 'https://commons.wikimedia.org/wiki/File:Page_a.jpg')})
     assert pages[0].group == 'commons-Planet-Comics' and pages[0].file == 'commons_Planet-Comics_page-a.jpg', pages[0]

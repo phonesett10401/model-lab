@@ -1,4 +1,4 @@
-"""Shared bits for the comic text detector: classes, licence allow-list, frozen splits, attribution log."""
+"""Shared bits for the comic text detector: classes, styles, licence records, frozen splits, attribution log."""
 import csv
 import json
 import hashlib
@@ -14,10 +14,22 @@ REVIEW = HERE / 'attribution/comic-v1-review.csv'
 # Claude's by-eye count of English the automatic labels missed, on a sample of test pages: file,labelled,missed,note
 MISSED = HERE / 'attribution/comic-v1-missed.csv'
 
-CLASSES = ['bubble', 'caption', 'sfx', 'art-text']
-STYLES = ['manga', 'modern-western', 'old-pd']
-# MandaX is a business: commercial use and changes must be allowed. No NC, no academic-only, no share-alike.
-ALLOWED_LICENCES = {'CC BY 4.0', 'CC0', 'Public domain', 'KOGL Type 1', 'Black Jack free reuse'}
+# Round 3's one labelling target: one box per closed bubble or narration box, meaningful text on the art (translated)
+# and sound effects (left as drawn).
+CLASSES = ['bubble', 'caption', 'free-text', 'sfx']
+# Round 2's data (data/comic) and model (final2-dfine) use this order.
+CLASSES_V2 = ['bubble', 'caption', 'sfx', 'art-text']
+STYLES = ['modern-western', 'old-american', 'manga', 'manhua', 'webtoon']
+# Round 2 called old American pages 'old-pd'.
+OLD_STYLES = {'old-pd': 'old-american'}
+
+
+def licence_status(page) -> str:
+    """The page's recorded licence. Owner, 2026-10-25: any source that improves accuracy may be used for training (not
+    Manga109), as long as its licence status is recorded and credited; publishers' art is never shown or committed."""
+    if not page.licence.strip():
+        raise ValueError(f'{page.file}: no licence recorded')
+    return page.licence
 
 
 @dataclass
@@ -43,8 +55,7 @@ def split_for(group: str) -> str:
 
 
 def _check(p: Page) -> None:
-    if p.licence not in ALLOWED_LICENCES:
-        raise ValueError(f'{p.file}: licence {p.licence!r} is not allowed')
+    licence_status(p)
     if p.style not in STYLES:
         raise ValueError(f'{p.file}: unknown style {p.style!r}')
     if not all(getattr(p, k) for k in COLUMNS if k != 'split'):
@@ -57,6 +68,7 @@ def load_attribution(path: Path = ATTRIBUTION) -> list[Page]:
     with open(path, newline='', encoding='utf8') as f:
         pages = [Page(**row) for row in csv.DictReader(f)]
     for p in pages:
+        p.style = OLD_STYLES.get(p.style, p.style)
         _check(p)
     return pages
 
@@ -69,22 +81,22 @@ def dropped(path: Path = REVIEW) -> set[str]:
         return {r['file'] for r in csv.DictReader(f) if r['verdict'] == 'drop'}
 
 
-def coco_dict(items: list[tuple[str, int, int, list[dict]]]) -> dict:
-    """items: (file, width, height, [{'bbox': [x, y, w, h], 'category': name, 'text'?: str}])."""
-    coco = {'images': [], 'annotations': [], 'categories': [{'id': i, 'name': n} for i, n in enumerate(CLASSES)]}
+def coco_dict(items: list[tuple[str, int, int, list[dict]]], classes: list[str] = CLASSES) -> dict:
+    """items: (file, width, height, [{'bbox': [x, y, w, h], 'category': name, 'text'?: str}]); `classes` gives the ids."""
+    coco = {'images': [], 'annotations': [], 'categories': [{'id': i, 'name': n} for i, n in enumerate(classes)]}
     # ids start at 1: pycocotools reads annotation id 0 as "unmatched".
     for image_id, (file, w, h, anns) in enumerate(items, start=1):
         coco['images'].append({'id': image_id, 'file_name': file, 'width': w, 'height': h})
         for a in anns:
             x, y, bw, bh = a['bbox']
-            coco['annotations'].append({'id': len(coco['annotations']) + 1, 'image_id': image_id, 'category_id': CLASSES.index(a['category']),
+            coco['annotations'].append({'id': len(coco['annotations']) + 1, 'image_id': image_id, 'category_id': classes.index(a['category']),
                                         'bbox': [x, y, bw, bh], 'area': bw * bh, 'iscrowd': 0, **({'text': a['text']} if 'text' in a else {})})
     return coco
 
 
-def write_coco(path: Path, items: list[tuple[str, int, int, list[dict]]]) -> None:
+def write_coco(path: Path, items: list[tuple[str, int, int, list[dict]]], classes: list[str] = CLASSES) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    Path(path).write_text(json.dumps(coco_dict(items)), encoding='utf8')
+    Path(path).write_text(json.dumps(coco_dict(items, classes)), encoding='utf8')
 
 
 def add_pages(path: Path, pages: list[Page]) -> None:

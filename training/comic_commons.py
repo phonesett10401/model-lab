@@ -1,4 +1,4 @@
-"""Old public-domain comic pages from Wikimedia Commons (no login), for the 'old-pd' style.
+"""Old public-domain comic pages from Wikimedia Commons (no login), for the 'old-american' style.
 
 Run: python comic_commons.py [--per-category 6] [--total 150]
 Walks Category:Public domain comics one level down, keeps files whose own licence is public domain (never anything
@@ -100,7 +100,7 @@ def main() -> None:
             n += 1
         print(cat, '->', n, 'files so far')
     for folder in sorted(p for p in INCOMING.iterdir() if p.is_dir()):
-        register(folder, source='Wikimedia Commons', style='old-pd', licence='Public domain',
+        register(folder, source='Wikimedia Commons', style='old-american', licence='Public domain',
                  author='see link', link=ROOT, meta=meta, group_prefix='commons')
     print(n, 'Commons files registered')
 

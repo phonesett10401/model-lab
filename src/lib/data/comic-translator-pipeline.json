@@ -1,10 +1,10 @@
 {
  "pages": 97,
- "replaced": 0.845,
- "fit": 0.977,
+ "replaced": 0.839,
+ "fitInBox": 0.948,
  "ocrPages": 21,
- "ocrBefore": 0.832,
- "ocrAfter": 0.833,
+ "ocrBefore": 0.851,
+ "ocrAfter": 0.855,
  "failures": [
   {
    "truth": "bubble: “MR. MIYAMURA s CHANCES FOR A SUCCESSFUL SURGERY” (blackjack_v02_003)",
