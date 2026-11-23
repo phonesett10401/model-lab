@@ -27,9 +27,9 @@ test('keyboard: arrows move, Enter opens the page', async ({ page }) => {
 	await page.waitForLoadState('networkidle'); // handlers attach on hydration
 	await page.locator('a.plate').first().focus();
 	await page.keyboard.press('ArrowDown');
-	await expect(page.locator('[data-bench-title]')).toHaveText('Fresh or spoiled');
+	await expect(page.locator('[data-bench-title]')).toHaveText('Sound detective');
 	await page.keyboard.press('Enter');
-	await expect(page).toHaveURL(/\/models\/fresh-or-spoiled$/);
+	await expect(page).toHaveURL(/\/models\/sound-detective$/);
 });
 
 test('back button returns to the previous selection', async ({ page }) => {
@@ -48,7 +48,7 @@ test('audits are grouped separately', async ({ page }) => {
 	await page.goto('/');
 	await expect(page.getByRole('heading', { name: 'Audits' })).toBeVisible();
 	await expect(page.locator('a.plate', { hasText: 'Document assistant audit' })).toContainText('Audit');
-	await expect(page.locator('a.plate', { hasText: 'Gender classifier' })).toContainText('Image'); // a model now
+	await expect(page.locator('a.plate', { hasText: 'Sound detective' })).toContainText('Audio'); // a model
 });
 
 test('on a short laptop screen every plate in the index stays reachable without an inner scroll', async ({ page }) => {
