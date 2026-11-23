@@ -33,8 +33,8 @@ export const BeatGlow: React.FC<{ from: number; strength?: number }> = ({ from, 
 };
 
 const names = [
-	'Sea creature detector', 'Bird song reader', 'Fresh or spoiled', 'Plant disease spotter', 'Gender classifier', 'Handwriting reader',
-	'Coral health check', 'Recycling sorter', 'Leaf identifier', 'Coin sorter', 'Cloud type reader', 'Shell sorter'
+	'Sea creature detector', 'Sound detective', 'Comic translator', 'Pathum Rai assistant', 'Raffel Luo assistant',
+	'Bird song reader', 'Plant disease spotter', 'Coral health check', 'Leaf identifier', 'Cloud type reader', 'Shell sorter', 'Handwriting reader'
 ];
 
 /**

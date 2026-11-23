@@ -3,7 +3,7 @@ import { AbsoluteFill } from 'remotion';
 import { c, font } from '../theme';
 import { LoopFrame, Plate, usePhase } from './Base';
 
-const names = ['Sea creature detector', 'Fresh or spoiled', 'Bird song reader', 'Plant disease spotter', 'Sound detective', 'Coin sorter', 'Leaf identifier', 'Gender classifier', 'Recycling sorter'];
+const names = ['Sea creature detector', 'Sound detective', 'Comic translator', 'Bird song reader', 'Pathum Rai assistant', 'Plant disease spotter', 'Raffel Luo assistant', 'Leaf identifier', 'Coral health check'];
 
 /** Slide 2: a grid of small models; the highlight moves from one to the next: one job each. */
 export const Boxes: React.FC = () => {

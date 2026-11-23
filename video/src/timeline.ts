@@ -1,5 +1,5 @@
 export const FPS = 30;
-export const DURATION = 630;
+export const DURATION = 853;
 
 /**
  * The music bed: "Tech Circuit Data Stream" (Alex Morgan, Pixabay licence).
@@ -19,7 +19,7 @@ export const MUSIC = {
 
 export const BEAT_FRAMES = (FPS * 60) / MUSIC.bpm;
 
-export type BeatId = 'title' | 'fly' | 'focus' | 'expand' | 'upload' | 'result' | 'wrong' | 'report' | 'end';
+export type BeatId = 'title' | 'fly' | 'focus' | 'expand' | 'upload' | 'result' | 'wrong' | 'comic' | 'rag' | 'report' | 'end';
 
 export const beats: { id: BeatId; from: number; duration: number }[] = [
 	{ id: 'title', from: 0, duration: 75 },
@@ -29,8 +29,10 @@ export const beats: { id: BeatId; from: number; duration: number }[] = [
 	{ id: 'upload', from: 281, duration: 68 },
 	{ id: 'result', from: 349, duration: 69 },
 	{ id: 'wrong', from: 418, duration: 86 },
-	{ id: 'report', from: 504, duration: 51 },
-	{ id: 'end', from: 555, duration: 75 }
+	{ id: 'comic', from: 504, duration: 103 },
+	{ id: 'rag', from: 607, duration: 103 },
+	{ id: 'report', from: 710, duration: 68 },
+	{ id: 'end', from: 778, duration: 75 }
 ];
 
 export const beat = (id: BeatId) => beats.find((b) => b.id === id)!;
@@ -44,8 +46,15 @@ export const UPLOADED_AT = 50;
 export const BARS_AT = 24;
 export const ANSWER_AT = 44;
 /** Report beat: when each card lands, then the stamp. */
-export const COLUMNS_AT = [4, 10, 16];
+export const COLUMNS_AT = [4, 9, 14, 19];
 export const RECORDED_AT = 30;
+/** Comic beat: the scan line wipes English into Burmese between these frames. */
+export const WIPE: [number, number] = [12, 60];
+/** RAG beat: the attack is typed, refused, stamped; the leak rate counts down from 56% to 0%. */
+export const ASK_AT = 4;
+export const REPLY_AT = 34;
+export const BLOCK_AT = 50;
+export const COUNT: [number, number] = [56, 88];
 
 /** 1 on each music beat, decaying to ~0 before the next: drives the glow pulses. */
 export function beatPulse(frame: number): number {
@@ -59,6 +68,8 @@ export type Cue = { sfx: Sfx; at: number; volume: number; rate?: number };
 const upload = beat('upload').from;
 const result = beat('result').from;
 const report = beat('report').from;
+const comic = beat('comic').from;
+const rag = beat('rag').from;
 
 // Sound effects sit on top of the music.
 export const cues: Cue[] = [
@@ -73,6 +84,12 @@ export const cues: Cue[] = [
 	...Array.from({ length: 6 }, (_, i) => ({ sfx: 'tick' as const, at: result + BARS_AT + i * 3, volume: 0.22, rate: 1 + i * 0.1 })),
 	{ sfx: 'ding', at: result + ANSWER_AT, volume: 0.4 },
 	{ sfx: 'thud', at: MUSIC.dropFrame, volume: 0.8 },
+	{ sfx: 'scan', at: comic + WIPE[0], volume: 0.25 },
+	{ sfx: 'ding', at: comic + WIPE[1], volume: 0.35, rate: 1.2 },
+	...Array.from({ length: 8 }, (_, i) => ({ sfx: 'tick' as const, at: rag + ASK_AT + 2 + i * 3, volume: 0.15, rate: 1.4 })),
+	{ sfx: 'chord', at: rag + REPLY_AT, volume: 0.2 },
+	{ sfx: 'clunk', at: rag + BLOCK_AT, volume: 0.5 },
+	{ sfx: 'ding', at: rag + COUNT[1], volume: 0.35 },
 	...COLUMNS_AT.map((f) => ({ sfx: 'paper' as const, at: report + f, volume: 0.4 }))
 ];
 

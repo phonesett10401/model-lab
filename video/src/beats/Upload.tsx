@@ -6,7 +6,7 @@ import { BeatGlow } from '../fx';
 import { DROP_AT, UPLOADED_AT } from '../timeline';
 import { unit, type Layout } from '../layout';
 
-/** The octopus photo drops into the glowing zone; a progress ring fills. */
+/** The sea-turtle photo drops into the glowing zone; a progress ring fills. */
 export const Upload: React.FC<{ layout: Layout; from: number }> = ({ layout, from }) => {
 	const frame = useCurrentFrame();
 	const u = unit(layout);
@@ -16,7 +16,7 @@ export const Upload: React.FC<{ layout: Layout; from: number }> = ({ layout, fro
 	return (
 		<>
 			<BeatGlow from={from} strength={0.6} />
-			<Bench layout={layout} u={u} photo="octopus.jpg" zone dropAt={DROP_AT}>
+			<Bench layout={layout} u={u} photo="sea-turtle.jpg" zone dropAt={DROP_AT}>
 				<Caption u={u}>Every model gets tested.</Caption>
 				<div style={{ fontFamily: font.serif, fontSize: 80 * u, lineHeight: 1 }}>Drop in a photo.</div>
 				<div style={{ display: 'flex', alignItems: 'center', gap: 28 * u }}>

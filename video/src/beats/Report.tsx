@@ -6,12 +6,13 @@ import { BeatGlow } from '../fx';
 import { COLUMNS_AT, RECORDED_AT } from '../timeline';
 import { stacked, unit, type Layout } from '../layout';
 
-// Every model in the lab gets a card; they fan out in 3D, and the top one is No. 01 with the failure just filed.
-const cards = ['No. 03 · Gender classifier', 'No. 02 · Fresh or spoiled', 'No. 01 · Sea creature detector'];
+// Every model and assistant in the lab gets a card; they fan out in 3D, and the top one is No. 01 with the failure just filed.
+// Numbers are the measured ones from src/lib/data/sea-creature-detector.json.
+const cards = ['No. 04 · RAG assistants', 'No. 03 · Comic translator', 'No. 02 · Sound detective', 'No. 01 · Sea creature detector'];
 const sections: { title: string; lines: string[] }[] = [
-	{ title: 'DATA', lines: ['Source · iNaturalist', 'Split · —'] },
-	{ title: 'ACCURACY', lines: ['octopus · —', 'squid · —', 'cuttlefish · —'] },
-	{ title: 'HOW IT FAILS', lines: ['cuttlefish → squid'] }
+	{ title: 'DATA', lines: ['7,637 photos', '767 test photos'] },
+	{ title: 'ACCURACY', lines: ['0.74 mAP@50', 'sea turtle · 0.87', 'seal · 0.68'] },
+	{ title: 'HOW IT FAILS', lines: ['seal → sea lion'] }
 ];
 
 export const Report: React.FC<{ layout: Layout; from: number }> = ({ layout, from }) => {

@@ -13,11 +13,13 @@ import { Expand } from './beats/Expand';
 import { Upload } from './beats/Upload';
 import { Result } from './beats/Result';
 import { Wrong } from './beats/Wrong';
+import { Comic } from './beats/Comic';
+import { Rag } from './beats/Rag';
 import { Report } from './beats/Report';
 import { End } from './beats/End';
 
 type Scene = React.FC<{ layout: Layout; from: number }>;
-const scenes: Record<BeatId, Scene> = { title: Title, fly: Fly, focus: Focus, expand: Expand, upload: Upload, result: Result, wrong: Wrong, report: Report, end: End };
+const scenes: Record<BeatId, Scene> = { title: Title, fly: Fly, focus: Focus, expand: Expand, upload: Upload, result: Result, wrong: Wrong, comic: Comic, rag: Rag, report: Report, end: End };
 
 export const Intro: React.FC<{ layout: Layout }> = ({ layout }) => (
 	<AbsoluteFill style={{ background: c.ground, color: c.ink, fontFamily: font.sans }}>

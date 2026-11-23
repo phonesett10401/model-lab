@@ -48,7 +48,8 @@ export const Bars: React.FC<{ u: number; rows: { label: string; score: number }[
  * Photo + side content, side by side (wide/square) or stacked (tall).
  * `zone`: an empty, glowing drop zone that the photo falls into at `dropAt`. `grid`: a tech-grid overlay for scanning.
  */
-export const Bench: React.FC<{ layout: Layout; u: number; photo: string; dropAt?: number; zone?: boolean; scan?: boolean; grid?: boolean; overlay?: React.ReactNode; children: React.ReactNode }> = ({ layout, u, photo, dropAt = -60, zone, scan, grid, overlay, children }) => {
+/** `panel` replaces the photo with any content (a comic page, a chat). */
+export const Bench: React.FC<{ layout: Layout; u: number; photo?: string; panel?: React.ReactNode; dropAt?: number; zone?: boolean; scan?: boolean; grid?: boolean; overlay?: React.ReactNode; children: React.ReactNode }> = ({ layout, u, photo, panel, dropAt = -60, zone, scan, grid, overlay, children }) => {
 	const frame = useCurrentFrame();
 	const { fps, height } = useVideoConfig();
 	const drop = spring({ frame: frame - dropAt, fps, config: { damping: 14, mass: 0.9 } });
@@ -64,7 +65,7 @@ export const Bench: React.FC<{ layout: Layout; u: number; photo: string; dropAt?
 					</div>
 				)}
 				<div style={{ position: 'absolute', inset: 0, overflow: 'hidden', border: `${2 * u}px solid ${c.hairline}`, opacity: landed ? 1 : 0, transform: `translateY(${(1 - drop) * -height * 0.8}px) rotate(${(1 - drop) * 9}deg)` }}>
-					<Img src={staticFile(`photos/${photo}`)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+					{panel ?? <Img src={staticFile(`photos/${photo}`)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
 					{grid && <AbsoluteFill style={{ backgroundImage: `linear-gradient(rgba(255,79,79,0.14) 1px, transparent 1px), linear-gradient(90deg, rgba(255,79,79,0.14) 1px, transparent 1px)`, backgroundSize: `${60 * u}px ${60 * u}px` }} />}
 					{overlay && <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center' }}>{overlay}</AbsoluteFill>}
 					{scan && <div style={{ position: 'absolute', left: 0, right: 0, top: `${scanPos * 100}%`, height: 4 * u, background: c.red, boxShadow: `0 0 ${30 * u}px ${8 * u}px rgba(255,79,79,0.6)` }} />}
