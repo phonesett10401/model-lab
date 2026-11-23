@@ -37,7 +37,7 @@
 		{#key i}
 			<div class="specimen">
 				{#if s.kind === 'image'}
-					<img src={s.src} alt="An octopus on a rocky seabed" width="512" height="512" />
+					<img src={s.src} alt={s.alt ?? ''} width="1024" height="768" />
 					<span class="scan" aria-hidden="true"></span>
 				{:else if s.kind === 'audio'}
 					<div class="wave" aria-hidden="true">{#each wave as h, n (n)}<i style="transform: scaleY({h})"></i>{/each}</div>

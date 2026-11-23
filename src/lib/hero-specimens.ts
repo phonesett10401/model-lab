@@ -4,17 +4,20 @@ export interface HeroSpecimen {
 	kind: 'image' | 'text' | 'audio' | 'chat';
 	label: string;
 	src?: string;
+	alt?: string;
 	text?: string;
 	flagged?: [number, number][];
 	predictions: Prediction[];
 }
 
 
-// Illustrative only — the hero is labelled SAMPLE.
+// Real numbers from the lab (the hero is still labelled SAMPLE):
+// the sea detector on its sea-turtle sample, the sound detective on its "two sounds at once" sample
+// (src/lib/data/*.json), and the comic translator's measured test results (97 test pages).
 const all: HeroSpecimen[] = [
-	{ kind: 'image', label: 'IMAGE', src: '/samples/octopus.jpg', predictions: [{ label: 'octopus', score: 0.94 }, { label: 'squid', score: 0.04 }, { label: 'cuttlefish', score: 0.02 }] },
-	{ kind: 'text', label: 'TEXT', text: 'The fish tasted a bit off yesterday.', predictions: [{ label: 'negative', score: 0.71 }, { label: 'neutral', score: 0.22 }, { label: 'positive', score: 0.07 }] },
-	{ kind: 'audio', label: 'AUDIO', predictions: [{ label: 'whale', score: 0.83 }, { label: 'engine', score: 0.12 }, { label: 'bubbles', score: 0.05 }] },
+	{ kind: 'image', label: 'PHOTO', src: '/samples/sea/sea-turtle.jpg', alt: 'A sea turtle swimming over a reef', predictions: [{ label: 'sea turtle', score: 0.856 }] },
+	{ kind: 'text', label: 'COMIC', text: 'The potion of Genius.', predictions: [{ label: 'text found', score: 0.97 }, { label: 'fits bubble', score: 0.948 }] },
+	{ kind: 'audio', label: 'SOUND', predictions: [{ label: 'clapping', score: 0.9944 }, { label: 'engine / traffic', score: 0.7478 }, { label: 'speech', score: 0.6751 }] },
 ];
 
 /** Prompt-injection sample: dev and preview only, compiled out of production with the audits. */
