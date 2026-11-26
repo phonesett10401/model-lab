@@ -194,6 +194,20 @@ The 30% blend is the only one with no style down more than 1 point, and it gains
 But extra boxes don't drop (test97 rises 3.6 → 4.0), so it doesn't meet the rule's "extra boxes drop" clause as written.
 The 28-page pipeline check decides whether those boxes matter (most extra boxes are dropped later as junk).
 
+**28-page pipeline check (2026-11-26), round 3 against the 30% blend, 172 labelled bubbles:**
+
+| | Round 3 | 30% blend |
+|---|---|---|
+| Bubbles found | 166 | 165 |
+| Cleanly translated (found, under 30% English left) | 149 | 147 |
+| English left, average | 11.7% | 12.5% |
+| Boxes drawn | 215 | 223 |
+| Art pixels changed outside bubbles | 70,750 | 41,382 (−42%) |
+
+The face on Black Jack v6 p.182 drops from 24,867 changed pixels to 7,090, and v6 p.21 from 12,468 to 0. The one page
+that got worse (v02 p.3, 0 → 7,533) is a wider box over a white caption on the black margin: the page looks clean.
+One Pepper&Carrot bubble (E14P05) is no longer found.
+
 ## Left to the builder
 
 The exact learning rate and epoch count (from the trial), the share of downscaled copies (about 20%), how many no-text
