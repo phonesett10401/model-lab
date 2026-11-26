@@ -81,17 +81,17 @@
    }
   },
   "manhua": {
-   "pages": 500,
+   "pages": 434,
    "bubbles": {
-    "new": 0.955,
-    "old": 0.882
+    "new": 0.953,
+    "old": 0.878
    },
    "texts": {
-    "new": 0.955,
-    "old": 0.882
+    "new": 0.953,
+    "old": 0.878
    },
    "extra_per_page": {
-    "new": 0.4,
+    "new": 0.3,
     "old": 0.3
    }
   },

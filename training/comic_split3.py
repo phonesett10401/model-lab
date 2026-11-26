@@ -14,6 +14,7 @@ import hashlib
 import json
 from collections import Counter
 from dataclasses import replace
+from pathlib import Path
 
 import numpy as np
 from PIL import Image
@@ -33,6 +34,8 @@ TEST_SHARE = {'rf-manhua-b': 15}  # percent of an imported source's pages held o
 TRAIN_CAP = {'rf-manhua-a': 900, 'rf-manhua-b': 600, 'rf-webtoon-bubbles': 700, 'hf-manga-bubbles': 800,
              'rf-bubble-shapes': 800, 'rf-manga-segment': 300, 'rf-manga-bubble': 500}
 MIN_TEST = 30
+# A test page whose 32x32 copy is within this many grey levels (on average) of a training page's is the same page.
+REPEAT_LEVELS = 8
 VAL = 10  # percent of an imported source's pages that go to val
 # Claude's hand-fixed labels for 42 Comix test pages (3 a book), file -> labels: Comix test pages are autolabels, too
 # rough to measure with (boxes over several bubbles or into panels on 106 of 168, looked at 2026-11-02).
@@ -64,6 +67,23 @@ def cap_train(pages: list[c.Page], split: dict[str, str], cap: dict[str, int]) -
         train = sorted((p for p in pages if p.source == src and split.get(p.file) == 'train'), key=key)
         for p in train[n:]:
             del split[p.file]
+
+
+def thumb(path: Path) -> np.ndarray:
+    """A 32x32 greyscale copy: the same picture re-saved or resized differs from it by a few levels on average."""
+    return np.asarray(Image.open(path).convert('L').resize((32, 32), Image.Resampling.BILINEAR), np.float32)
+
+
+def drop_test_repeats(pages: list[c.Page], split: dict[str, str], sources: set[str], thumb_of) -> list[str]:
+    """Leaves out (in place) test pages of these sources that are the same picture as a train or val page: Roboflow sets
+    share pages (rf-manhua-a and rf-manhua-b hold some of the same chapters)."""
+    seen = np.stack([thumb_of(p.file) for p in pages if split.get(p.file) in ('train', 'val')])
+    gone = []
+    for p in pages:
+        if split.get(p.file) == 'test' and p.source in sources and np.abs(seen - thumb_of(p.file)).mean(axis=(1, 2)).min() <= REPEAT_LEVELS:
+            del split[p.file]
+            gone.append(p.file)
+    return gone
 
 
 def reviewed_test(pages: list[c.Page], split: dict[str, str], items: dict[str, tuple], reviewed: dict[str, list]) -> None:
@@ -128,6 +148,8 @@ def main() -> None:
         items.update(got)
     split = assign(pages, HELD_OUT, c.dropped(), TEST_SHARE)
     cap_train(pages, split, TRAIN_CAP)
+    gone = drop_test_repeats(pages, split, set(TEST_SHARE), lambda f: thumb(c.HERE / 'data' / items[f][0]))
+    print('test pages left out as repeats of training pages:', len(gone))
     reviewed_test(pages, split, items, json.loads(REVIEWED.read_text(encoding='utf8')))
     out = C3 / 'annotations'
     for s in ('train', 'val', 'test'):

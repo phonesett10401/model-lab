@@ -217,3 +217,9 @@ splits again.
 
 The exact learning rate and epoch count (from the trial), the share of downscaled copies (about 20%), how many no-text
 pages to add (about 10% of training pages), and the minimum box size to label.
+
+**Manhua test leak fixed (code review, 2026-11-26):** 66 manhua test pages were near copies of training pages (the
+two manhua sets share pages). `comic_split3.py` now leaves out any test page whose 32×32 grey copy is within 8 grey
+levels of a training or validation page; train, val and the other test sets are unchanged. On the 434 manhua pages
+left, round 3 finds 87.8% and the 30% blend 95.3% (0.3 extra boxes each), so the gain holds. Every other number above
+is unchanged, and the report card uses the cleaned set.

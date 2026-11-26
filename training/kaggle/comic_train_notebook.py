@@ -37,7 +37,9 @@ if not VENDOR.exists():
 args = [sys.executable, DATASET / 'code/comic_train.py', 'dfine', RUN, '--data', 'comic3', '--size', SIZE,
         '--epochs', EPOCHS, '--data-root', DATASET / 'data', '--runs', RUNS, '--vendor', VENDOR]
 if TUNE and not RESUME_FROM:
-    args += ['--tune', next((DATASET / 'weights').glob('*.pth'))]
+    tune = sorted((DATASET / 'weights').glob('*.pth'))
+    assert len(tune) == 1, f"TUNE needs exactly one checkpoint in the dataset's weights/, found {tune}"
+    args += ['--tune', tune[0]]
 if RESUME_FROM:
     # Same config as the stopped run (its paths point at this notebook's folders, which are the same on every run).
     shutil.copytree(RESUME_FROM, RUNS / RUN, dirs_exist_ok=True)

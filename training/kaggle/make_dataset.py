@@ -34,8 +34,9 @@ def main() -> None:
         shutil.copy2(HERE / f, out / 'code' / f)
     shutil.copy2(HERE / 'kaggle/requirements.txt', out / 'code/kaggle/requirements.txt')
     shutil.copytree(ann, out / 'data/comic3/annotations', dirs_exist_ok=True)
-    if weights:  # round 4 fine-tunes from round 3: weights/<run>-<file>.pth
-        (out / 'weights').mkdir(exist_ok=True)
+    if weights:  # round 4 fine-tunes from round 3: weights/<run>-<file>.pth, the only file there (the notebook takes the first)
+        shutil.rmtree(out / 'weights', ignore_errors=True)
+        (out / 'weights').mkdir()
         shutil.copy2(weights, out / 'weights' / f'{weights.parent.name}-{weights.name}')
     names = files(ann)
     for name in sorted(names):
