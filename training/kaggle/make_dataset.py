@@ -1,7 +1,7 @@
 """Builds the folder for the private Kaggle dataset: our training code (code/) and every image the round 3 splits use
 (data/, same layout as training/data), plus dataset-metadata.json marked private.
 
-Run from training/: python kaggle/make_dataset.py <out folder> <kaggle username>
+Run from training/: python kaggle/make_dataset.py <out folder> <kaggle username> [<checkpoint to fine-tune from>]
 Then (the owner): kaggle datasets create -p <out folder> --dir-mode zip   (first time)
              or: kaggle datasets version -p <out folder> --dir-mode zip -m "<what changed>"
 """
@@ -26,6 +26,7 @@ def files(ann_dir: Path) -> set[str]:
 
 def main() -> None:
     out, user = Path(sys.argv[1]), sys.argv[2]
+    weights = Path(sys.argv[3]) if len(sys.argv) > 3 else None
     data = HERE / 'data'
     ann = data / 'comic3/annotations'
     (out / 'code/kaggle').mkdir(parents=True, exist_ok=True)
@@ -33,6 +34,10 @@ def main() -> None:
         shutil.copy2(HERE / f, out / 'code' / f)
     shutil.copy2(HERE / 'kaggle/requirements.txt', out / 'code/kaggle/requirements.txt')
     shutil.copytree(ann, out / 'data/comic3/annotations', dirs_exist_ok=True)
+    if weights:  # round 4 fine-tunes from round 3: weights/<run>-<file>.pth, the only file there (the notebook takes the first)
+        shutil.rmtree(out / 'weights', ignore_errors=True)
+        (out / 'weights').mkdir()
+        shutil.copy2(weights, out / 'weights' / f'{weights.parent.name}-{weights.name}')
     names = files(ann)
     for name in sorted(names):
         dest = out / 'data' / name

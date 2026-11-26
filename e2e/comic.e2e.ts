@@ -649,9 +649,9 @@ test('the report card says how it was measured', async ({ page }) => {
 	await page.goto('/models/comic-translator');
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Comic translator');
 	await expect(page.getByText('Not checked by a person.').first()).toBeVisible();
-	// Round 3: found share per style, this finder against round 2's (grey), and every data source credited
+	// Round 3: found share per style, this finder against the one before it (grey), and every data source credited
 	await expect(page.getByText('Text found per style')).toBeVisible();
-	await expect(page.getByText('Grey shows round 2’s finder.')).toBeVisible();
+	await expect(page.getByText(`Grey shows ${comic.old_label}’s finder.`)).toBeVisible();
 	await expect(page.locator('.bars > li')).toHaveCount(Object.keys(comic.styles).length);
 	for (const style of Object.keys(comic.styles)) await expect(page.locator('.bars').getByText(STYLE_NAMES[style] ?? style, { exact: true })).toBeVisible();
 	for (const credit of comic.credits) await expect(page.getByText(`Source: ${credit.source}`)).toBeVisible();

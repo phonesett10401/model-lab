@@ -37,3 +37,16 @@ After the data changes: `kaggle datasets version -p ../../kaggle-comic3 --dir-mo
 - D-FINE saves `last.pth` after every epoch except the last 8 (its no-augmentation finishing stage). A run stopped in
   those 8 epochs resumes from just before them and redoes them (about a fifth of a 40-epoch run); its best checkpoint
   so far (`best_stg1.pth`) is kept either way.
+
+## Round 4: fine-tuning from round 3
+
+From `training/`, after `python comic_split3.py` (round 4's sets are imported into `data/comic3/`):
+
+```
+python kaggle/make_dataset.py ../../kaggle-comic3 <your kaggle username> runs/comic/r3-full-l2/best_stg2.pth
+kaggle datasets version -p ../../kaggle-comic3 --dir-mode zip -m "round 4: 9 more bubble sets, round 3 weights"
+```
+
+The notebook defaults to round 4 (`TUNE = True`, `EPOCHS = 12`, run `r4-dfine-l`; about 40 minutes an epoch on 8,617 pages): it starts from the checkpoint in the
+dataset's `weights/` folder with a lower learning rate (`comic_train.TUNE_LR`). Run a short trial first (`EPOCHS = 2`)
+to check the loss falls, then the full run. Resuming works as in round 3.

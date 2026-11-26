@@ -1,6 +1,7 @@
 {
- "run": "r3-full-l2-fp16",
- "old_run": "final2-dfine",
+ "run": "r34-mix30-fp16",
+ "old_run": "r3-full-l2-fp16",
+ "old_label": "round 3",
  "data": [
   {
    "label": "Training pages: Black Jack ni Yoroshiku (Give My Regards to Black Jack)",
@@ -19,6 +20,10 @@
    "value": 2000
   },
   {
+   "label": "Training pages: hf-manga-bubbles",
+   "value": 800
+  },
+  {
    "label": "Training pages: lie-eater",
    "value": 362
   },
@@ -27,8 +32,36 @@
    "value": 488
   },
   {
+   "label": "Training pages: rf-bubble-shapes",
+   "value": 800
+  },
+  {
+   "label": "Training pages: rf-comicbubbles",
+   "value": 77
+  },
+  {
+   "label": "Training pages: rf-manga-bubble",
+   "value": 500
+  },
+  {
+   "label": "Training pages: rf-manga-segment",
+   "value": 300
+  },
+  {
+   "label": "Training pages: rf-manhua-a",
+   "value": 900
+  },
+  {
+   "label": "Training pages: rf-manhua-b",
+   "value": 600
+  },
+  {
+   "label": "Training pages: rf-webtoon-bubbles",
+   "value": 700
+  },
+  {
    "label": "Test labels",
-   "value": "Not checked by a person. Pepper&Carrot and Black Jack test pages: labelled automatically, reviewed by Claude. Old American: 42 Comix pages whose boxes Claude corrected by hand. Manga: an outside dataset's own labels (manga-text-detection, Indonesian scanlations). Each finder is scored on the boxes its page shows. Found = a box covers at least half of the bubble; text found = covers at least half of the words in it; extra boxes = boxes that find nothing (repeats, or boxes on art), counted before the page reads them: round 3's page then also drops boxes it cannot read and repeats that read the same words, so it shows fewer."
+   "value": "Not checked by a person. Pepper&Carrot and Black Jack test pages: labelled automatically, reviewed by Claude. Old American: 42 Comix pages whose boxes Claude corrected by hand. Manga: an outside dataset's own labels (manga-text-detection, Indonesian scanlations). Manhua and webtoon: held-out pages of outside datasets, with their own labels. Each finder is scored on the boxes its page shows. Found = a box covers at least half of the bubble; text found = covers at least half of the words in it; extra boxes = boxes that find nothing (repeats, or boxes on art), counted before the page reads them: the page then also drops boxes it cannot read and repeats that read the same words, so it shows fewer."
   }
  ],
  "styles": {
@@ -36,60 +69,90 @@
    "pages": 170,
    "bubbles": {
     "new": 0.936,
-    "old": 0.819
+    "old": 0.936
    },
    "texts": {
-    "new": 0.951,
-    "old": 0.844
+    "new": 0.947,
+    "old": 0.951
    },
    "extra_per_page": {
-    "new": 1.8,
-    "old": 1.0
+    "new": 1.9,
+    "old": 1.8
+   }
+  },
+  "manhua": {
+   "pages": 434,
+   "bubbles": {
+    "new": 0.953,
+    "old": 0.878
+   },
+   "texts": {
+    "new": 0.953,
+    "old": 0.878
+   },
+   "extra_per_page": {
+    "new": 0.3,
+    "old": 0.3
    }
   },
   "modern-western": {
    "pages": 47,
    "bubbles": {
-    "new": 0.948,
-    "old": 0.838
+    "new": 0.952,
+    "old": 0.948
    },
    "texts": {
     "new": 0.969,
-    "old": 0.869
+    "old": 0.969
    },
    "extra_per_page": {
     "new": 1.9,
-    "old": 1.0
+    "old": 1.9
    }
   },
   "old-american": {
    "pages": 42,
    "bubbles": {
-    "new": 0.883,
-    "old": 0.812
+    "new": 0.875,
+    "old": 0.883
    },
    "texts": {
-    "new": 0.867,
-    "old": 0.775
+    "new": 0.86,
+    "old": 0.867
    },
    "extra_per_page": {
-    "new": 2.1,
-    "old": 0.8
+    "new": 2.2,
+    "old": 2.1
+   }
+  },
+  "webtoon": {
+   "pages": 187,
+   "bubbles": {
+    "new": 0.89,
+    "old": 0.837
+   },
+   "texts": {
+    "new": 0.89,
+    "old": 0.837
+   },
+   "extra_per_page": {
+    "new": 0.4,
+    "old": 0.4
    }
   },
   "test97": {
    "pages": 97,
    "bubbles": {
-    "new": 0.924,
-    "old": 0.895
+    "new": 0.922,
+    "old": 0.924
    },
    "texts": {
     "new": 0.97,
-    "old": 0.907
+    "old": 0.97
    },
    "extra_per_page": {
-    "new": 3.6,
-    "old": 1.1
+    "new": 4.0,
+    "old": 3.6
    }
   }
  },
@@ -119,6 +182,12 @@
    "link": "https://www.peppercarrot.com/0_sources/ep01_Potion-of-Flight/"
   },
   {
+   "source": "hf-manga-bubbles",
+   "author": "PSImera (Hugging Face)",
+   "licence": "CC BY-NC 4.0 (labels, Hugging Face); art belongs to its publishers",
+   "link": "https://huggingface.co/datasets/PSImera/manga_bubbles_detect"
+  },
+  {
    "source": "lie-eater",
    "author": "hieupham154 (Kaggle)",
    "licence": "MIT (Kaggle; labels from Roboflow, CC BY 4.0); art belongs to its publishers",
@@ -135,6 +204,54 @@
    "author": "swm16a4 (Kaggle)",
    "licence": "unknown (Kaggle); art belongs to its publishers",
    "link": "https://www.kaggle.com/datasets/swm16a4/mangatextbox-detection"
+  },
+  {
+   "source": "rf-bubble-shapes",
+   "author": "Roboflow 100-VL",
+   "licence": "MIT (labels, Roboflow 100-VL); art belongs to its publishers",
+   "link": "https://universe.roboflow.com/rf100-vl/speech-bubbles-detection-r22zt-ou0u6-jols"
+  },
+  {
+   "source": "rf-comicbubbles",
+   "author": "comic-speech-bubbles (Roboflow)",
+   "licence": "CC BY 4.0 (labels, Roboflow); art belongs to its publishers",
+   "link": "https://universe.roboflow.com/comic-speech-bubbles/comicbubbles"
+  },
+  {
+   "source": "rf-manga-bubble",
+   "author": "crepidules-workspace (Roboflow)",
+   "licence": "Public Domain (labels, Roboflow); art belongs to its publishers",
+   "link": "https://universe.roboflow.com/crepidules-workspace/manga-bubble-detection"
+  },
+  {
+   "source": "rf-manga-segment",
+   "author": "Ashu (Roboflow)",
+   "licence": "MIT (labels, Roboflow); art belongs to its publishers",
+   "link": "https://universe.roboflow.com/ashu-biqfs/manga-segment_v2"
+  },
+  {
+   "source": "rf-manhua-a",
+   "author": "manhwaDev (Roboflow)",
+   "licence": "MIT (labels, Roboflow); art belongs to its publishers",
+   "link": "https://universe.roboflow.com/manhwadev/manhua-bubbles-6fho3"
+  },
+  {
+   "source": "rf-manhua-b",
+   "author": "saif (Roboflow)",
+   "licence": "MIT (labels, Roboflow); art belongs to its publishers",
+   "link": "https://universe.roboflow.com/saif-cxjs3/manhua-bubbles-1wbtl-jqnou"
+  },
+  {
+   "source": "rf-webtoon-bubbles",
+   "author": "AlexHeh (Roboflow)",
+   "licence": "CC BY 4.0 (labels, Roboflow); art belongs to its publishers",
+   "link": "https://universe.roboflow.com/alexheh/webtoon-bubble-detection-osuqx-xqdqa"
+  },
+  {
+   "source": "rf-webtoon-segmented",
+   "author": "wip-sama (Roboflow)",
+   "licence": "CC BY 4.0 (labels, Roboflow); art belongs to its publishers",
+   "link": "https://universe.roboflow.com/wip-sama-wip-sama-smastermega/webtoon-segmented"
   }
  ]
 }

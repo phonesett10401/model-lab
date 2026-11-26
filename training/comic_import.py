@@ -10,7 +10,7 @@ import datetime
 import json
 import re
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import numpy as np
@@ -26,8 +26,14 @@ ATTRIBUTION3 = c.HERE / 'attribution/comic-v3.csv'
 EXTS = {'.jpg', '.jpeg', '.png', '.webp'}
 # Masks: a region smaller than this share of the page is a speck, not a bubble.
 MIN_REGION = 0.0005
+# A strip taller than this many widths (a webtoon episode) is cut into pieces about PIECE widths tall, each cut
+# between bubbles, so the finder sees page-shaped pictures as it does in the translator.
+TALL = 2.5
+PIECE = 1.5
 # Pages whose 64-bit difference hashes differ in at most this many bits are the same page.
 SAME_PAGE_BITS = 6
+# A hash with fewer bits set than this is a nearly blank page (a white webtoon tile): never called a repeat.
+BLANK_BITS = 8
 
 
 @dataclass
@@ -51,6 +57,11 @@ class Imported:
     size: tuple[int, int]
     anns: list[dict]  # [{'bbox': [x, y, w, h], 'category': one of CLASSES}]
     complete: bool = True  # False when a text box had no bubble to grow to: its bubble would be left unlabelled
+    top: int = 0  # a piece of a tall strip: its first row in the image (size is the piece's own)
+
+    def picture(self) -> Image.Image:
+        im = Image.open(self.image).convert('RGB')
+        return im.crop((0, self.top, im.width, self.top + self.size[1])) if self.top or 0 < self.size[1] < im.height else im
 
 
 def _images(folder: Path) -> dict[str, Path]:
@@ -78,7 +89,7 @@ def _read_coco(folder: Path) -> list[tuple[Path, list[tuple[str, list[float]]]]]
 def _read_yolo(folder: Path) -> list[tuple[Path, list[tuple[str, list[float]]]]]:
     names = next((yaml.safe_load(y.read_text(encoding='utf8'))['names'] for y in sorted(folder.rglob('*.yaml'))), [])
     names = list(names.values()) if isinstance(names, dict) else names
-    labels = {p.stem: p for p in folder.rglob('*.txt') if p.parent.name == 'labels'}
+    labels = {p.stem: p for p in folder.rglob('*.txt') if 'labels' in p.parts}  # labels/ or labels/<split>/
     out = []
     for path in _images(folder).values():
         w, h = Image.open(path).size
@@ -131,7 +142,25 @@ def _read_masks(folder: Path) -> list[tuple[Path, list[tuple[str, list[float]]]]
     return out
 
 
-READERS = {'coco': _read_coco, 'yolo': _read_yolo, 'voc': _read_voc, 'masks': _read_masks}
+def _read_paddle(folder: Path) -> list[tuple[Path, list[tuple[str, list[float]]]]]:
+    """PaddleOCR detection labels: one row per page, `<image path><tab><json list of {points}>`; each text line is 'line'."""
+    files = _images(folder)
+    out = []
+    for txt in sorted(folder.rglob('*.txt')):
+        for row in txt.read_text(encoding='utf8').splitlines():
+            name, _, js = row.partition('\t')
+            path = files.get(Path(name).name)
+            if not path or not js:
+                continue
+            anns = []
+            for t in json.loads(js):
+                xs, ys = [q[0] for q in t['points']], [q[1] for q in t['points']]
+                anns.append(('line', [min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)]))
+            out.append((path, anns))
+    return out
+
+
+READERS = {'coco': _read_coco, 'yolo': _read_yolo, 'voc': _read_voc, 'masks': _read_masks, 'paddle': _read_paddle}
 
 
 def convert(src: Source, path: Path, raw: list[tuple[str, list[float]]], today: str = '') -> Imported:
@@ -157,11 +186,40 @@ def convert(src: Source, path: Path, raw: list[tuple[str, list[float]]], today: 
     return Imported(page, path, im.size, _dedupe_boxes(anns), complete)
 
 
-def import_source(src: Source, folder: Path) -> list[Imported]:
-    """Every page of a downloaded source, with its boxes in the one target. A page where a text box had no bubble to
-    grow to is left out whole: a bubble left unlabelled would teach the finder to skip it. Nothing is written."""
+def split_tall(p: Imported) -> list[Imported]:
+    """A tall strip as page-shaped pieces. Each cut is at the row nearest PIECE widths down (between 1 and 2 widths)
+    that no box crosses; a box that still crosses a cut (no free row) is dropped and its piece marked incomplete."""
+    w, h = p.size
+    if h <= TALL * w:
+        return [p]
+    spans = [(a['bbox'][1], a['bbox'][1] + a['bbox'][3]) for a in p.anns]
+    free = lambda y: all(not (y0 < y < y1) for y0, y1 in spans)
+    out, top = [], 0
+    while top < h:
+        end = h if h - top <= 2 * w else min(range(int(top + w), int(top + 2 * w)), key=lambda y: (not free(y), abs(y - top - PIECE * w)))
+        anns, complete = [], p.complete
+        for a in p.anns:
+            x, y, bw, bh = a['bbox']
+            if y >= top and y + bh <= end:
+                anns.append({**a, 'bbox': [x, round(y - top, 1), bw, bh]})
+            elif y < end and y + bh > top:
+                complete = False
+        page = replace(p.page, file=p.page.file.replace('.jpg', f'_{len(out):02d}.jpg'))
+        out.append(Imported(page, p.image, (w, end - top), anns, complete, p.top + top))
+        top = end
+    return out
+
+
+def import_source(src: Source, folder: Path, sample: int = 0) -> list[Imported]:
+    """Every page of a downloaded source (or `sample` of them, the same ones each run), with its boxes in the one target.
+    A page where a text box had no bubble to grow to is left out whole: a bubble left unlabelled would teach the finder
+    to skip it. Nothing is written."""
     today = datetime.date.today().isoformat()
-    pages = (convert(src, path, raw, today) for path, raw in READERS[src.format](Path(folder)))
+    raw_pages = READERS[src.format](Path(folder))
+    if sample and len(raw_pages) > sample:
+        keep = np.random.default_rng(0).choice(len(raw_pages), sample, replace=False)
+        raw_pages = [raw_pages[k] for k in sorted(keep)]
+    pages = (piece for path, raw in raw_pages for piece in split_tall(convert(src, path, raw, today)))
     return [p for p in pages if p.complete]
 
 
@@ -176,21 +234,21 @@ def _dedupe_boxes(anns: list[dict]) -> list[dict]:
     return out
 
 
-def _hash(path: Path) -> int:
+def _hash(p: Imported) -> int:
     """64-bit difference hash: robust to resizing and JPEG re-saving."""
-    g = np.asarray(Image.open(path).convert('L').resize((9, 8), Image.Resampling.BILINEAR), np.int16)
+    g = np.asarray(p.picture().convert('L').resize((9, 8), Image.Resampling.BILINEAR), np.int16)
     bits = (g[:, 1:] > g[:, :-1]).flatten()
     return int(''.join('1' if b else '0' for b in bits), 2)
 
 
 def dedupe(pages: list[Imported]) -> list[Imported]:
     """Drops a page that is the same as an earlier one (also across sources), so one page can't sit in two splits."""
-    kept, hashes = [], []
+    kept, hashes = [], np.zeros(len(pages), np.uint64)
     for p in pages:
-        h = _hash(p.image)
-        if any(bin(h ^ k).count('1') <= SAME_PAGE_BITS for k in hashes):
+        h = np.uint64(_hash(p))
+        if kept and np.bitwise_count(h) >= BLANK_BITS and np.bitwise_count(hashes[:len(kept)] ^ h).min() <= SAME_PAGE_BITS:
             continue
-        hashes.append(h)
+        hashes[len(kept)] = h
         kept.append(p)
     return kept
 
@@ -199,7 +257,7 @@ def save(pages: list[Imported], name: str, out: Path = DATA3, attribution: Path 
     folder = out / name
     (folder / 'images').mkdir(parents=True, exist_ok=True)
     for p in pages:
-        Image.open(p.image).convert('RGB').save(folder / 'images' / p.page.file, quality=92)
+        p.picture().save(folder / 'images' / p.page.file, quality=92)
     c.write_coco(folder / 'labels.json', [(p.page.file, *p.size, p.anns) for p in pages])
     c.add_pages(attribution, [p.page for p in pages])
 
@@ -215,16 +273,60 @@ SOURCES: dict[str, Source] = {s.name: s for s in [
            K + 'hieupham154/lie-eater-speech-bubbles', {'bubble': 'bubble'}),
 ]}
 
+# Round 4 (docs/superpowers/specs/2026-11-18-comic-finder-round-4-design.md): bubble shapes all map to bubble;
+# narration and system boxes to caption; text on the art to free-text; word-level text, titles, panels and watermarks
+# are left out (their bubbles are labelled on their own).
+R = 'https://universe.roboflow.com/'
+H = 'https://huggingface.co/datasets/'
+PUB = 'art belongs to its publishers'
+ROUND4 = [
+    Source('rf-manga-bubble', 'coco', 'manga', f'Public Domain (labels, Roboflow); {PUB}', 'crepidules-workspace (Roboflow)',
+           R + 'crepidules-workspace/manga-bubble-detection', {'bubble': 'bubble'}),
+    Source('rf-comicbubbles', 'coco', 'modern-western', f'CC BY 4.0 (labels, Roboflow); {PUB}', 'comic-speech-bubbles (Roboflow)',
+           R + 'comic-speech-bubbles/comicbubbles',
+           {**{k: 'bubble' for k in ('general-speech-bubble', 'speech-cluster-bubble', 'irregular-speech-bubble', 'irregular-thought-bubble',
+                                     'thought-bubble', 'unattributed-speech-bubble', 'stylized-speech-bubble', 'digitized-speech-bubble',
+                                     'combination-cluster-bubble')},
+            'information-bubble': 'caption', 'in-story-media-text': 'free-text'}),
+    Source('rf-webtoon-segmented', 'coco', 'webtoon', f'CC BY 4.0 (labels, Roboflow); {PUB}', 'wip-sama (Roboflow)',
+           R + 'wip-sama-wip-sama-smastermega/webtoon-segmented',
+           {**{f'balloon-{a}-{b}': 'bubble' for a in ('undefined', 'jagged', 'circular', 'spiky', 'rectangular', 'cloudy')
+               for b in ('solid', 'transparent')}, 'text-outside': 'free-text', 'sfx': 'sfx'}),
+    Source('rf-manhua-a', 'coco', 'manhua', f'MIT (labels, Roboflow); {PUB}', 'manhwaDev (Roboflow)', R + 'manhwadev/manhua-bubbles-6fho3',
+           {'speech_bubble': 'bubble', 'thinking_bubble': 'bubble', 'system_box': 'caption', 'panel_text': 'free-text', 'sfx_sound': 'sfx'}),
+    Source('rf-manhua-b', 'coco', 'manhua', f'MIT (labels, Roboflow); {PUB}', 'saif (Roboflow)', R + 'saif-cxjs3/manhua-bubbles-1wbtl-jqnou',
+           {**{k: 'bubble' for k in ('speech_bubble', 'hexagon_bubble', 'sqare_bubble', 'scream_bubble', 'think_bubble', 'spiked_bubble',
+                                     'wiggle_bubble', 'cloud_bubble')},
+            'system_bubble': 'caption', 'standalone_text': 'free-text', 'background_text': 'free-text', 'sfx_sound': 'sfx'}),
+    Source('rf-webtoon-bubbles', 'coco', 'webtoon', f'CC BY 4.0 (labels, Roboflow); {PUB}', 'AlexHeh (Roboflow)',
+           R + 'alexheh/webtoon-bubble-detection-osuqx-xqdqa',
+           {'dialog': 'bubble', 'thought': 'bubble', 'continuation': 'bubble', 'narration': 'caption', 'sound-effect': 'sfx',
+            'only-text': 'free-text', 'small-text': 'free-text', 'misc-text': 'free-text'}),
+    Source('rf-bubble-shapes', 'coco', 'manga', f'MIT (labels, Roboflow 100-VL); {PUB}', 'Roboflow 100-VL',
+           R + 'rf100-vl/speech-bubbles-detection-r22zt-ou0u6-jols',
+           {k: 'bubble' for k in ('Elipse', 'thorn', 'cloude', 'rectangle', 'other', 'sea_uchirin')}),
+    Source('rf-manga-segment', 'coco', 'manga', f'MIT (labels, Roboflow); {PUB}', 'Ashu (Roboflow)', R + 'ashu-biqfs/manga-segment_v2',
+           {'speech-balloon': 'bubble', 'thought-balloon': 'bubble', 'caption-box': 'caption'}),
+    Source('hf-manga-bubbles', 'yolo', 'manga', f'CC BY-NC 4.0 (labels, Hugging Face); {PUB}', 'PSImera (Hugging Face)',
+           H + 'PSImera/manga_bubbles_detect', {'location-of-bubbles': 'bubble'}),
+    Source('hf-webtoon-lines', 'yolo', 'webtoon', f'Apache 2.0 (labels, Hugging Face); {PUB}', 'Hares08 (Hugging Face)',
+           H + 'Hares08/webtoon_yolo26n_dataset', {'text_line': 'text'}),
+    Source('kg-manhwa-lines', 'paddle', 'manhua', f'MIT (labels, Kaggle); {PUB}', 'shinyunaa (Kaggle)', K + 'shinyunaa/ppocrv5-det-manhwa',
+           {'line': 'text'}),
+]
+SOURCES.update({s.name: s for s in ROUND4})
+
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('source', choices=sorted(SOURCES))
     ap.add_argument('folder', type=Path)
+    ap.add_argument('--sample', type=int, default=0, help='import only this many pages (the same ones each run)')
     a = ap.parse_args()
     known = []
     for f in sorted(DATA3.glob('*/labels.json')):
         if f.parent.name != a.source:
             known += [Imported(p, f.parent / 'images' / p.file, (0, 0), []) for p in c.load_attribution(ATTRIBUTION3)
                       if p.source == f.parent.name]
-    pages = [p for p in dedupe(known + import_source(SOURCES[a.source], a.folder)) if p.page.source == a.source]
+    pages = [p for p in dedupe(known + import_source(SOURCES[a.source], a.folder, a.sample)) if p.page.source == a.source]
     save(pages, a.source)
     print(a.source, len(pages), 'pages,', sum(len(p.anns) for p in pages), 'boxes')

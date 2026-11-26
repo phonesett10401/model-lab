@@ -73,6 +73,40 @@ with tempfile.TemporaryDirectory() as d:
     [b] = [a['bbox'] for a in got[0].anns if a['category'] == 'bubble']
     assert b[0] == 80 and b[2] == 240 and abs(b[1] - 67.5) <= 1 and abs(b[3] - 165) <= 1, b
 
+    # YOLO labels split into labels/<split>/ are found too
+    (d / 'ys/images/train').mkdir(parents=True), (d / 'ys/labels/train').mkdir(parents=True)
+    bubble_page().save(d / 'ys/images/train/q.png')
+    (d / 'ys/data.yaml').write_text("names: ['balloon']\n")
+    (d / 'ys/labels/train/q.txt').write_text('0 0.5 0.5 0.6 0.55\n')
+    assert len(import_source(kw('ys', 'yolo', {'balloon': 'bubble'}), d / 'ys')[0].anns) == 1
+
+    # a tall webtoon strip is cut into page-shaped pieces between bubbles, each box kept whole in its piece
+    (d / 'tall/images').mkdir(parents=True), (d / 'tall/labels').mkdir()
+    strip = Image.new('RGB', (200, 1200), 'white')
+    ImageDraw.Draw(strip).ellipse([20, 260, 180, 340], outline='black', width=3)  # crosses 300, 1.5 widths down
+    strip.save(d / 'tall/images/s.png')
+    (d / 'tall/data.yaml').write_text("names: ['balloon']\n")
+    (d / 'tall/labels/s.txt').write_text('0 0.5 0.25 0.8 0.0667\n0 0.5 0.9 0.8 0.05\n')
+    pieces = import_source(kw('tall', 'yolo', {'balloon': 'bubble'}), d / 'tall')
+    assert len(pieces) >= 2 and all(p.size[1] <= 2 * 200 for p in pieces), [p.size for p in pieces]
+    assert sum(len(p.anns) for p in pieces) == 2 and all(p.complete for p in pieces)
+    assert all(0 <= a['bbox'][1] and a['bbox'][1] + a['bbox'][3] <= p.size[1] for p in pieces for a in p.anns)
+    assert pieces[0].picture().size == pieces[0].size and len({p.page.file for p in pieces}) == len(pieces)
+
+    # PaddleOCR detection rows (path, tab, JSON points) are text lines grown to their bubble
+    (d / 'pd/images').mkdir(parents=True)
+    bubble_page().save(d / 'pd/images/r.jpg')
+    (d / 'pd/train.txt').write_text('images/r.jpg\t' + json.dumps([{'transcription': 'x', 'points': [[150, 140], [250, 140], [250, 160], [150, 160]]}]) + '\n')
+    [got] = import_source(kw('paddle', 'paddle', {'line': 'text'}), d / 'pd')
+    [a] = got.anns
+    assert a['category'] == 'bubble' and 80 <= a['bbox'][0] <= 86 and a['bbox'][3] > 140, a
+
+    # a sample picks the same pages each run, and no more than asked
+    for k in range(4):
+        bubble_page().save(d / f'y/images/s{k}.png')
+    one = [p.page.file for p in import_source(kw('yolo', 'yolo', {'balloon': 'bubble'}), d / 'y', sample=2)]
+    assert len(one) == 2 and one == [p.page.file for p in import_source(kw('yolo', 'yolo', {'balloon': 'bubble'}), d / 'y', sample=2)]
+
     # near-duplicates across sources are removed (the same page re-uploaded smaller and re-saved as JPEG)
     (d / 'dup/images').mkdir(parents=True)
     bubble_page().resize((300, 225)).save(d / 'dup/images/a-copy.jpg', quality=80)
@@ -82,6 +116,14 @@ with tempfile.TemporaryDirectory() as d:
     second = import_source(kw('dup', 'coco', {'text': 'text'}), d / 'dup')
     kept = dedupe(first + second)
     assert [p.page.file for p in kept] == ['text_a.jpg'], [p.page.file for p in kept]
+    # nearly blank pages (white webtoon tiles with a little text) all hash alike: they are not repeats of each other
+    (d / 'w/images').mkdir(parents=True)
+    for k in range(3):
+        im = Image.new('RGB', (400, 300), 'white')
+        ImageDraw.Draw(im).rectangle([40 + 90 * k, 140, 80 + 90 * k, 150], fill='black')
+        im.save(d / f'w/images/t{k}.png')
+    tiles = import_source(kw('w', 'yolo', {}), d / 'w')
+    assert len(dedupe(tiles)) == 3
 
     # every imported page has a source, style and recorded licence (and a style the target knows)
     for p in first + second:

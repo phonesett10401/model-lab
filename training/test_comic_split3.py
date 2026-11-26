@@ -1,6 +1,6 @@
 """Round 3's splits: test pages never leak into training. Run: python test_comic_split3.py"""
 import comic_common as c
-from comic_split3 import MIN_TEST, assign, reviewed_test, style_counts, to_test97
+from comic_split3 import MIN_TEST, assign, cap_train, drop_test_repeats, reviewed_test, style_counts, to_test97
 
 
 def page(file, source, group, style='manga', split=''):
@@ -24,6 +24,25 @@ assert groups['blackjack-v02'] == {'test'} and groups['blackjack-v06'] == {'test
 # held-out sources appear only in test; other imported sources never do (they have no book IDs to split by)
 assert all(split[p.file] == 'test' for p in pages if p.source == 'manga-text-detection')
 assert {split[p.file] for p in pages if p.source == 'lie-eater'} == {'train', 'val'}
+# a test share holds out about that percent of a source's pages, the rest train and val; other sources keep no test pages
+mh = [page(f'mh_{i}.jpg', 'rf-manhua-b', 'rf-manhua-b', 'manhua') for i in range(400)]
+ms = assign(mh + pages, held_out=set(), dropped=set(), test_share={'rf-manhua-b': 15})
+share = sum(ms[p.file] == 'test' for p in mh) / len(mh)
+assert 0.1 < share < 0.2 and {ms[p.file] for p in mh} == {'train', 'val', 'test'}, share
+assert 'test' not in {ms[p.file] for p in pages if p.source == 'lie-eater'}
+# a training cap keeps that many of a source's training pages, the same ones each run; its val and test pages stay
+cs1 = dict(ms); cap_train(mh, cs1, {'rf-manhua-b': 50})
+cs2 = dict(ms); cap_train(mh, cs2, {'rf-manhua-b': 50})
+assert sum(v == 'train' for f, v in cs1.items() if f.startswith('mh_')) == 50 and cs1 == cs2
+assert [f for f in ms if ms[f] != 'train' and f.startswith('mh_')] == [f for f in cs1 if cs1[f] != 'train' and f.startswith('mh_')]
+# a test page that is the same picture as a training page (re-saved: a few grey levels off) leaves the test set;
+# a different picture and other sources' test pages stay
+import numpy as np
+flat = lambda v: np.full((32, 32), v, np.float32)
+TH = {'mh_0.jpg': flat(100), 'mh_1.jpg': flat(103), 'mh_2.jpg': flat(160), 'le_0.jpg': flat(100)}
+dp = [page(f, 'lie-eater' if f.startswith('le') else 'rf-manhua-b', 'g') for f in TH]
+ds = {'mh_0.jpg': 'train', 'mh_1.jpg': 'test', 'mh_2.jpg': 'test', 'le_0.jpg': 'test'}
+assert drop_test_repeats(dp, ds, {'rf-manhua-b'}, TH.get) == ['mh_1.jpg'] and ds == {'mh_0.jpg': 'train', 'mh_2.jpg': 'test', 'le_0.jpg': 'test'}, ds
 # synthetic pages train only, even when their art page's episode is a test episode; reviewed drops are left out
 assert all(split[p.file] == 'train' for p in pages if p.file.startswith('synth3_'))
 assert 'bj1_0.jpg' not in split
