@@ -208,6 +208,11 @@ The face on Black Jack v6 p.182 drops from 24,867 changed pixels to 7,090, and v
 that got worse (v02 p.3, 0 → 7,533) is a wider box over a white caption on the black margin: the page looks clean.
 One Pepper&Carrot bubble (E14P05) is no longer found.
 
+**Shipped (owner decision, 2026-11-26):** the 30% blend replaces round 3 as the live finder, accepting the small rise
+in extra boxes for the lower art damage and the manhua and webtoon gains. Made with `training/comic_blend.py`. The
+report card now compares it with round 3. The 4b split change was reverted, so `comic_split3.py` rebuilds round 4's
+splits again.
+
 ## Left to the builder
 
 The exact learning rate and epoch count (from the trial), the share of downscaled copies (about 20%), how many no-text

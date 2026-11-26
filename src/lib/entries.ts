@@ -72,7 +72,7 @@ const comicTranslator: ModelEntry = {
 		data: [
 			...comic.data.map((d) => ({ label: d.label, value: String(d.value) })),
 			...comicStyles.map(([s, r]) => ({ label: `Bubbles found: ${STYLE_NAMES[s] ?? s} (${r.pages} pages)`,
-				value: `${share(r.bubbles.new)} (round 2: ${share(r.bubbles.old)}); extra boxes a page ${r.extra_per_page.new} (round 2: ${r.extra_per_page.old})` })),
+				value: `${share(r.bubbles.new)} (${comic.old_label}: ${share(r.bubbles.old)}); extra boxes a page ${r.extra_per_page.new} (${comic.old_label}: ${r.extra_per_page.old})` })),
 			...comic.credits.map((c) => ({ label: `Source: ${c.source}`, value: `${c.author}; ${c.licence}; ${c.link}` })),
 			{ label: 'OCR words read (before / after Gemini repair)', value: comicPipeline.ocrBefore === null || comicPipeline.ocrAfter === null ? null
 				: `${share(comicPipeline.ocrBefore)} / ${share(comicPipeline.ocrAfter)} (on ${comicPipeline.ocrPages} Pepper&Carrot pages with their own text files)` },
@@ -85,7 +85,7 @@ const comicTranslator: ModelEntry = {
 		],
 		metrics: {
 			title: 'Text found per style',
-			beforeNote: 'Grey shows round 2’s finder.',
+			beforeNote: `Grey shows ${comic.old_label}’s finder.`,
 			rows: comicStyles.map(([s, r]) => ({ label: STYLE_NAMES[s] ?? s, value: r.texts.new, before: r.texts.old }))
 		},
 		failures: comicPipeline.failures as Failure[]

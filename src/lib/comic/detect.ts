@@ -1,7 +1,7 @@
 import { ENGINE_MB, openSession, type Ort } from '$lib/runtime/engine';
 import type { Box, RegionClass } from './types';
 
-/** Our D-FINE text detector (round 3: size L, weights stored at half size), exported at 1024 px. Runs on the visitor's device. */
+/** Our D-FINE text detector (size L: round 3's weights blended with 30% of round 4's, stored at half size), exported at 1024 px. Runs on the visitor's device. */
 export const MODEL_URL = '/models/comic-text-detector.onnx';
 export const MODEL_MB = 63.5;
 export const CLASSES: RegionClass[] = ['bubble', 'caption', 'free-text', 'sfx'];

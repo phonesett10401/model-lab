@@ -129,7 +129,7 @@ found = {'new': {'manga': {'found': 9, 'total': 10, 'pages': 3, 'extra': 3}, 'te
          'old_text': {'manga': {'found': 7, 'total': 10, 'pages': 3}, 'test97': {'found': 4, 'total': 5, 'pages': 2}}}
 pages.append(pg('old.jpg', 'Wikimedia Commons', 'old-american'))  # in the log, but in no split this round: not credited
 rep = build_report3('r3', 'r2', found, train, pages, used={'a.jpg', 'b.jpg', 'm.jpg'})
-assert rep['run'] == 'r3' and rep['old_run'] == 'r2'
+assert rep['run'] == 'r3' and rep['old_run'] == 'r2' and rep['old_label'] == 'round 2'
 assert rep['styles']['manga'] == {'pages': 3, 'bubbles': {'new': 0.9, 'old': 0.8}, 'texts': {'new': 1.0, 'old': 0.7},
                                   'extra_per_page': {'new': 1.0, 'old': 2.0}}, rep['styles']
 assert rep['styles']['test97']['bubbles'] == {'new': 0.8, 'old': 1.0}
@@ -155,7 +155,10 @@ assert [a['bbox'] for a in tg2['annotations']] == [[20, 20, 100, 30], [230, 130,
 ok = {'new': {'sets': 'h1', 'old': False, 'text': False}, 'old': {'sets': 'h1', 'old': True, 'text': False},
       'new_text': {'sets': 'h1', 'old': False, 'text': True}, 'old_text': {'sets': 'h1', 'old': True, 'text': True}}
 check_found(ok)
-for bad in ({**ok, 'old': {**ok['old'], 'sets': 'h0'}}, {**ok, 'new_text': {**ok['new_text'], 'text': False}}):
+r3 = {k: {**m, 'old': False} for k, m in ok.items()}  # round 3 as the old finder, scored as it is
+check_found(r3)
+for bad in ({**ok, 'old': {**ok['old'], 'sets': 'h0'}}, {**ok, 'new_text': {**ok['new_text'], 'text': False}},
+            {**ok, 'old_text': {**ok['old_text'], 'old': False}}, {**r3, 'new': {**r3['new'], 'old': True}}):
     try:
         check_found(bad)
     except SystemExit:

@@ -340,13 +340,15 @@ def build_report(run: str, gt: dict, result: dict, styles: dict, pages: list[c.P
 
 LABELS3 = ('Not checked by a person. Pepper&Carrot and Black Jack test pages: labelled automatically, reviewed by Claude. '
            "Old American: 42 Comix pages whose boxes Claude corrected by hand. Manga: an outside dataset's own labels "
-           '(manga-text-detection, Indonesian scanlations). Each finder is scored on the boxes its page shows. Found = a box '
+           '(manga-text-detection, Indonesian scanlations). Manhua and webtoon: held-out pages of outside datasets, with '
+           'their own labels. Each finder is scored on the boxes its page shows. Found = a box '
            'covers at least half of the bubble; text found = covers at least half of the words in it; extra boxes = boxes '
-           "that find nothing (repeats, or boxes on art), counted before the page reads them: round 3's page then also "
+           "that find nothing (repeats, or boxes on art), counted before the page reads them: the page then also "
            'drops boxes it cannot read and repeats that read the same words, so it shows fewer.')
 
 
-def build_report3(run: str, old_run: str, found: dict, train_coco: dict, pages: list[c.Page], used: set[str]) -> dict:
+def build_report3(run: str, old_run: str, found: dict, train_coco: dict, pages: list[c.Page], used: set[str],
+                  old_label: str = 'round 2') -> dict:
     """Round 3's report-card numbers. found: {'new'|'old'|'new_text'|'old_text': found_by_set result}; used: the page
     files in round 3's training and test sets (only their sources are credited). Nothing is typed by hand."""
     share = lambda r: round(r['found'] / r['total'], 3) if r and r['total'] else None
@@ -357,7 +359,7 @@ def build_report3(run: str, old_run: str, found: dict, train_coco: dict, pages: 
     for p in (p for p in pages if p.file in used):
         by_source.setdefault(p.source, {'source': p.source, 'author': p.author, 'licence': p.licence, 'link': p.link})
     return {
-        'run': run, 'old_run': old_run,
+        'run': run, 'old_run': old_run, 'old_label': old_label,
         'data': [{'label': f'Training pages: {s}', 'value': n} for s, n in sorted(per_source.items())]
                 + [{'label': 'Test labels', 'value': LABELS3}],
         'styles': {name: {'pages': r['pages'],
@@ -382,8 +384,9 @@ def check_found(metas: dict) -> None:
     sets, each in the mode it is read for."""
     if len({m['sets'] for m in metas.values()}) != 1:
         raise SystemExit('found files were scored on different test sets: rerun `found` (and `found --text`) for both runs')
+    # the old finder may be round 2 (scored with --old) or round 3 (scored as it is); both of its files the same way
     for key, m in metas.items():
-        if m['old'] != key.startswith('old') or m['text'] != key.endswith('text'):
+        if (m['old'] if key.startswith('new') else m['old'] != metas['old']['old']) or m['text'] != key.endswith('text'):
             raise SystemExit(f'{key}: found file is in the wrong mode {m}')
 
 
@@ -397,12 +400,13 @@ def report3_main(run: str, old_run: str) -> None:
     check_found({k: f['meta'] for k, f in found.items()})
     if found['new']['meta']['sets'] != sets_hash(sorted(ann.glob('test-*.json')) + [ann / 'test97-bubbles.json']):
         raise SystemExit('the test sets changed since `found` ran: rerun it for both runs')
+    old_label = 'round 2' if found['old']['meta']['old'] else 'round 3'
     found = {k: f['results'] for k, f in found.items()}
     used = {Path(i['file_name']).name for s in ('train', 'test', 'test97-bubbles')
             for i in json.loads((ann / f'{s}.json').read_text(encoding='utf8'))['images']}
     pages = c.load_attribution() + c.load_attribution(c.HERE / 'attribution/comic-v3.csv')
     train = json.loads((ann / 'train.json').read_text(encoding='utf8'))
-    OUT.write_text(json.dumps(build_report3(run, old_run, found, train, pages, used), indent=1, ensure_ascii=False) + '\n', encoding='utf8')
+    OUT.write_text(json.dumps(build_report3(run, old_run, found, train, pages, used, old_label), indent=1, ensure_ascii=False) + '\n', encoding='utf8')
     print('wrote', OUT)
 
 

@@ -1,6 +1,6 @@
 """Round 3's splits: test pages never leak into training. Run: python test_comic_split3.py"""
 import comic_common as c
-from comic_split3 import MIN_TEST, REPEAT, assign, cap_train, times, reviewed_test, style_counts, to_test97
+from comic_split3 import MIN_TEST, assign, cap_train, reviewed_test, style_counts, to_test97
 
 
 def page(file, source, group, style='manga', split=''):
@@ -70,12 +70,4 @@ for box in ([43, 63, 237, 237], [203, 83, 337, 217]):
     g.ellipse(box, fill='white')
 old = [{'bbox': [80, 110, 110, 70], 'category': 'bubble'}, {'bbox': [230, 120, 90, 60], 'category': 'bubble'}]
 assert to_test97(np.asarray(im), old) == old, to_test97(np.asarray(im), old)
-
-# round 4b: Comix and real Pepper&Carrot pages are listed twice in train.json, the synthetic Pepper&Carrot pages once
-from dataclasses import replace
-p0 = pages[0]
-assert times(replace(p0, source='Comix v0.1 (Digital Comic Museum)'), REPEAT) == 2
-assert times(replace(p0, source='Pepper&Carrot'), REPEAT) == 2
-assert times(replace(p0, source='Synthetic lettering on Pepper&Carrot art (round 3)'), REPEAT) == 1
-assert times(replace(p0, source='rf-manhua-a'), REPEAT) == 1
 print('comic split3 checks passed')
